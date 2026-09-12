@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Home from './Home';
 import Login from './Login';
 import Register from './Register';
 import UserList from './UserList';
 import Skills from './Skills';
 
-// Home Dashboard containing current active components
-const Home = ({ user, onLogout }) => {
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
+// Dashboard - shown after login
+const Dashboard = ({ user, onLogout }) => {
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #ddd' }}>
@@ -19,7 +18,7 @@ const Home = ({ user, onLogout }) => {
         </div>
       </header>
 
-      <UserList refreshSignal={refreshTrigger} />
+      <UserList />
       <Skills />
     </div>
   );
@@ -39,26 +38,42 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Landing page - marketplace home, passes user state */}
         <Route 
           path="/" 
-          element={currentUser ? <Navigate to="/home" /> : <Navigate to="/login" />} 
+          element={<Home user={currentUser} onLogout={handleLogout} />} 
         />
 
+        {/* Login page */}
         <Route 
           path="/login" 
-          element={<Login onLogin={handleLogin} />} 
-        />
-
-        <Route 
-          path="/register" 
-          element={<Register />} 
-        />
-
-        <Route 
-          path="/home" 
           element={
             currentUser ? (
-              <Home user={currentUser} onLogout={handleLogout} />
+              <Navigate to="/" />
+            ) : (
+              <Login onLogin={handleLogin} />
+            )
+          } 
+        />
+
+        {/* Register page */}
+        <Route 
+          path="/register" 
+          element={
+            currentUser ? (
+              <Navigate to="/" />
+            ) : (
+              <Register />
+            )
+          } 
+        />
+
+        {/* Dashboard - protected route */}
+        <Route 
+          path="/dashboard" 
+          element={
+            currentUser ? (
+              <Dashboard user={currentUser} onLogout={handleLogout} />
             ) : (
               <Navigate to="/login" />
             )

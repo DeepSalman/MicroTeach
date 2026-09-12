@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const db = require('../db');
 
 // 1. Get all users
@@ -31,6 +32,10 @@ router.post('/register', async (req, res) => {
   }
 
   try {
+    // Hash the password before storing
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const query = `
       INSERT INTO Users
         (full_name, email, password, role)
@@ -40,7 +45,7 @@ router.post('/register', async (req, res) => {
     const [result] = await db.query(query, [
       full_name,
       email,
-      password,
+      hashedPassword,
       role || 'student'
     ]);
     res.status(201).json({ message: 'User registered successfully!', userId: result.insertId });
@@ -76,7 +81,10 @@ router.post('/login', async (req, res) => {
 
     const user = rows[0];
 
-    if (user.password !== password) {
+    // Compare password with hashed password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
