@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Home from './Home';
 import Login from './Login';
 import Register from './Register';
+import CreatePost from './CreatePost';
 import UserList from './UserList';
 import Skills from './Skills';
 
@@ -64,6 +65,18 @@ function App() {
               <Navigate to="/" />
             ) : (
               <Register />
+            )
+          } 
+        />
+
+        {/* Create Post page - protected */}
+        <Route 
+          path="/create-post" 
+          element={
+            currentUser ? (
+              <CreatePost user={currentUser} />
+            ) : (
+              <Navigate to="/login" />
             )
           } 
         />

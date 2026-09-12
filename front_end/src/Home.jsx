@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { fetchPosts } from './api';
 import './Home.css';
 
 const Home = ({ user, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -16,9 +20,43 @@ const Home = ({ user, onLogout }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const loadPosts = async () => {
+    try {
+      const response = await fetchPosts();
+      setPosts(response.data);
+    } catch (err) {
+      console.error('Failed to load posts:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     setDropdownOpen(false);
     if (onLogout) onLogout();
+  };
+
+  const getDeliveryLabel = (format) => {
+    const labels = {
+      'live_call': '📹 Google Meet (30m)',
+      'annotated_pdf': '📝 Annotated Notes',
+      'video_walkthrough': '🎬 Video Walkthrough'
+    };
+    return labels[format] || '📹 Google Meet (30m)';
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      'active': { class: 'active', text: '● Active Session' },
+      'pending': { class: 'pending', text: '● Pending Review' },
+      'resolved': { class: 'not-selected', text: 'Resolved' },
+      'closed': { class: 'not-selected', text: 'Closed' }
+    };
+    return badges[status] || badges['active'];
   };
 
   return (
@@ -149,102 +187,57 @@ const Home = ({ user, onLogout }) => {
 
       {/* Main Content */}
       <main className="home-main">
-        <h1>My Applications &amp; Campus Engagements</h1>
-        <p className="subtitle">Manage live peer-tutoring calls, pending solution pitches, and milestone payouts.</p>
+        <div className="main-header">
+          <div>
+            <h1>My Applications &amp; Campus Engagements</h1>
+            <p className="subtitle">Manage live peer-tutoring calls, pending solution pitches, and milestone payouts.</p>
+          </div>
+          {user && (
+            <button className="create-post-btn" onClick={() => navigate('/create-post')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="5" y1="12" x2="19" y2="12" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Create Post
+            </button>
+          )}
+        </div>
 
         <div className="cards">
-          {/* Card 1 */}
-          <div className="card">
-            <div className="card-header">
-              <span className="badge active">&#9679; Active Session</span>
-              <span className="course-code">CSE 221</span>
-              <span className="heart">&#9825;</span>
-            </div>
-            <div className="card-subject">&#9654; Dijkstra Edge Cases</div>
-            <div className="card-title">Priority queue heap indexing bug on C++ adjacency list with cycle detection.</div>
-            <div className="card-meta">
-              <span>&#128187; Google Meet (30m)</span>
-              <span className="funded">100% Funded</span>
-            </div>
-            <div className="card-footer-meta">
-              <div>CSE 221 &middot; Dijkstra Priorit... &#9733; 4.98 (42)</div>
-              <div>Posted by @tahmid_k &middot; CSE Dept</div>
-              <div className="time">&#9200; Starts in 1h 12m (Today 7:30 PM)</div>
-            </div>
-            <div className="card-bottom">
-              <div className="price"><strong>&#x09F3;350</strong> / session</div>
-              <button className="apply-btn">Apply Now</button>
-            </div>
-          </div>
-
-          {/* Card 2 */}
-          <div className="card">
-            <div className="card-header">
-              <span className="badge pending">&#9679; Pending Review</span>
-              <span className="course-code">PHY 102</span>
-              <span className="heart">&#9825;</span>
-            </div>
-            <div className="card-subject">&#8721; Gauss Law Cylindrical Shell</div>
-            <div className="card-title">Non-uniform charge distribution integration step-by-step PDF diagram needed tonight.</div>
-            <div className="card-meta">
-              <span>&#128196; Annotated Notes</span>
-              <span className="pitches">3 pitches submitted</span>
-            </div>
-            <div className="card-footer-meta">
-              <div>PHY 102 &middot; Gauss Law Cyli... &#9733; 5.0 (19)</div>
-              <div>Posted by @zahid_phys &middot; Physics Dept</div>
-              <div className="due">Due: Tonight at 11:30 PM</div>
-            </div>
-            <div className="card-bottom">
-              <div className="price"><strong>&#x09F3;300</strong> / solution</div>
-              <button className="apply-btn">Apply Now</button>
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="card">
-            <div className="card-header">
-              <span className="badge due">&#9200; Due in 3h 15m</span>
-              <span className="course-code">MAT 120</span>
-              <span className="heart">&#9825;</span>
-            </div>
-            <div className="card-subject">&#128203; Trig Substitution Multivariable</div>
-            <div className="card-title">Step-by-step bound transformation with 1 clarifying audio memo. Escrow auto-release.</div>
-            <div className="progress-bar"><div className="progress-fill" style={{ width: '60%' }}></div></div>
-            <div className="card-footer-meta">
-              <div>MAT 120 &middot; Multivariable ... &#9733; 4.92 (31)</div>
-              <div>Posted by @nafisa_calc &middot; Math Dept</div>
-              <div>Drafting Solution (Step 2 of 3)</div>
-            </div>
-            <div className="card-bottom">
-              <div className="price"><strong>&#x09F3;400</strong> / escrow</div>
-              <button className="apply-btn">Apply Now</button>
-            </div>
-          </div>
-
-          {/* Card 4 */}
-          <div className="card" style={{ opacity: 0.7 }}>
-            <div className="card-header">
-              <span className="badge not-selected">Not Selected</span>
-              <span className="course-code">CSE 111</span>
-              <span className="heart">&#9825;</span>
-            </div>
-            <div className="card-subject">&#128101; OOP Inheritance Bugs</div>
-            <div className="card-title">Polymorphic interface inheritance recursion bug. Student selected another peer tutor.</div>
-            <div className="archived">
-              <span>Archived 36h ago</span>
-              <span>Escrow Returned</span>
-            </div>
-            <div className="card-footer-meta">
-              <div>CSE 111 &middot; Polymorphic Inh... &#9733; Resolved</div>
-              <div>Posted by @arif_dev &middot; Applied 2d ago</div>
-              <div>Session Closed</div>
-            </div>
-            <div className="card-bottom">
-              <div className="price"><strong>&#x09F3;200</strong> / bounty</div>
-              <button className="apply-btn disabled">Apply Now</button>
-            </div>
-          </div>
+          {loading ? (
+            <div className="loading-message">Loading posts...</div>
+          ) : posts.length === 0 ? (
+            <div className="empty-message">No posts yet. Create the first one!</div>
+          ) : (
+            posts.map((post) => {
+              const statusBadge = getStatusBadge(post.status);
+              return (
+                <div key={post.post_id} className="card">
+                  <div className="card-header">
+                    <span className={`badge ${statusBadge.class}`}>{statusBadge.text}</span>
+                    <span className="course-code">{post.course_code.split(' ')[0]}</span>
+                    <span className="heart">&#9825;</span>
+                  </div>
+                  <div className="card-subject">{post.category}</div>
+                  <div className="card-title">{post.title}</div>
+                  <div className="card-meta">
+                    <span>{getDeliveryLabel(post.delivery_format)}</span>
+                    <span className="funded">100% Funded</span>
+                  </div>
+                  <div className="card-footer-meta">
+                    <div>{post.course_code} &#9733; {post.author_name}</div>
+                    <div>Posted by {post.author_name} &middot; {post.author_department || 'Dept'}</div>
+                    {post.deadline && <div className="time">⏰ Due: {post.deadline}</div>}
+                    {post.is_urgent && <div className="due">🔥 High Urgency</div>}
+                  </div>
+                  <div className="card-bottom">
+                    <div className="price"><strong>৳{post.bounty}</strong> / session</div>
+                    <button className="apply-btn">Apply Now</button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Show More */}
