@@ -68,7 +68,8 @@ const Register = () => {
         full_name: name,
         email: email,
         password: password,
-        role: formData.role
+        role: formData.role,
+        department: formData.department
       });
       navigate('/login');
     } catch (err) {

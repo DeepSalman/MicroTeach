@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 
 // 2. Register a new user
 router.post('/register', async (req, res) => {
-  const { full_name, email, password, role } = req.body;
+  const { full_name, email, password, role, department } = req.body;
 
   if (!full_name || !email || !password) {
     return res.status(400).json({ message: 'Full name, email, and password are required.' });
@@ -38,15 +38,16 @@ router.post('/register', async (req, res) => {
 
     const query = `
       INSERT INTO Users
-        (full_name, email, password, role)
+        (full_name, email, password, role, department)
       VALUES
-        (?, ?, ?, ?)
+        (?, ?, ?, ?, ?)
     `;
     const [result] = await db.query(query, [
       full_name,
       email,
       hashedPassword,
-      role || 'student'
+      role || 'student',
+      department || null
     ]);
     res.status(201).json({ message: 'User registered successfully!', userId: result.insertId });
   } catch (error) {
