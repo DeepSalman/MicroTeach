@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MicroTeach — Login</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; display: flex; color: #131b2e; }
+
+    /* Left Panel */
+    .left {
+      flex: 1; background: #faf8ff; display: flex; flex-direction: column; justify-content: center;
+      padding: 60px 80px; position: relative;
+    }
+    .eyebrow {
+      display: inline-block; border: 1px solid #c4c6d0; background: #eaedff;
+      padding: 4px 10px; font-size: 10px; font-family: 'Courier New', monospace; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase; color: #1f3864; margin-bottom: 16px;
+    }
+    .title-block { margin-bottom: 36px; }
+    .title-label {
+      display: inline-flex; align-items: center; gap: 6px; background: #1f3864; color: #fff;
+      padding: 4px 10px; font-size: 9px; font-family: 'Courier New', monospace; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase; border-radius: 2px 2px 0 0; margin-bottom: -1px;
+    }
+    .title-label svg { width: 10px; height: 10px; }
+    .title-box {
+      border: 2px solid #1f3864; background: #fff; padding: 28px 32px;
+      border-radius: 0 4px 4px 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .title-box h1 { font-size: 36px; line-height: 1.15; font-weight: 700; color: #131b2e; }
+
+    /* Form */
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+    }
+    .form-label span { font-size: 10px; font-family: 'Courier New', monospace; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #44474f; }
+    .form-label .required { color: #1f3864; font-weight: 700; font-size: 9px; }
+    .form-label .forgot {
+      font-size: 11px; color: #44474f; text-decoration: underline; cursor: pointer;
+      font-family: -apple-system, sans-serif;
+    }
+    .form-label .forgot:hover { color: #131b2e; }
+    .form-input {
+      width: 100%; padding: 12px 14px; border: 1px solid #c4c6d0; border-radius: 4px;
+      font-size: 13px; font-family: 'Courier New', monospace; background: #fff; color: #131b2e;
+      outline: none; transition: border 0.2s;
+    }
+    .form-input:focus { border-color: #1f3864; }
+    .form-input::placeholder { color: #aaa; }
+    .password-wrapper { position: relative; }
+    .password-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: #888; font-size: 16px;
+    }
+    .checkbox-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+    .checkbox-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: #44474f; }
+    .checkbox-row input[type="checkbox"] { width: 14px; height: 14px; accent-color: #1f3864; }
+    .checkbox-row .ttl { font-size: 9px; font-family: 'Courier New', monospace; color: #747780; text-transform: uppercase; letter-spacing: 1px; }
+
+    .btn-signin {
+      width: 100%; padding: 14px; background: #03224d; color: #fff; border: none;
+      font-size: 12px; font-family: 'Courier New', monospace; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 3px; cursor: pointer; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.2s; margin-top: 8px;
+    }
+    .btn-signin:hover { background: #1f3864; }
+    .btn-signin .arrow { font-size: 16px; }
+
+    .register-link {
+      text-align: center; margin-top: 20px; font-size: 12px; color: #44474f;
+    }
+    .register-link a {
+      color: #1f3864; font-weight: 600; font-family: 'Courier New', monospace;
+      text-decoration: none; font-size: 11px; margin-left: 4px;
+    }
+    .register-link a:hover { text-decoration: underline; }
+
+    /* Right Panel */
+    .right {
+      flex: 1; background: #0E1117; display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden; min-height: 100vh;
+    }
+
+    /* Orbital Circles */
+    .orbital {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 900px; height: 900px; opacity: 0.25;
+    }
+    .orbital svg { width: 100%; height: 100%; }
+    .orbital text {
+      font-family: 'Courier New', monospace; font-size: 11px; text-transform: uppercase;
+      letter-spacing: 4px; fill: #9ca3af;
+    }
+
+    /* Center Branding */
+    .center-brand {
+      position: relative; z-index: 2; text-align: center; color: #fff;
+    }
+    .center-brand .logo-icon {
+      width: 64px; height: 64px; background: #1f3864; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+      font-weight: 700; font-size: 20px; color: #fff; box-shadow: 0 8px 32px rgba(31,56,100,0.4);
+    }
+    .center-brand h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .center-brand p { font-size: 13px; color: #9ca3af; max-width: 260px; line-height: 1.5; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      body { flex-direction: column; }
+      .left { padding: 40px 28px; }
+      .right { min-height: 300px; }
+      .title-box h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Left Panel: Login Form -->
+  <section class="left">
+    <div>
+      <div class="eyebrow">BUILT FOR CAMPUS MICRO-LEARNING .</div>
+
+      <div class="title-block">
+        <div class="title-label">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 1h8v2H4V1zm0 12h8v2H4v-2zM1 4h14v8H1V4z"/></svg>
+          TITLE
+        </div>
+        <div class="title-box">
+          <h1>MicroTeach. The campus exchange built for peer mastery.</h1>
+        </div>
+      </div>
+
+      <form action="index.html" method="GET">
+        <div class="form-group">
+          <div class="form-label">
+            <span>Email Address</span>
+            <span class="required">REQUIRED</span>
+          </div>
+          <input class="form-input" type="email" placeholder="you@email.com" required>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span>Password</span>
+            <a class="forgot" href="#">Forgot?</a>
+          </div>
+          <div class="password-wrapper">
+            <input class="form-input" type="password" id="password" placeholder="••••••••••••" required style="padding-right:40px;">
+            <button type="button" class="password-toggle" id="toggle-pwd" aria-label="Toggle password">&#128065;</button>
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <label>
+            <input type="checkbox" checked>
+            Remember authenticated session
+          </label>
+          <span class="ttl">TTL: 14 DAYS</span>
+        </div>
+
+        <button type="submit" class="btn-signin">
+          <span>SIGN IN</span>
+          <span class="arrow">&rarr;</span>
+        </button>
+
+        <div class="register-link">
+          Don't have an account?
+          <a href="Register.html">Register student account &rarr;</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Right Panel: Orbital Background -->
+  <section class="right">
+    <div class="orbital">
+      <svg viewBox="0 0 1000 1000">
+        <defs>
+          <path d="M 500, 500 m -440, 0 a 440,440 0 1,1 880,0 a 440,440 0 1,1 -880,0" id="c-outer"/>
+          <path d="M 500, 500 m -350, 0 a 350,350 0 1,1 700,0 a 350,350 0 1,1 -700,0" id="c-mid1"/>
+          <path d="M 500, 500 m -260, 0 a 260,260 0 1,1 520,0 a 260,260 0 1,1 -520,0" id="c-mid2"/>
+          <path d="M 500, 500 m -170, 0 a 170,170 0 1,1 340,0 a 170,170 0 1,1 -340,0" id="c-inner"/>
+        </defs>
+        <text opacity="0.5"><textPath href="#c-outer" startOffset="0%">THE CONTENT ARCHITECTURE • MICROTEACH PEER LEARNING • ACADEMIC INTEGRITY • THE CONTENT ARCHITECTURE •</textPath></text>
+        <text opacity="0.7"><textPath href="#c-mid1" startOffset="25%">CAMPUS KNOWLEDGE EXCHANGE • REAL-TIME MICRO-TUTORING • VERIFIED .EDU NETWORK •</textPath></text>
+        <text opacity="0.6"><textPath href="#c-mid2" startOffset="50%">THE CONTENT ARCHITECTURE • STRICT IDENTITY VERIFICATION • ZERO FRAUD ESCROW •</textPath></text>
+        <text opacity="0.8"><textPath href="#c-inner" startOffset="10%">PEER SOLVING • TUTOR PROTOCOL • MICROTEACH •</textPath></text>
+      </svg>
+    </div>
+
+    <div class="center-brand">
+      <div class="logo-icon">MT</div>
+      <h2>MicroTeach</h2>
+      <p>Campus peer tutoring network powered by escrow-secured sessions and verified .edu identities.</p>
+    </div>
+  </section>
+
+  <script>
+    document.getElementById('toggle-pwd').addEventListener('click', function() {
+      const pwd = document.getElementById('password');
+      pwd.type = pwd.type === 'password' ? 'text' : 'password';
+    });
+  </script>
+</body>
+</html>

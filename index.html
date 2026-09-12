@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MicroTeach Campus Hub</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #1a1a2e; }
+
+    /* Top Banner */
+    .top-banner {
+      background: #e8f4f0;
+      text-align: center;
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #333;
+      border-bottom: 1px solid #ddd;
+    }
+    .top-banner .dot { display: inline-block; width: 8px; height: 8px; background: #2ecc71; border-radius: 50%; margin-right: 6px; }
+    .top-banner strong { font-weight: 600; }
+    .top-banner a { color: #333; text-decoration: underline; font-weight: 500; }
+
+    /* Header */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 32px; background: #fff; border-bottom: 1px solid #e0e0e0;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 44px; height: 44px; background: #1a1a2e; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px;
+    }
+    .logo-text { font-size: 22px; font-weight: 700; color: #1a1a2e; line-height: 1.1; }
+    .logo-text span { display: block; font-size: 11px; font-weight: 500; color: #666; letter-spacing: 2px; text-transform: uppercase; }
+
+    .search-bar {
+      display: flex; align-items: center; border: 1px solid #ccc; border-radius: 24px; overflow: hidden;
+    }
+    .search-bar input, .search-bar select {
+      border: none; outline: none; padding: 10px 16px; font-size: 14px; background: transparent;
+    }
+    .search-bar select { border-left: 1px solid #ddd; cursor: pointer; color: #555; }
+    .search-bar .search-btn {
+      width: 40px; height: 40px; background: #e74c8b; border: none; border-radius: 50%;
+      color: #fff; font-size: 16px; cursor: pointer; margin: 2px; display: flex; align-items: center; justify-content: center;
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 16px; }
+    .header-actions .icon-btn {
+      width: 38px; height: 38px; border-radius: 50%; border: 1px solid #ddd; background: #fff;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; color: #555;
+    }
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%; background: #2c3e50; color: #fff;
+      display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;
+    }
+
+    /* Category Tabs */
+    .categories {
+      display: flex; align-items: center; gap: 0; padding: 0 32px; background: #fff;
+      border-bottom: 1px solid #e0e0e0; overflow-x: auto;
+    }
+    .cat-tab {
+      display: flex; flex-direction: column; align-items: center; padding: 16px 20px 12px;
+      font-size: 12px; color: #666; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; gap: 6px;
+    }
+    .cat-tab:hover { color: #1a1a2e; }
+    .cat-tab.active { color: #1a1a2e; font-weight: 600; border-bottom-color: #1a1a2e; }
+    .cat-tab .cat-icon { font-size: 22px; }
+    .filters-btn {
+      margin-left: auto; display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border: 1px solid #ccc; border-radius: 20px; background: #fff;
+      font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+    }
+    .filters-badge {
+      background: #1a1a2e; color: #fff; border-radius: 50%; width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;
+    }
+
+    /* Main Content */
+    .main { max-width: 1200px; margin: 0 auto; padding: 32px 32px 16px; }
+    .main h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; color: #1a1a2e; }
+    .main .subtitle { font-size: 14px; color: #777; margin-bottom: 28px; }
+
+    /* Cards Grid */
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+    .card {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 14px; padding: 20px;
+      display: flex; flex-direction: column;
+    }
+    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .badge {
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .badge.active { background: #d4f5e2; color: #1a7a4c; }
+    .badge.pending { background: #fef3c7; color: #92400e; }
+    .badge.due { background: #fee2e2; color: #b91c1c; }
+    .badge.not-selected { background: #f3f4f6; color: #555; }
+    .course-code {
+      padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;
+      background: #f3f4f6; color: #444;
+    }
+    .heart { margin-left: auto; font-size: 18px; color: #ccc; cursor: pointer; }
+    .heart:hover { color: #e74c8b; }
+
+    .card-subject { font-size: 12px; color: #888; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+    .card-title { font-size: 15px; font-weight: 600; color: #1a1a2e; line-height: 1.4; margin-bottom: 14px; flex: 1; }
+
+    .card-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #777; margin-bottom: 12px; flex-wrap: wrap; }
+    .card-meta .funded { color: #1a7a4c; font-weight: 600; }
+    .card-meta .pitches { color: #e74c8b; font-weight: 500; }
+    .progress-bar { width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; margin-bottom: 12px; }
+    .progress-fill { height: 100%; background: #1a7a4c; border-radius: 3px; width: 60%; }
+    .archived { font-size: 12px; color: #999; display: flex; justify-content: space-between; margin-bottom: 8px; }
+
+    .card-footer-meta { font-size: 12px; color: #555; margin-bottom: 4px; line-height: 1.6; }
+    .card-footer-meta .dept { color: #888; }
+    .card-footer-meta .time { color: #e74c8b; font-weight: 500; }
+    .card-footer-meta .due { color: #555; }
+    .card-footer-meta .resolved { color: #999; font-style: italic; }
+
+    .card-bottom {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: auto; padding-top: 14px; border-top: 1px solid #eee;
+    }
+    .price { font-size: 13px; color: #555; }
+    .price strong { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+    .apply-btn {
+      padding: 8px 20px; background: #1a1a2e; color: #fff; border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .apply-btn:hover { background: #2c2c4a; }
+    .apply-btn.disabled { background: #ccc; cursor: not-allowed; }
+
+    /* Show More */
+    .show-more { text-align: center; padding: 32px 0 16px; }
+    .show-more p { font-size: 14px; color: #555; margin-bottom: 14px; }
+    .show-more-btn {
+      padding: 12px 32px; background: #1a1a2e; color: #fff; border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .show-more-btn:hover { background: #2c2c4a; }
+    .show-more .count { font-size: 13px; color: #999; margin-top: 10px; }
+
+    /* Footer */
+    .footer {
+      background: #f9fafb; border-top: 1px solid #e0e0e0; padding: 40px 32px 20px; margin-top: 32px;
+    }
+    .footer-grid {
+      max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+    }
+    .footer-col h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; color: #1a1a2e; }
+    .footer-col a {
+      display: block; font-size: 13px; color: #666; text-decoration: none; margin-bottom: 8px;
+    }
+    .footer-col a:hover { color: #1a1a2e; }
+    .footer-bottom {
+      max-width: 1200px; margin: 28px auto 0; padding-top: 20px; border-top: 1px solid #ddd;
+      display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #999;
+    }
+    .footer-bottom a { color: #999; text-decoration: none; margin: 0 8px; }
+    .footer-bottom a:hover { color: #555; }
+    .footer-bottom .right { display: flex; align-items: center; gap: 8px; }
+    .footer-bottom .lang { display: flex; align-items: center; gap: 4px; }
+    .footer-bottom .icons { display: flex; gap: 10px; font-size: 16px; color: #666; }
+
+    /* Responsive */
+    @media (max-width: 1024px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) {
+      .cards { grid-template-columns: 1fr; }
+      .header { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
+      .main { padding: 20px 16px; }
+      .footer-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Banner -->
+  <div class="top-banner">
+    <span class="dot"></span>
+    <strong>Spring Midterm Sprint:</strong> Verified peer STEM tutors are live on campus. Escrow secured payouts &amp; instant matches.
+    <a href="#">Learn how it works</a>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <a href="login.html" style="text-decoration:none; color:inherit;">
+      <div class="logo">
+        <div class="logo-icon">MT</div>
+        <div class="logo-text">MicroTeach<span>Campus Hub</span></div>
+      </div>
+    </a>
+    <div class="search-bar">
+      <input type="text" value="Any Subject" style="width:110px;">
+      <select><option>Any Department</option></select>
+      <select><option>All Sessions</option></select>
+      <button class="search-btn">&#128269;</button>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn">&#9734;</button>
+      <button class="icon-btn">&#9776;</button>
+      <a href="login.html" style="text-decoration:none;"><div class="avatar">SK</div></a>
+    </div>
+  </header>
+
+  <!-- Categories -->
+  <nav class="categories">
+    <div class="cat-tab active">
+      <span class="cat-icon">&#9783;</span>
+      Algorithms &amp; DS
+    </div>
+    <div class="cat-tab">
+      <span class="cat-icon">&#8721;</span>
+      Calculus &amp; Math
+    </div>
+    <div class="cat-tab">
+      <span class="cat-icon">&#9881;</span>
+      Physics &amp; Lab
+    </div>
+    <div class="cat-tab">
+      <span class="cat-icon">&#9783;</span>
+      Object-Oriented
+    </div>
+    <div class="cat-tab">
+      <span class="cat-icon">&#9881;</span>
+      System Architecture
+    </div>
+    <div class="cat-tab">
+      <span class="cat-icon">&#9889;</span>
+      Circuits &amp; EEE
+    </div>
+    <div class="cat-tab">
+      <span class="cat-icon">&#128161;</span>
+      Machine Learning
+    </div>
+    <div class="cat-tab">
+      <span class="cat-icon">&#9201;</span>
+      Cram Sessions
+    </div>
+    <div class="cat-tab">
+      <span class="cat-icon">&#128190;</span>
+      Database...
+    </div>
+    <button class="filters-btn">
+      &#9881; Filters
+      <span class="filters-badge">3</span>
+    </button>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main">
+    <h1>My Applications &amp; Campus Engagements</h1>
+    <p class="subtitle">Manage live peer-tutoring calls, pending solution pitches, and milestone payouts.</p>
+
+    <div class="cards">
+
+      <!-- Card 1 -->
+      <div class="card">
+        <div class="card-header">
+          <span class="badge active">&#9679; Active Session</span>
+          <span class="course-code">CSE 221</span>
+          <span class="heart">&#9825;</span>
+        </div>
+        <div class="card-subject">&#9654; Dijkstra Edge Cases</div>
+        <div class="card-title">Priority queue heap indexing bug on C++ adjacency list with cycle detection.</div>
+        <div class="card-meta">
+          <span>&#128187; Google Meet (30m)</span>
+          <span class="funded">100% Funded</span>
+        </div>
+        <div class="card-footer-meta">
+          <div>CSE 221 &middot; Dijkstra Priorit... &starf; 4.98 (42)</div>
+          <div>Posted by @tahmid_k &middot; CSE Dept</div>
+          <div class="time">&#9200; Starts in 1h 12m (Today 7:30 PM)</div>
+        </div>
+        <div class="card-bottom">
+          <div class="price"><strong>&#x09F3;350</strong> / session</div>
+          <button class="apply-btn">Apply Now</button>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="card">
+        <div class="card-header">
+          <span class="badge pending">&#9679; Pending Review</span>
+          <span class="course-code">PHY 102</span>
+          <span class="heart">&#9825;</span>
+        </div>
+        <div class="card-subject">&#8721; Gauss Law Cylindrical Shell</div>
+        <div class="card-title">Non-uniform charge distribution integration step-by-step PDF diagram needed tonight.</div>
+        <div class="card-meta">
+          <span>&#128196; Annotated Notes</span>
+          <span class="pitches">3 pitches submitted</span>
+        </div>
+        <div class="card-footer-meta">
+          <div>PHY 102 &middot; Gauss Law Cyli... &starf; 5.0 (19)</div>
+          <div>Posted by @zahid_phys &middot; Physics Dept</div>
+          <div class="due">Due: Tonight at 11:30 PM</div>
+        </div>
+        <div class="card-bottom">
+          <div class="price"><strong>&#x09F3;300</strong> / solution</div>
+          <button class="apply-btn">Apply Now</button>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="card">
+        <div class="card-header">
+          <span class="badge due">&#9200; Due in 3h 15m</span>
+          <span class="course-code">MAT 120</span>
+          <span class="heart">&#9825;</span>
+        </div>
+        <div class="card-subject">&#128203; Trig Substitution Multivariable</div>
+        <div class="card-title">Step-by-step bound transformation with 1 clarifying audio memo. Escrow auto-release.</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:60%"></div></div>
+        <div class="card-footer-meta">
+          <div>MAT 120 &middot; Multivariable ... &starf; 4.92 (31)</div>
+          <div>Posted by @nafisa_calc &middot; Math Dept</div>
+          <div>Drafting Solution (Step 2 of 3)</div>
+        </div>
+        <div class="card-bottom">
+          <div class="price"><strong>&#x09F3;400</strong> / escrow</div>
+          <button class="apply-btn">Apply Now</button>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="card" style="opacity:0.7;">
+        <div class="card-header">
+          <span class="badge not-selected">Not Selected</span>
+          <span class="course-code">CSE 111</span>
+          <span class="heart">&#9825;</span>
+        </div>
+        <div class="card-subject">&#128101; OOP Inheritance Bugs</div>
+        <div class="card-title">Polymorphic interface inheritance recursion bug. Student selected another peer tutor.</div>
+        <div class="archived">
+          <span>Archived 36h ago</span>
+          <span>Escrow Returned</span>
+        </div>
+        <div class="card-footer-meta">
+          <div>CSE 111 &middot; Polymorphic Inh... &starf; Resolved</div>
+          <div>Posted by @arif_dev &middot; Applied 2d ago</div>
+          <div>Session Closed</div>
+        </div>
+        <div class="card-bottom">
+          <div class="price"><strong>&#x09F3;200</strong> / bounty</div>
+          <button class="apply-btn disabled">Apply Now</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Show More -->
+    <div class="show-more">
+      <p>Continue exploring tutoring opportunities</p>
+      <button class="show-more-btn">Show More Applications &amp; Bounties</button>
+      <div class="count">Showing 4 of 7 active pitches &amp; tutoring sessions</div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h3>Campus Support</h3>
+        <a href="#">Help Center &amp; FAQs</a>
+        <a href="#">MicroTeach AirCover for Tutors</a>
+        <a href="#">Anti-Plagiarism Standards</a>
+        <a href="#">Disability &amp; Scribe Support</a>
+      </div>
+      <div class="footer-col">
+        <h3>Community</h3>
+        <a href="#">Campus Peer Forum</a>
+        <a href="#">Department Leaderboards</a>
+        <a href="#">Midterm Study Lounges</a>
+        <a href="#">Campus Ambassador Program</a>
+      </div>
+      <div class="footer-col">
+        <h3>Hosting &amp; Tutoring</h3>
+        <a href="#">Become a Verified Tutor</a>
+        <a href="#">Hourly &amp; Milestone Rates</a>
+        <a href="#">Escrow Payout Guidelines</a>
+        <a href="#">Tutor Code of Conduct</a>
+      </div>
+      <div class="footer-col">
+        <h3>MicroTeach</h3>
+        <a href="#">Newsroom &amp; Release Notes</a>
+        <a href="#">Campus Integrity Policy</a>
+        <a href="#">Careers at MicroTeach</a>
+        <a href="#">Student Privacy Notice</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>
+        &copy; 2025 MicroTeach, Inc. &nbsp;&middot;&nbsp;
+        <a href="#">Privacy</a> &middot;
+        <a href="#">Terms</a> &middot;
+        <a href="#">Sitemap</a> &middot;
+        <a href="#">Campus Safety &amp; Escrow</a>
+      </div>
+      <div class="right">
+        <span class="lang">&#127760; English (US)</span>
+        <span>&#x09F3; BDT</span>
+        <span class="icons">&lt; &gt; &#128187;</span>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
