@@ -7,7 +7,7 @@
 .create-post-page {
   min-height: 100vh;
   background: #faf8ff;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-primary);
   padding: 24px;
 }
 
@@ -217,7 +217,7 @@
   color: #131b2e;
   outline: none;
   transition: all 0.2s;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-primary);
 }
 
 .form-input:focus,

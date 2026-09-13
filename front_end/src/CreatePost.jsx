@@ -23,7 +23,8 @@ const CreatePost = ({ user }) => {
     { name: 'Calculus & Math', code: 'MTH 201', icon: '∑' },
     { name: 'Physics & Lab', code: 'PHY 102', icon: '⚛' },
     { name: 'System Architecture', code: 'CSE 331', icon: '⚙' },
-    { name: 'Circuits & EEE', code: 'EEE 163', icon: '⚡' }
+    { name: 'Circuits & EEE', code: 'EEE 163', icon: '⚡' },
+    { name: 'Others', code: '', icon: '📌' }
   ];
 
   const deliveryOptions = [
@@ -44,7 +45,7 @@ const CreatePost = ({ user }) => {
     setFormData({
       ...formData,
       category: cat.name,
-      courseCode: `${cat.code} - Core Topic`
+      courseCode: cat.code ? `${cat.code} - Core Topic` : ''
     });
   };
 
@@ -156,7 +157,7 @@ const CreatePost = ({ user }) => {
                   type="text"
                   name="courseCode"
                   className="form-input"
-                  placeholder="e.g. CSE 221 - Algorithms"
+                  placeholder={formData.category === 'Others' ? 'e.g. Machine Learning - Neural Networks' : 'e.g. CSE 221 - Algorithms'}
                   value={formData.courseCode}
                   onChange={handleChange}
                 />

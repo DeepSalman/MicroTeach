@@ -8,6 +8,7 @@ router.get('/', async (req, res) => {
     const query = `
       SELECT
         p.post_id,
+        p.user_id,
         p.category,
         p.course_code,
         p.title,

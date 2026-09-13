@@ -6,6 +6,8 @@ import Register from './Register';
 import CreatePost from './CreatePost';
 import UserList from './UserList';
 import Skills from './Skills';
+import Profile from './Profile';
+import EditProfile from './EditProfile';
 
 // Dashboard - shown after login
 const Dashboard = ({ user, onLogout }) => {
@@ -34,6 +36,10 @@ function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+  };
+
+  const handleProfileUpdate = (updatedUser) => {
+    setCurrentUser(updatedUser);
   };
 
   return (
@@ -87,6 +93,30 @@ function App() {
           element={
             currentUser ? (
               <Dashboard user={currentUser} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+
+        {/* Profile page - protected route */}
+        <Route 
+          path="/profile" 
+          element={
+            currentUser ? (
+              <Profile user={currentUser} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+
+        {/* Edit Profile page - protected route */}
+        <Route 
+          path="/edit-profile" 
+          element={
+            currentUser ? (
+              <EditProfile user={currentUser} onProfileUpdate={handleProfileUpdate} />
             ) : (
               <Navigate to="/login" />
             )

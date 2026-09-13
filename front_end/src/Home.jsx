@@ -105,6 +105,13 @@ const Home = ({ user, onLogout }) => {
                       <div className="dropdown-user-email">{user.email}</div>
                     </div>
                     <div className="dropdown-divider"></div>
+                    <button className="dropdown-item" onClick={() => { setDropdownOpen(false); navigate('/profile'); }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="12" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Your Profile
+                    </button>
                     <button className="dropdown-item logout" onClick={handleLogout}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -211,6 +218,7 @@ const Home = ({ user, onLogout }) => {
           ) : (
             posts.map((post) => {
               const statusBadge = getStatusBadge(post.status);
+              const isOwnPost = user && String(post.user_id) === String(user.user_id);
               return (
                 <div key={post.post_id} className="card">
                   <div className="card-header">
@@ -232,7 +240,11 @@ const Home = ({ user, onLogout }) => {
                   </div>
                   <div className="card-bottom">
                     <div className="price"><strong>৳{post.bounty}</strong> / session</div>
-                    <button className="apply-btn">Apply Now</button>
+                    {isOwnPost ? (
+                      <span className="your-post-badge">Your Post</span>
+                    ) : (
+                      <button className="apply-btn">Apply Now</button>
+                    )}
                   </div>
                 </div>
               );
