@@ -78,3 +78,12 @@ Login with any of these emails. Password for all: **`password123`**
 | nusrat@bracu.ac.bd | Student & Tutor |
 | imran@bracu.ac.bd | Student |
 | fatima@bracu.ac.bd | Tutor |
+
+## How the App is Connected
+
+| Connection | File | What it does |
+|-----------|------|-------------|
+| Frontend → Backend | `front_end/src/api.js` | Sends HTTP requests to `http://localhost:3001/api` |
+| Backend routes | `back_end/server.js` | Maps URLs like `/api/users` to route files |
+| Backend → Database | `back_end/db.js` | Connects to MySQL using credentials from `.env` |
+| DB credentials | `back_end/.env` | Stores host, user, password, database name |
