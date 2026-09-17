@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 
 // 2. Register a new user
 router.post('/register', async (req, res) => {
-  const { full_name, email, password, role, department } = req.body;
+  const { full_name, email, password, department } = req.body;
 
   if (!full_name || !email || !password) {
     return res.status(400).json({ message: 'Full name, email, and password are required.' });
@@ -46,10 +46,28 @@ router.post('/register', async (req, res) => {
       full_name,
       email,
       hashedPassword,
-      role || 'student',
+      'student',
       department || null
     ]);
     res.status(201).json({ message: 'User registered successfully!', userId: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Find teachers available in the student's department.
+router.get('/teachers', async (req, res) => {
+  try {
+    const query = `
+      SELECT user_id, full_name, email, role, is_verified, department, bio, student_id, created_at
+      FROM Users
+      WHERE role IN ('tutor', 'both')
+        AND (? = '' OR department = ?)
+      ORDER BY is_verified DESC, full_name ASC
+    `;
+    const department = req.query.department || '';
+    const [rows] = await db.query(query, [department, department]);
+    res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -130,6 +148,31 @@ router.put('/profile/:userId', async (req, res) => {
     const [rows] = await db.query(updatedQuery, [req.params.userId]);
 
     res.json({ message: 'Profile updated successfully!', user: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add teaching capability while keeping the account available as a student.
+router.patch('/profile/:userId/become-teacher', async (req, res) => {
+  const { full_name, student_id, department, bio, expertise } = req.body;
+
+  if (!full_name || !student_id || !department || !bio || !expertise) {
+    return res.status(400).json({ message: 'Full name, student ID, department, bio, and expertise are required.' });
+  }
+
+  try {
+    const teacherBio = `Expertise: ${expertise.trim()}\n\n${bio.trim()}`;
+    await db.query(`
+      UPDATE Users
+      SET role = 'both', full_name = ?, student_id = ?, department = ?, bio = ?
+      WHERE user_id = ?
+    `, [full_name.trim(), student_id.trim(), department, teacherBio, req.params.userId]);
+    const [rows] = await db.query(`
+      SELECT user_id, full_name, email, role, is_verified, department, bio, phone, student_id, wallet_balance, created_at
+      FROM Users WHERE user_id = ?
+    `, [req.params.userId]);
+    res.json({ message: 'Teacher profile enabled.', user: rows[0] });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

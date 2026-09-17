@@ -67,6 +67,15 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ message: 'User ID, category, course code, and title are required.' });
   }
 
+  const bountyAmount = Number(bounty);
+  if (!Number.isInteger(bountyAmount) || bountyAmount < 50 || bountyAmount > 2000) {
+    return res.status(400).json({ message: 'Bounty must be a whole amount between 50 and 2000.' });
+  }
+
+  if (deadline && (!Number.isFinite(Date.parse(deadline)) || Date.parse(deadline) <= Date.now())) {
+    return res.status(400).json({ message: 'The deadline must be a valid date and time in the future.' });
+  }
+
   try {
     const query = `
       INSERT INTO Posts
@@ -81,11 +90,35 @@ router.post('/', async (req, res) => {
       title,
       description || '',
       delivery_format || 'live_call',
-      bounty || 0,
+      bountyAmount,
       deadline || null,
       is_urgent || false
     ]);
     res.status(201).json({ message: 'Post created successfully!', postId: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a post only when the requesting user owns it.
+router.delete('/:postId', async (req, res) => {
+  const userId = req.body.user_id;
+
+  if (!userId) {
+    return res.status(400).json({ message: 'User ID is required.' });
+  }
+
+  try {
+    const [result] = await db.query(
+      'DELETE FROM Posts WHERE post_id = ? AND user_id = ?',
+      [req.params.postId, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Post not found or you do not own this post.' });
+    }
+
+    res.json({ message: 'Post deleted successfully.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

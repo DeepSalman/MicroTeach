@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './Home';
 import Login from './Login';
@@ -8,6 +8,10 @@ import UserList from './UserList';
 import Skills from './Skills';
 import Profile from './Profile';
 import EditProfile from './EditProfile';
+import BecomeTeacher from './BecomeTeacher';
+
+const CURRENT_USER_KEY = 'microteach_current_user';
+const ACTIVE_MODE_KEY = 'microteach_active_mode';
 
 // Dashboard - shown after login
 const Dashboard = ({ user, onLogout }) => {
@@ -28,27 +32,63 @@ const Dashboard = ({ user, onLogout }) => {
 };
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const storedUser = localStorage.getItem(CURRENT_USER_KEY);
+
+    if (!storedUser) return null;
+
+    try {
+      return JSON.parse(storedUser);
+    } catch {
+      localStorage.removeItem(CURRENT_USER_KEY);
+      return null;
+    }
+  });
+  const [activeMode, setActiveMode] = useState(() => {
+    const savedMode = localStorage.getItem(ACTIVE_MODE_KEY);
+    if (savedMode) return savedMode;
+    return currentUser?.role === 'tutor' ? 'teacher' : 'student';
+  });
 
   const handleLogin = (userData) => {
     setCurrentUser(userData);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    localStorage.removeItem(CURRENT_USER_KEY);
+    localStorage.removeItem(ACTIVE_MODE_KEY);
   };
 
   const handleProfileUpdate = (updatedUser) => {
     setCurrentUser(updatedUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+  };
+
+  const handleModeChange = (mode) => {
+    setActiveMode(mode);
+    localStorage.setItem(ACTIVE_MODE_KEY, mode);
+  };
+
+  const handleUserUpdate = (updatedUser) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
   };
 
   return (
     <Router>
       <Routes>
-        {/* Landing page - marketplace home, passes user state */}
+        {/* Home page - protected from unauthenticated visitors */}
         <Route 
           path="/" 
-          element={<Home user={currentUser} onLogout={handleLogout} />} 
+          element={
+            currentUser ? (
+              <Home user={currentUser} activeMode={activeMode} onModeChange={handleModeChange} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
         />
 
         {/* Login page */}
@@ -104,7 +144,7 @@ function App() {
           path="/profile" 
           element={
             currentUser ? (
-              <Profile user={currentUser} onLogout={handleLogout} />
+              <Profile user={currentUser} activeMode={activeMode} onModeChange={handleModeChange} />
             ) : (
               <Navigate to="/login" />
             )
@@ -121,6 +161,18 @@ function App() {
               <Navigate to="/login" />
             )
           } 
+        />
+
+        {/* Teacher onboarding - protected route */}
+        <Route
+          path="/become-teacher"
+          element={
+            currentUser ? (
+              <BecomeTeacher user={currentUser} onUserUpdate={handleUserUpdate} onModeChange={handleModeChange} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
       </Routes>
     </Router>

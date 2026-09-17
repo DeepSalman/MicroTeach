@@ -11,7 +11,6 @@ const Register = () => {
     department: '',
     password: '',
     confirmPassword: '',
-    role: 'student',
     agreeTerms: false
   });
   const [error, setError] = useState('');
@@ -68,7 +67,6 @@ const Register = () => {
         full_name: name,
         email: email,
         password: password,
-        role: formData.role,
         department: formData.department
       });
       navigate('/login');

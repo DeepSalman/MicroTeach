@@ -230,74 +230,152 @@
   background: #fef2f2;
 }
 
+.teacher-directory {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.directory-header h2 {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.directory-header p {
+  color: #777;
+  font-size: 14px;
+}
+
+.teacher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.teacher-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+}
+
+.teacher-avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #1a1a2e;
+  color: #fff;
+  font-weight: 700;
+}
+
+.teacher-card h3 {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.teacher-card p,
+.teacher-rating {
+  display: block;
+  font-size: 12px;
+  color: #777;
+}
+
+.teacher-rating {
+  margin-top: 5px;
+  color: #b7791f;
+}
+
+.own-post-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.delete-post-btn {
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  padding: 5px 9px;
+  background: #fff;
+  color: #dc2626;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.delete-post-btn:hover {
+  background: #fef2f2;
+}
+
 .dropdown-item svg {
   flex-shrink: 0;
 }
 
-/* Category Tabs */
-.categories {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 0 32px;
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
-  overflow-x: auto;
-}
-
-.cat-tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 16px 20px 12px;
-  font-size: 12px;
-  color: #666;
-  cursor: pointer;
-  white-space: nowrap;
-  border-bottom: 3px solid transparent;
-  gap: 6px;
-}
-
-.cat-tab:hover {
-  color: #1a1a2e;
-}
-
-.cat-tab.active {
-  color: #1a1a2e;
-  font-weight: 600;
-  border-bottom-color: #1a1a2e;
-}
-
-.cat-tab .cat-icon {
-  font-size: 22px;
-}
-
-.filters-btn {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: 1px solid #ccc;
-  border-radius: 20px;
-  background: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.filters-badge {
-  background: #1a1a2e;
+.become-teacher-header-btn {
+  padding: 9px 14px;
+  border: 1px solid #be185d;
+  border-radius: 8px;
+  background: #be185d;
   color: #fff;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.become-teacher-header-btn:hover {
+  background: #9d174d;
+  border-color: #9d174d;
+}
+
+.mode-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mode-indicator:hover {
+  border-color: #3730a3;
+}
+
+.mode-indicator:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.mode-indicator:disabled:hover {
+  border-color: transparent;
+}
+
+.mode-indicator.teacher {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.mode-indicator.teacher:hover {
+  border-color: #047857;
+}
+
+.mode-indicator.teacher:disabled:hover {
+  border-color: transparent;
+}
+
+.dropdown-mode {
+  margin-top: 8px;
 }
 
 /* Main Content */

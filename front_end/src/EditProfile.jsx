@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserProfile, updateUserProfile } from './api';
 import './EditProfile.css';
@@ -15,17 +15,10 @@ const EditProfile = ({ user, onProfileUpdate }) => {
     department: '',
     bio: '',
     phone: '',
-    student_id: '',
-    role: 'student'
+    student_id: ''
   });
 
-  useEffect(() => {
-    if (user?.user_id) {
-      loadProfile();
-    }
-  }, [user]);
-
-  const loadProfile = async () => {
+  async function loadProfile() {
     try {
       const response = await fetchUserProfile(user.user_id);
       const userData = response.data.user;
@@ -35,15 +28,20 @@ const EditProfile = ({ user, onProfileUpdate }) => {
         department: userData.department || '',
         bio: userData.bio || '',
         phone: userData.phone || '',
-        student_id: userData.student_id || '',
-        role: userData.role || 'student'
+        student_id: userData.student_id || ''
       });
-    } catch (err) {
+    } catch {
       setError('Failed to load profile data.');
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (user?.user_id) {
+      loadProfile();
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -98,12 +96,6 @@ const EditProfile = ({ user, onProfileUpdate }) => {
     'Economics',
     'English',
     'Other'
-  ];
-
-  const roles = [
-    { value: 'student', label: 'Student' },
-    { value: 'tutor', label: 'Peer Tutor' },
-    { value: 'both', label: 'Student & Tutor' }
   ];
 
   if (loading) {
@@ -183,7 +175,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
                   )}
                 </div>
                 <p>{formData.email}</p>
-                <span className="preview-role">{roles.find(r => r.value === formData.role)?.label || 'Student'}</span>
+                <span className="preview-role">{user?.role === 'tutor' ? 'Teacher' : user?.role === 'both' ? 'Student & Teacher' : 'Student'}</span>
               </div>
             </div>
 
@@ -242,25 +234,6 @@ const EditProfile = ({ user, onProfileUpdate }) => {
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </select>
-                </div>
-              </div>
-              <div className="form-grid">
-                <div className="form-field">
-                  <label>Role</label>
-                  <div className="role-options">
-                    {roles.map(r => (
-                      <label key={r.value} className={`role-option ${formData.role === r.value ? 'active' : ''}`}>
-                        <input
-                          type="radio"
-                          name="role"
-                          value={r.value}
-                          checked={formData.role === r.value}
-                          onChange={handleChange}
-                        />
-                        <span>{r.label}</span>
-                      </label>
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>

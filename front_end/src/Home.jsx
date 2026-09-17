@@ -1,14 +1,48 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchPosts } from './api';
+import { deletePost, fetchPosts, fetchTeachers } from './api';
 import './Home.css';
 
-const Home = ({ user, onLogout }) => {
+const formatDeadline = (deadline) => {
+  if (!deadline || !deadline.includes('T')) return deadline;
+
+  const date = new Date(deadline);
+  return Number.isNaN(date.getTime())
+    ? deadline
+    : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+};
+
+const Home = ({ user, activeMode, onModeChange, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [teachers, setTeachers] = useState([]);
+  const [teacherLoading, setTeacherLoading] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+
+  async function loadPosts() {
+    try {
+      const response = await fetchPosts();
+      setPosts(response.data);
+    } catch (err) {
+      console.error('Failed to load posts:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadTeachers() {
+    setTeacherLoading(true);
+    try {
+      const response = await fetchTeachers(user.department);
+      setTeachers(response.data);
+    } catch (err) {
+      console.error('Failed to load teachers:', err);
+    } finally {
+      setTeacherLoading(false);
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -24,14 +58,20 @@ const Home = ({ user, onLogout }) => {
     loadPosts();
   }, []);
 
-  const loadPosts = async () => {
+  useEffect(() => {
+    if (activeMode === 'student') {
+      loadTeachers();
+    }
+  }, [activeMode, user.department]);
+
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm('Delete this post?')) return;
+
     try {
-      const response = await fetchPosts();
-      setPosts(response.data);
+      await deletePost(postId, user.user_id);
+      setPosts((currentPosts) => currentPosts.filter((post) => post.post_id !== postId));
     } catch (err) {
-      console.error('Failed to load posts:', err);
-    } finally {
-      setLoading(false);
+      console.error('Failed to delete post:', err);
     }
   };
 
@@ -85,6 +125,19 @@ const Home = ({ user, onLogout }) => {
         <div className="header-actions">
           <button className="icon-btn">&#9734;</button>
           <button className="icon-btn">&#9776;</button>
+          {user.role === 'student' && (
+            <button className="become-teacher-header-btn" onClick={() => navigate('/become-teacher')}>
+              Become a Teacher
+            </button>
+          )}
+          <button
+            className={`mode-indicator ${activeMode}`}
+            onClick={user.role === 'both' ? () => onModeChange(activeMode === 'student' ? 'teacher' : 'student') : undefined}
+            title={user.role === 'both' ? 'Switch profile' : 'Current profile'}
+            disabled={user.role !== 'both'}
+          >
+            {activeMode === 'teacher' ? 'Teacher Profile' : 'Student Profile'}
+          </button>
           
           {/* Avatar with Dropdown */}
           <div className="avatar-wrapper" ref={dropdownRef}>
@@ -103,6 +156,9 @@ const Home = ({ user, onLogout }) => {
                     <div className="dropdown-user-info">
                       <div className="dropdown-user-name">{user.full_name}</div>
                       <div className="dropdown-user-email">{user.email}</div>
+                      <span className={`mode-indicator dropdown-mode ${activeMode}`}>
+                        {activeMode === 'teacher' ? 'Teacher Profile' : 'Student Profile'}
+                      </span>
                     </div>
                     <div className="dropdown-divider"></div>
                     <button className="dropdown-item" onClick={() => { setDropdownOpen(false); navigate('/profile'); }}>
@@ -112,6 +168,16 @@ const Home = ({ user, onLogout }) => {
                       </svg>
                       Your Profile
                     </button>
+                    {user.role === 'student' && (
+                      <button className="dropdown-item" onClick={() => { setDropdownOpen(false); navigate('/become-teacher'); }}>
+                        Become a Teacher
+                      </button>
+                    )}
+                    {user.role === 'both' && (
+                      <button className="dropdown-item" onClick={() => { setDropdownOpen(false); onModeChange(activeMode === 'student' ? 'teacher' : 'student'); }}>
+                        Switch to {activeMode === 'student' ? 'Teacher' : 'Student'} Profile
+                      </button>
+                    )}
                     <button className="dropdown-item logout" onClick={handleLogout}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -148,56 +214,12 @@ const Home = ({ user, onLogout }) => {
         </div>
       </header>
 
-      {/* Categories */}
-      <nav className="categories">
-        <div className="cat-tab active">
-          <span className="cat-icon">&#9783;</span>
-          Algorithms &amp; DS
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#8721;</span>
-          Calculus &amp; Math
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9881;</span>
-          Physics &amp; Lab
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9783;</span>
-          Object-Oriented
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9881;</span>
-          System Architecture
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9889;</span>
-          Circuits &amp; EEE
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#128161;</span>
-          Machine Learning
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9201;</span>
-          Cram Sessions
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#128190;</span>
-          Database...
-        </div>
-        <button className="filters-btn">
-          &#9881; Filters
-          <span className="filters-badge">3</span>
-        </button>
-      </nav>
-
       {/* Main Content */}
       <main className="home-main">
         <div className="main-header">
           <div>
-            <h1>My Applications &amp; Campus Engagements</h1>
-            <p className="subtitle">Manage live peer-tutoring calls, pending solution pitches, and milestone payouts.</p>
+            <h1>{activeMode === 'student' ? 'Student Profile Home' : 'Tutoring Opportunities'}</h1>
+            <p className="subtitle">{activeMode === 'student' ? 'Manage your academic requests and find highly rated teachers in your department.' : 'Review student requests and apply to teach the topics you know best.'}</p>
           </div>
           {user && (
             <button className="create-post-btn" onClick={() => navigate('/create-post')}>
@@ -213,10 +235,10 @@ const Home = ({ user, onLogout }) => {
         <div className="cards">
           {loading ? (
             <div className="loading-message">Loading posts...</div>
-          ) : posts.length === 0 ? (
-            <div className="empty-message">No posts yet. Create the first one!</div>
+          ) : (activeMode === 'student' ? posts.filter((post) => String(post.user_id) === String(user.user_id)).length === 0 : posts.length === 0) ? (
+            <div className="empty-message">{activeMode === 'student' ? 'You have not created any posts yet.' : 'No posts yet. Create the first one!'}</div>
           ) : (
-            posts.map((post) => {
+            (activeMode === 'student' ? posts.filter((post) => String(post.user_id) === String(user.user_id)) : posts).map((post) => {
               const statusBadge = getStatusBadge(post.status);
               const isOwnPost = user && String(post.user_id) === String(user.user_id);
               return (
@@ -235,13 +257,18 @@ const Home = ({ user, onLogout }) => {
                   <div className="card-footer-meta">
                     <div>{post.course_code} &#9733; {post.author_name}</div>
                     <div>Posted by {post.author_name} &middot; {post.author_department || 'Dept'}</div>
-                    {post.deadline && <div className="time">⏰ Due: {post.deadline}</div>}
+                    {post.deadline && <div className="time">⏰ Due: {formatDeadline(post.deadline)}</div>}
                     {post.is_urgent && <div className="due">🔥 High Urgency</div>}
                   </div>
                   <div className="card-bottom">
                     <div className="price"><strong>৳{post.bounty}</strong> / session</div>
                     {isOwnPost ? (
-                      <span className="your-post-badge">Your Post</span>
+                      <div className="own-post-actions">
+                        <span className="your-post-badge">Your Post</span>
+                        {activeMode === 'student' && (
+                          <button className="delete-post-btn" onClick={() => handleDeletePost(post.post_id)}>Delete</button>
+                        )}
+                      </div>
                     ) : (
                       <button className="apply-btn">Apply Now</button>
                     )}
@@ -251,6 +278,35 @@ const Home = ({ user, onLogout }) => {
             })
           )}
         </div>
+
+        {activeMode === 'student' && (
+          <section className="teacher-directory">
+            <div className="directory-header">
+              <div>
+                <h2>Teachers in {user.department || 'your department'}</h2>
+                <p>Browse verified teachers available to help with your coursework.</p>
+              </div>
+            </div>
+            {teacherLoading ? (
+              <div className="loading-message">Loading teachers...</div>
+            ) : teachers.length === 0 ? (
+              <div className="empty-message">No teachers are listed in this department yet.</div>
+            ) : (
+              <div className="teacher-grid">
+                {teachers.map((teacher) => (
+                  <div className="teacher-card" key={teacher.user_id}>
+                    <div className="teacher-avatar">{teacher.full_name.charAt(0).toUpperCase()}</div>
+                    <div>
+                      <h3>{teacher.full_name}</h3>
+                      <p>{teacher.department || 'Campus teacher'}</p>
+                      <span className="teacher-rating">★ Highly rated teacher</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Show More */}
         <div className="show-more">

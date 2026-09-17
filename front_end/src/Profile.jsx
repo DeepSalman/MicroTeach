@@ -1,21 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile } from './api';
+import { deletePost, fetchTeachers, fetchUserProfile } from './api';
 import './Profile.css';
 
-const Profile = ({ user, onLogout }) => {
+const Profile = ({ user, activeMode, onModeChange }) => {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [teachers, setTeachers] = useState([]);
 
-  useEffect(() => {
-    if (user?.user_id) {
-      loadProfile();
-    }
-  }, [user]);
-
-  const loadProfile = async () => {
+  async function loadProfile() {
     try {
       const response = await fetchUserProfile(user.user_id);
       setProfileData(response.data);
@@ -25,7 +20,35 @@ const Profile = ({ user, onLogout }) => {
     } finally {
       setLoading(false);
     }
+  }
+
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm('Delete this post?')) return;
+
+    try {
+      await deletePost(postId, user.user_id);
+      setProfileData((current) => ({
+        ...current,
+        posts: current.posts.filter((post) => post.post_id !== postId)
+      }));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not delete this post.');
+    }
   };
+
+  useEffect(() => {
+    if (user?.user_id) {
+      loadProfile();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (activeMode === 'student') {
+      fetchTeachers(user.department)
+        .then((response) => setTeachers(response.data))
+        .catch(() => setTeachers([]));
+    }
+  }, [activeMode, user.department]);
 
   const getDeliveryLabel = (format) => {
     const labels = {
@@ -84,11 +107,6 @@ const Profile = ({ user, onLogout }) => {
   const phone = userData?.phone || '';
   const studentId = userData?.student_id || '';
   const role = userData?.role || user?.role || 'student';
-  const memberSince = userData?.created_at ? new Date(userData.created_at).getFullYear() : '2025';
-  const walletBalance = userData?.wallet_balance || 0;
-
-  const roleLabels = { student: 'Student', tutor: 'Peer Tutor', both: 'Student & Tutor' };
-
   return (
     <div className="profile-page">
       {/* Top Banner */}
@@ -106,6 +124,14 @@ const Profile = ({ user, onLogout }) => {
         </div>
         <div className="header-actions">
           <button className="icon-btn" onClick={() => navigate('/')}>Home</button>
+          <button
+            className={`mode-indicator ${activeMode}`}
+            onClick={user.role === 'both' ? () => onModeChange(activeMode === 'student' ? 'teacher' : 'student') : undefined}
+            title={user.role === 'both' ? 'Switch profile' : 'Current profile'}
+            disabled={user.role !== 'both'}
+          >
+            {activeMode === 'teacher' ? 'Teacher Profile' : 'Student Profile'}
+          </button>
           <div className="avatar">
             {displayName.charAt(0).toUpperCase()}
           </div>
@@ -136,7 +162,7 @@ const Profile = ({ user, onLogout }) => {
               <div className="hero-info">
                 <div className="hero-name-row">
                   <h1>{displayName}</h1>
-                  <span className="verified-badge">{roleLabels[role] || 'Student'}</span>
+                  <span className="verified-badge">{activeMode === 'teacher' ? 'Teacher Profile' : 'Student Profile'}</span>
                   {studentId && <span className="class-badge">ID: {studentId}</span>}
                 </div>
                 {bio && <p className="hero-role">{bio}</p>}
@@ -168,6 +194,14 @@ const Profile = ({ user, onLogout }) => {
               </div>
             </div>
             <div className="hero-right">
+              {role === 'student' && (
+                <button className="btn-primary" onClick={() => navigate('/become-teacher')}>Become a Teacher</button>
+              )}
+              {role === 'both' && (
+                <button className="btn-secondary-sm" onClick={() => onModeChange(activeMode === 'student' ? 'teacher' : 'student')}>
+                  Switch to {activeMode === 'student' ? 'Teacher' : 'Student'} Profile
+                </button>
+              )}
               <button className="btn-primary" onClick={() => navigate('/edit-profile')}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -191,7 +225,7 @@ const Profile = ({ user, onLogout }) => {
               <div className="section-icon-box primary">post_add</div>
               <div>
                 <div className="section-title-row">
-                  <h2>Posted Requests</h2>
+                  <h2>{activeMode === 'teacher' ? 'Teaching Activity' : 'My Posted Requests'}</h2>
                   <span className="count-badge primary">{posts?.length || 0} Active Posts</span>
                 </div>
                 <p>Academic problems and course questions requested by {displayName}</p>
@@ -228,7 +262,7 @@ const Profile = ({ user, onLogout }) => {
                       <span className="format-tag">{getDeliveryLabel(post.delivery_format)}</span>
                       <div className="post-card-actions">
                         <button className="btn-secondary-sm">View Details</button>
-                        <button className="btn-outline-sm">Close Post</button>
+                        <button className="btn-outline-sm" onClick={() => handleDeletePost(post.post_id)}>Delete Post</button>
                       </div>
                     </div>
                   </div>
@@ -242,6 +276,35 @@ const Profile = ({ user, onLogout }) => {
             )}
           </div>
         </section>
+
+        {activeMode === 'student' && (
+          <section className="profile-section">
+            <div className="section-header">
+              <div className="section-header-left">
+                <div className="section-icon-box secondary">school</div>
+                <div>
+                  <div className="section-title-row">
+                    <h2>Teachers in {department || 'Your Department'}</h2>
+                    <span className="count-badge secondary">{teachers.length} Teachers</span>
+                  </div>
+                  <p>Browse teachers available to help with your coursework.</p>
+                </div>
+              </div>
+            </div>
+            <div className="teacher-profile-grid">
+              {teachers.length > 0 ? teachers.map((teacher) => (
+                <div className="teacher-profile-card" key={teacher.user_id}>
+                  <div className="teacher-profile-avatar">{teacher.full_name.charAt(0).toUpperCase()}</div>
+                  <div>
+                    <h3>{teacher.full_name}</h3>
+                    <p>{teacher.bio || 'Verified campus teacher'}</p>
+                    <span>★ Highly rated teacher</span>
+                  </div>
+                </div>
+              )) : <div className="empty-state"><p>No teachers are listed in this department yet.</p></div>}
+            </div>
+          </section>
+        )}
 
         {/* Applied Requests Section */}
         <section className="profile-section">

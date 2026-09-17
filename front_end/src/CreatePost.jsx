@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPost } from './api';
 import './CreatePost.css';
 
+const getMinimumDeadline = () => {
+  const now = new Date();
+  const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return localDateTime.toISOString().slice(0, 16);
+};
+
 const CreatePost = ({ user }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    category: 'Algorithms & DS',
-    courseCode: 'CSE 221 - Algorithms & Data Structures',
+    courseName: '',
+    courseCode: '',
     title: '',
     description: '',
     deliveryFormat: 'live_call',
@@ -17,15 +23,6 @@ const CreatePost = ({ user }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const categories = [
-    { name: 'Algorithms & DS', code: 'CSE 221', icon: '📊' },
-    { name: 'Calculus & Math', code: 'MTH 201', icon: '∑' },
-    { name: 'Physics & Lab', code: 'PHY 102', icon: '⚛' },
-    { name: 'System Architecture', code: 'CSE 331', icon: '⚙' },
-    { name: 'Circuits & EEE', code: 'EEE 163', icon: '⚡' },
-    { name: 'Others', code: '', icon: '📌' }
-  ];
 
   const deliveryOptions = [
     { id: 'live_call', name: 'Live Micro-Call', desc: '15-30 min interactive whiteboard via Google Meet or Discord voice.', badge: 'Google Meet (30m)', icon: '📹', tag: 'Fastest resolution' },
@@ -41,14 +38,6 @@ const CreatePost = ({ user }) => {
     });
   };
 
-  const handleCategorySelect = (cat) => {
-    setFormData({
-      ...formData,
-      category: cat.name,
-      courseCode: cat.code ? `${cat.code} - Core Topic` : ''
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -57,8 +46,13 @@ const CreatePost = ({ user }) => {
       return;
     }
 
-    if (!formData.courseCode.trim()) {
-      setError('Please enter a course code.');
+    if (!formData.courseName.trim() || !formData.courseCode.trim()) {
+      setError('Please enter a course name and course code.');
+      return;
+    }
+
+    if (formData.deadline && new Date(formData.deadline).getTime() <= Date.now()) {
+      setError('The deadline must be in the future.');
       return;
     }
 
@@ -68,7 +62,7 @@ const CreatePost = ({ user }) => {
     try {
       await createPost({
         user_id: user.user_id,
-        category: formData.category,
+        category: formData.courseName,
         course_code: formData.courseCode,
         title: formData.title,
         description: formData.description,
@@ -117,55 +111,44 @@ const CreatePost = ({ user }) => {
 
         <form onSubmit={handleSubmit} className="create-post-form">
           
-          {/* Section 1: Category */}
-          <div className="form-section">
-            <div className="section-header">
-              <label>
-                <span className="section-icon">📁</span>
-                Discipline & Domain
-              </label>
-              <span className="step-label">Step 1 of 5</span>
-            </div>
-            <div className="category-pills">
-              {categories.map((cat) => (
-                <button
-                  key={cat.name}
-                  type="button"
-                  className={`cat-pill ${formData.category === cat.name ? 'active' : ''}`}
-                  onClick={() => handleCategorySelect(cat)}
-                >
-                  <span>{cat.icon}</span>
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Section 2: Course & Title */}
+          {/* Section 1: Course Details */}
           <div className="form-section">
             <div className="section-header">
               <label>
                 <span className="section-icon">🎓</span>
-                Course Code & Problem Headline
+                Course Details & Topic
               </label>
-              <span className="step-label">Step 2 of 5</span>
+              <span className="step-label">Step 1 of 4</span>
             </div>
             <div className="form-grid">
               <div className="form-field">
-                <label className="field-label">Course Code & Module</label>
+                <label className="field-label">Course Code</label>
                 <input
                   type="text"
                   name="courseCode"
                   className="form-input"
-                  placeholder={formData.category === 'Others' ? 'e.g. Machine Learning - Neural Networks' : 'e.g. CSE 221 - Algorithms'}
+                  placeholder="e.g. CSE 221"
                   value={formData.courseCode}
                   onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Course Name</label>
+                <input
+                  type="text"
+                  name="courseName"
+                  className="form-input"
+                  placeholder="e.g. Algorithms and Data Structures"
+                  value={formData.courseName}
+                  onChange={handleChange}
+                  required
                 />
               </div>
             </div>
             <div className="form-field">
               <div className="field-label-row">
-                <label className="field-label">Problem Title / Core Roadblock</label>
+                <label className="field-label">Topic Name</label>
                 <span className="char-count">{formData.title.length} / 120 chars</span>
               </div>
               <input
@@ -173,7 +156,7 @@ const CreatePost = ({ user }) => {
                 name="title"
                 className="form-input"
                 maxLength="120"
-                placeholder="Summarize your exact bottleneck clearly..."
+                placeholder="e.g. Binary Search Tree Traversal"
                 value={formData.title}
                 onChange={handleChange}
                 required
@@ -188,7 +171,7 @@ const CreatePost = ({ user }) => {
                 <span className="section-icon">📝</span>
                 Detailed Roadblock Description
               </label>
-              <span className="step-label">Step 3 of 5</span>
+              <span className="step-label">Step 2 of 4</span>
             </div>
             <div className="form-field">
               <textarea
@@ -209,7 +192,7 @@ const CreatePost = ({ user }) => {
                 <span className="section-icon">💬</span>
                 Preferred Resolution Format
               </label>
-              <span className="step-label">Step 4 of 5</span>
+              <span className="step-label">Step 3 of 4</span>
             </div>
             <div className="delivery-options">
               {deliveryOptions.map((opt) => (
@@ -243,20 +226,20 @@ const CreatePost = ({ user }) => {
                 <span className="section-icon">💰</span>
                 Bounty Allocation & Deadline
               </label>
-              <span className="step-label">Step 5 of 5</span>
+              <span className="step-label">Step 4 of 4</span>
             </div>
             <div className="form-grid">
               <div className="form-field">
                 <label className="field-label">Target Resolution Deadline</label>
                 <input
-                  type="text"
+                  type="datetime-local"
                   name="deadline"
                   className="form-input"
-                  placeholder="e.g. Today at 10:00 PM"
+                  min={getMinimumDeadline()}
                   value={formData.deadline}
                   onChange={handleChange}
                 />
-                <span className="field-hint">Tutors must deliver before this deadline to claim payout.</span>
+                <span className="field-hint">Choose the date and time tutors must deliver by.</span>
               </div>
               <div className="form-field">
                 <label className="field-label">Escrow Bounty (৳ BDT)</label>
@@ -266,14 +249,14 @@ const CreatePost = ({ user }) => {
                     type="number"
                     name="bounty"
                     className="form-input bounty-field"
-                    min="100"
-                    max="5000"
-                    step="50"
+                    min="50"
+                    max="2000"
+                    step="1"
                     value={formData.bounty}
                     onChange={handleChange}
                   />
                 </div>
-                <span className="field-hint">Typical accepted bounty: ৳250 – ৳450</span>
+                <span className="field-hint">Choose any whole amount from ৳50 to ৳2000.</span>
               </div>
             </div>
 

@@ -107,6 +107,93 @@
   background: #f5f5f5;
 }
 
+.profile-page .mode-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.profile-page .mode-indicator:hover {
+  border-color: #3730a3;
+}
+
+.profile-page .mode-indicator:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.profile-page .mode-indicator:disabled:hover {
+  border-color: transparent;
+}
+
+.profile-page .mode-indicator.teacher {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.profile-page .mode-indicator.teacher:hover {
+  border-color: #047857;
+}
+
+.profile-page .mode-indicator.teacher:disabled:hover {
+  border-color: transparent;
+}
+
+.teacher-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.teacher-profile-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+}
+
+.teacher-profile-avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #1a1a2e;
+  color: #fff;
+  font-weight: 700;
+}
+
+.teacher-profile-card h3 {
+  font-size: 15px;
+  margin-bottom: 5px;
+}
+
+.teacher-profile-card p {
+  color: #777;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.teacher-profile-card span {
+  display: block;
+  margin-top: 7px;
+  color: #b7791f;
+  font-size: 12px;
+}
+
 .profile-page .avatar {
   width: 40px;
   height: 40px;
