@@ -59,7 +59,7 @@ router.post('/register', async (req, res) => {
 router.get('/teachers', async (req, res) => {
   try {
     const query = `
-      SELECT user_id, full_name, email, role, is_verified, department, bio, student_id, created_at
+      SELECT user_id, full_name, email, role, is_verified, department, bio, expertise, student_id, created_at
       FROM Users
       WHERE role IN ('tutor', 'both')
         AND (? = '' OR department = ?)
@@ -86,6 +86,7 @@ router.get('/profile/:userId', async (req, res) => {
         wallet_balance,
         department,
         bio,
+        expertise,
         phone,
         student_id,
         created_at
@@ -127,7 +128,7 @@ router.get('/profile/:userId', async (req, res) => {
 
 // 4. Update user profile
 router.put('/profile/:userId', async (req, res) => {
-  const { full_name, department, bio, phone, student_id } = req.body;
+  const { full_name, department, bio, expertise, phone, student_id } = req.body;
 
   if (!full_name) {
     return res.status(400).json({ message: 'Full name is required.' });
@@ -136,13 +137,13 @@ router.put('/profile/:userId', async (req, res) => {
   try {
     const query = `
       UPDATE Users
-      SET full_name = ?, department = ?, bio = ?, phone = ?, student_id = ?
+      SET full_name = ?, department = ?, bio = ?, expertise = ?, phone = ?, student_id = ?
       WHERE user_id = ?
     `;
-    await db.query(query, [full_name, department || null, bio || null, phone || null, student_id || null, req.params.userId]);
+    await db.query(query, [full_name, department || null, bio || null, expertise || null, phone || null, student_id || null, req.params.userId]);
 
     const updatedQuery = `
-      SELECT user_id, full_name, email, role, is_verified, department, bio, phone, student_id, wallet_balance, created_at
+      SELECT user_id, full_name, email, role, is_verified, department, bio, expertise, phone, student_id, wallet_balance, created_at
       FROM Users WHERE user_id = ?
     `;
     const [rows] = await db.query(updatedQuery, [req.params.userId]);
@@ -162,14 +163,14 @@ router.patch('/profile/:userId/become-teacher', async (req, res) => {
   }
 
   try {
-    const teacherBio = `Expertise: ${expertise.trim()}\n\n${bio.trim()}`;
+    const teacherBio = bio.trim();
     await db.query(`
       UPDATE Users
-      SET role = 'both', full_name = ?, student_id = ?, department = ?, bio = ?
+      SET role = 'both', full_name = ?, student_id = ?, department = ?, bio = ?, expertise = ?
       WHERE user_id = ?
-    `, [full_name.trim(), student_id.trim(), department, teacherBio, req.params.userId]);
+    `, [full_name.trim(), student_id.trim(), department, teacherBio, expertise.trim(), req.params.userId]);
     const [rows] = await db.query(`
-      SELECT user_id, full_name, email, role, is_verified, department, bio, phone, student_id, wallet_balance, created_at
+      SELECT user_id, full_name, email, role, is_verified, department, bio, expertise, phone, student_id, wallet_balance, created_at
       FROM Users WHERE user_id = ?
     `, [req.params.userId]);
     res.json({ message: 'Teacher profile enabled.', user: rows[0] });
@@ -198,6 +199,7 @@ router.post('/login', async (req, res) => {
         bio,
         phone,
         student_id,
+        expertise,
         password
       FROM Users
       WHERE email = ?

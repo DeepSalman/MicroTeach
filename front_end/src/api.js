@@ -16,7 +16,18 @@ export const addSkill = (skillData) => API.post("/skills", skillData);
 export const fetchSessions = () => API.get("/sessions");
 export const createSession = (sessionData) => API.post("/sessions", sessionData);
 
-export const fetchPosts = () => API.get("/posts");
+export const fetchPosts = (userId) => API.get("/posts", { params: { user_id: userId } });
 export const createPost = (postData) => API.post("/posts", postData);
 export const deletePost = (postId, userId) => API.delete(`/posts/${postId}`, { data: { user_id: userId } });
 export const updatePostStatus = (postId, status) => API.patch(`/posts/${postId}/status`, { status });
+export const fetchPostDetails = (postId, userId) => API.get(`/posts/${postId}`, { params: { user_id: userId } });
+export const applyToPost = (postId, userId) => API.post(`/posts/${postId}/applications`, { user_id: userId });
+export const acceptPostApplication = (postId, applicationId, userId) => API.patch(
+	`/posts/${postId}/applications/${applicationId}/accept`,
+	{ user_id: userId }
+);
+export const addPostComment = (postId, userId, commentText, parentCommentId = null) => API.post(`/posts/${postId}/comments`, {
+	user_id: userId,
+	comment_text: commentText,
+	parent_comment_id: parentCommentId
+});

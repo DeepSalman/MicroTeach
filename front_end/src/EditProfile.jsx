@@ -14,6 +14,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
     email: '',
     department: '',
     bio: '',
+    expertise: '',
     phone: '',
     student_id: ''
   });
@@ -27,6 +28,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
         email: userData.email || '',
         department: userData.department || '',
         bio: userData.bio || '',
+        expertise: userData.expertise || '',
         phone: userData.phone || '',
         student_id: userData.student_id || ''
       });
@@ -64,6 +66,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
         full_name: formData.full_name,
         department: formData.department,
         bio: formData.bio,
+        expertise: formData.expertise,
         phone: formData.phone,
         student_id: formData.student_id
       });
@@ -260,6 +263,17 @@ const EditProfile = ({ user, onProfileUpdate }) => {
             <div className="edit-section">
               <h3>About You</h3>
               <div className="form-field full-width">
+                <label>Teaching expertise</label>
+                <input
+                  type="text"
+                  name="expertise"
+                  value={formData.expertise}
+                  onChange={handleChange}
+                  placeholder="e.g. CSE 221, Data Structures, Algorithms"
+                />
+                <span className="field-hint">List the courses or subjects you can help with.</span>
+              </div>
+              <div className="form-field full-width">
                 <label>Bio</label>
                 <textarea
                   name="bio"
@@ -267,7 +281,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
                   onChange={handleChange}
                   rows="4"
                   maxLength="500"
-                  placeholder="Tell other students about your expertise, courses you've completed, and how you can help..."
+                  placeholder="Briefly describe your experience, teaching style, and how you help students..."
                 />
                 <span className="field-hint">{formData.bio.length} / 500 characters</span>
               </div>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { deletePost, fetchPosts, fetchTeachers } from './api';
+import { acceptPostApplication, addPostComment, applyToPost, deletePost, fetchPostDetails, fetchPosts, fetchTeachers } from './api';
 import './Home.css';
 
 const formatDeadline = (deadline) => {
@@ -12,18 +12,29 @@ const formatDeadline = (deadline) => {
     : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 };
 
+const hasApplied = (post) => Number(post?.has_applied) === 1;
+
 const Home = ({ user, activeMode, onModeChange, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [teachers, setTeachers] = useState([]);
   const [teacherLoading, setTeacherLoading] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const [commentText, setCommentText] = useState('');
+  const [replyText, setReplyText] = useState('');
+  const [replyTo, setReplyTo] = useState(null);
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [acceptLoading, setAcceptLoading] = useState(null);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
   async function loadPosts() {
     try {
-      const response = await fetchPosts();
+      const response = await fetchPosts(user?.user_id);
       setPosts(response.data);
     } catch (err) {
       console.error('Failed to load posts:', err);
@@ -55,8 +66,10 @@ const Home = ({ user, activeMode, onModeChange, onLogout }) => {
   }, []);
 
   useEffect(() => {
-    loadPosts();
-  }, []);
+    if (user?.user_id) {
+      loadPosts();
+    }
+  }, [user?.user_id]);
 
   useEffect(() => {
     if (activeMode === 'student') {
@@ -80,6 +93,120 @@ const Home = ({ user, activeMode, onModeChange, onLogout }) => {
     if (onLogout) onLogout();
   };
 
+  const openPostDetails = async (post) => {
+    setSelectedPost(post);
+    setCommentText('');
+    setReplyText('');
+    setReplyTo(null);
+    setDetailError('');
+    setDetailLoading(true);
+    try {
+      const response = await fetchPostDetails(post.post_id, user?.user_id);
+      setSelectedPost({
+        ...response.data,
+        application_count: Math.max(
+          Number(response.data.application_count) || 0,
+          Number(post.application_count) || 0
+        ),
+        has_applied: Number(response.data.has_applied) === 1 || hasApplied(post) ? 1 : 0
+      });
+    } catch (err) {
+      setDetailError('Could not load the full post details.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleApply = async (post = selectedPost) => {
+    if (!post || hasApplied(post)) return;
+    setApplyLoading(true);
+    try {
+      const response = await applyToPost(post.post_id, user.user_id);
+      const updatedPost = { ...post, application_count: response.data.application_count, has_applied: 1 };
+      setSelectedPost((current) => current?.post_id === post.post_id ? { ...current, ...updatedPost } : current);
+      setPosts((currentPosts) => currentPosts.map((post) => (
+        post.post_id === updatedPost.post_id
+          ? updatedPost
+          : post
+      )));
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setPosts((currentPosts) => currentPosts.map((currentPost) => (
+          currentPost.post_id === post.post_id ? { ...currentPost, has_applied: 1 } : currentPost
+        )));
+        setSelectedPost((current) => current?.post_id === post.post_id ? { ...current, has_applied: 1 } : current);
+      } else {
+        if (selectedPost?.post_id === post.post_id) {
+          setDetailError(err.response?.data?.message || 'Could not submit your application.');
+        }
+      }
+    } finally {
+      setApplyLoading(false);
+    }
+  };
+
+  const handleAcceptApplication = async (applicationId) => {
+    setAcceptLoading(applicationId);
+    try {
+      const response = await acceptPostApplication(selectedPost.post_id, applicationId, user.user_id);
+      setSelectedPost((current) => ({
+        ...current,
+        status: 'pending',
+        applicants: (current.applicants || []).map((applicant) => (
+          applicant.application_id === applicationId
+            ? response.data.application
+            : { ...applicant, status: applicant.status === 'pending' ? 'rejected' : applicant.status }
+        ))
+      }));
+      setPosts((currentPosts) => currentPosts.map((post) => (
+        post.post_id === selectedPost.post_id ? { ...post, status: 'pending' } : post
+      )));
+    } catch (err) {
+      setDetailError(err.response?.data?.message || 'Could not accept this applicant.');
+    } finally {
+      setAcceptLoading(null);
+    }
+  };
+
+  const handleCommentSubmit = async (event) => {
+    event.preventDefault();
+    if (!commentText.trim()) return;
+
+    setCommentLoading(true);
+    try {
+      const response = await addPostComment(selectedPost.post_id, user.user_id, commentText);
+      setSelectedPost((current) => ({
+        ...current,
+        comments: [...(current.comments || []), response.data]
+      }));
+      setCommentText('');
+    } catch (err) {
+      setDetailError(err.response?.data?.message || 'Could not add your comment.');
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleReplySubmit = async (event, commentId) => {
+    event.preventDefault();
+    if (!replyText.trim()) return;
+
+    setCommentLoading(true);
+    try {
+      const response = await addPostComment(selectedPost.post_id, user.user_id, replyText, commentId);
+      setSelectedPost((current) => ({
+        ...current,
+        comments: [...(current.comments || []), response.data]
+      }));
+      setReplyText('');
+      setReplyTo(null);
+    } catch (err) {
+      setDetailError(err.response?.data?.message || 'Could not add your reply.');
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
   const getDeliveryLabel = (format) => {
     const labels = {
       'live_call': '📹 Google Meet (30m)',
@@ -97,6 +224,39 @@ const Home = ({ user, activeMode, onModeChange, onLogout }) => {
       'closed': { class: 'not-selected', text: 'Closed' }
     };
     return badges[status] || badges['active'];
+  };
+
+  const renderComment = (comment) => {
+    const replies = (selectedPost.comments || []).filter(
+      (reply) => Number(reply.parent_comment_id) === Number(comment.comment_id)
+    );
+
+    return (
+      <div className="comment-thread" key={comment.comment_id}>
+        <div className="comment">
+          <div className="comment-avatar">{comment.author_name.charAt(0).toUpperCase()}</div>
+          <div className="comment-content">
+            <strong>{comment.author_name}</strong>
+            <p>{comment.comment_text}</p>
+            <small>{new Date(comment.created_at).toLocaleString()}</small>
+            <button className="reply-button" type="button" onClick={() => { setReplyTo(comment.comment_id); setReplyText(''); }}>
+              Reply
+            </button>
+            {replyTo === comment.comment_id && (
+              <form className="reply-form" onSubmit={(event) => handleReplySubmit(event, comment.comment_id)}>
+                <input autoFocus value={replyText} onChange={(event) => setReplyText(event.target.value)} placeholder={`Reply to ${comment.author_name}...`} maxLength="500" />
+                <button type="submit" disabled={commentLoading || !replyText.trim()}>Send</button>
+              </form>
+            )}
+          </div>
+        </div>
+        {replies.length > 0 && (
+          <div className="comment-replies">
+            {replies.map((reply) => renderComment(reply))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -242,23 +402,31 @@ const Home = ({ user, activeMode, onModeChange, onLogout }) => {
               const statusBadge = getStatusBadge(post.status);
               const isOwnPost = user && String(post.user_id) === String(user.user_id);
               return (
-                <div key={post.post_id} className="card">
+                <div
+                  key={post.post_id}
+                  className="card"
+                  role="button"
+                  tabIndex="0"
+                  onClick={() => openPostDetails(post)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') openPostDetails(post);
+                  }}
+                >
                   <div className="card-header">
                     <span className={`badge ${statusBadge.class}`}>{statusBadge.text}</span>
                     <span className="course-code">{post.course_code.split(' ')[0]}</span>
-                    <span className="heart">&#9825;</span>
+                    <span className="heart" onClick={(event) => event.stopPropagation()}>&#9825;</span>
                   </div>
-                  <div className="card-subject">{post.category}</div>
+                  <div className="card-kicker">{post.category} <span>/</span> {post.course_code}</div>
                   <div className="card-title">{post.title}</div>
-                  <div className="card-meta">
+                  <div className="card-meta card-highlights">
                     <span>{getDeliveryLabel(post.delivery_format)}</span>
-                    <span className="funded">100% Funded</span>
+                    <span className="applications">{post.application_count || 0} applied</span>
                   </div>
                   <div className="card-footer-meta">
-                    <div>{post.course_code} &#9733; {post.author_name}</div>
-                    <div>Posted by {post.author_name} &middot; {post.author_department || 'Dept'}</div>
-                    {post.deadline && <div className="time">⏰ Due: {formatDeadline(post.deadline)}</div>}
-                    {post.is_urgent && <div className="due">🔥 High Urgency</div>}
+                    <div className="card-author">Posted by <strong>{post.author_name}</strong> <span>· {post.author_department || 'Dept'}</span></div>
+                    {post.deadline && <div className="time"><span>Due</span> {formatDeadline(post.deadline)}</div>}
+                    {post.is_urgent && <div className="due">High urgency</div>}
                   </div>
                   <div className="card-bottom">
                     <div className="price"><strong>৳{post.bounty}</strong> / session</div>
@@ -266,11 +434,17 @@ const Home = ({ user, activeMode, onModeChange, onLogout }) => {
                       <div className="own-post-actions">
                         <span className="your-post-badge">Your Post</span>
                         {activeMode === 'student' && (
-                          <button className="delete-post-btn" onClick={() => handleDeletePost(post.post_id)}>Delete</button>
+                          <button className="delete-post-btn" onClick={(event) => { event.stopPropagation(); handleDeletePost(post.post_id); }}>Delete</button>
                         )}
                       </div>
                     ) : (
-                      <button className="apply-btn">Apply Now</button>
+                      <button
+                        className={`apply-btn ${hasApplied(post) ? 'applied' : ''}`}
+                        disabled={hasApplied(post)}
+                        onClick={(event) => { event.stopPropagation(); handleApply(post); }}
+                      >
+                        {hasApplied(post) ? 'Applied' : 'Apply Now'}
+                      </button>
                     )}
                   </div>
                 </div>
@@ -294,13 +468,23 @@ const Home = ({ user, activeMode, onModeChange, onLogout }) => {
             ) : (
               <div className="teacher-grid">
                 {teachers.map((teacher) => (
-                  <div className="teacher-card" key={teacher.user_id}>
+                <div
+                  className="teacher-card"
+                  key={teacher.user_id}
+                  role="button"
+                  tabIndex="0"
+                  onClick={() => navigate(`/profile/${teacher.user_id}`)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') navigate(`/profile/${teacher.user_id}`);
+                  }}
+                >
                     <div className="teacher-avatar">{teacher.full_name.charAt(0).toUpperCase()}</div>
                     <div>
                       <h3>{teacher.full_name}</h3>
                       <p>{teacher.department || 'Campus teacher'}</p>
                       <span className="teacher-rating">★ Highly rated teacher</span>
                     </div>
+                    <span className="teacher-view-link">View profile</span>
                   </div>
                 ))}
               </div>
@@ -315,6 +499,93 @@ const Home = ({ user, activeMode, onModeChange, onLogout }) => {
           <div className="count">Showing 4 of 7 active pitches &amp; tutoring sessions</div>
         </div>
       </main>
+
+      {selectedPost && (
+        <div className="post-modal-backdrop" onClick={() => setSelectedPost(null)}>
+          <section className="post-modal" role="dialog" aria-modal="true" aria-labelledby="post-detail-title" onClick={(event) => event.stopPropagation()}>
+            <button className="post-modal-close" aria-label="Close post details" onClick={() => setSelectedPost(null)}>×</button>
+            {detailLoading ? (
+              <div className="post-modal-loading">Loading post details...</div>
+            ) : (
+              <>
+                <div className="post-modal-heading">
+                  <div>
+                    <span className={`badge ${getStatusBadge(selectedPost.status).class}`}>{getStatusBadge(selectedPost.status).text}</span>
+                    <p className="post-modal-category">{selectedPost.category} · {selectedPost.course_code}</p>
+                    <h2 id="post-detail-title">{selectedPost.title}</h2>
+                  </div>
+                  <div className="post-modal-bounty"><strong>৳{selectedPost.bounty}</strong><span>per session</span></div>
+                </div>
+
+                <div className="post-detail-stats">
+                  <span>👤 Posted by <strong>{selectedPost.author_name}</strong></span>
+                  <span>📨 <strong>{selectedPost.application_count || 0}</strong> applied</span>
+                  <span>💬 <strong>{selectedPost.comments?.length || 0}</strong> comments</span>
+                </div>
+
+                <div className="post-detail-grid">
+                  <div><span>Delivery format</span><strong>{getDeliveryLabel(selectedPost.delivery_format)}</strong></div>
+                  <div><span>Department</span><strong>{selectedPost.author_department || 'Not specified'}</strong></div>
+                  <div><span>Deadline</span><strong>{selectedPost.deadline ? formatDeadline(selectedPost.deadline) : 'Open deadline'}</strong></div>
+                  <div><span>Priority</span><strong>{selectedPost.is_urgent ? 'High urgency' : 'Standard'}</strong></div>
+                </div>
+
+                <div className="post-detail-description">
+                  <h3>What help is needed</h3>
+                  <p>{selectedPost.description || 'No additional description was provided.'}</p>
+                </div>
+
+                {String(selectedPost.user_id) === String(user.user_id) && (
+                  <div className="applicants-section">
+                    <div className="applicants-heading">
+                      <div><h3>Applicants</h3><p>Review who wants to teach this request.</p></div>
+                      <span>{selectedPost.applicants?.length || 0}</span>
+                    </div>
+                    {selectedPost.applicants?.length ? (
+                      <div className="applicants-list">
+                        {selectedPost.applicants.map((applicant) => (
+                          <div className="applicant-row" key={applicant.application_id}>
+                            <div className="applicant-avatar">{applicant.full_name.charAt(0).toUpperCase()}</div>
+                            <div className="applicant-info">
+                              <strong>{applicant.full_name}</strong>
+                              <span>{applicant.expertise || applicant.department || 'Peer tutor'}</span>
+                              {applicant.bio && <p>{applicant.bio}</p>}
+                            </div>
+                            <div className="applicant-action">
+                              {applicant.status === 'accepted' ? <span className="accepted-label">Accepted</span> : applicant.status === 'rejected' ? <span className="rejected-label">Not selected</span> : <button className="accept-btn" onClick={() => handleAcceptApplication(applicant.application_id)} disabled={acceptLoading !== null}>{acceptLoading === applicant.application_id ? 'Accepting...' : 'Accept'}</button>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="no-applicants">No one has applied yet.</p>}
+                  </div>
+                )}
+
+                {detailError && <div className="post-detail-error">{detailError}</div>}
+
+                <div className="comments-section">
+                  <div className="comments-heading"><h3>Comments</h3><span>{selectedPost.comments?.length || 0}</span></div>
+                  <div className="comments-list">
+                    {selectedPost.comments?.length ? selectedPost.comments.filter((comment) => !comment.parent_comment_id).map(renderComment) : <p className="no-comments">No comments yet. Start the conversation.</p>}
+                  </div>
+                  <form className="comment-form" onSubmit={handleCommentSubmit}>
+                    <input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Ask a question or share a helpful detail..." maxLength="500" />
+                    <button type="submit" disabled={commentLoading || !commentText.trim()}>{commentLoading ? 'Sending...' : 'Comment'}</button>
+                  </form>
+                </div>
+
+                {!user || String(selectedPost.user_id) !== String(user.user_id) ? (
+                  <div className="post-modal-actions">
+                    <button className={`apply-btn ${hasApplied(selectedPost) ? 'applied' : ''}`} onClick={() => handleApply()} disabled={applyLoading || hasApplied(selectedPost)}>
+                      {hasApplied(selectedPost) ? 'Applied' : applyLoading ? 'Applying...' : 'Apply to teach this post'}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </section>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="home-footer">

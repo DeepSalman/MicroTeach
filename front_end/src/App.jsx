@@ -13,6 +13,14 @@ import BecomeTeacher from './BecomeTeacher';
 const CURRENT_USER_KEY = 'microteach_current_user';
 const ACTIVE_MODE_KEY = 'microteach_active_mode';
 
+const getModeForUser = (user) => {
+  if (user?.role === 'tutor') return 'teacher';
+  if (user?.role !== 'both') return 'student';
+
+  const savedMode = localStorage.getItem(ACTIVE_MODE_KEY);
+  return savedMode === 'teacher' || savedMode === 'student' ? savedMode : 'student';
+};
+
 // Dashboard - shown after login
 const Dashboard = ({ user, onLogout }) => {
   return (
@@ -44,15 +52,14 @@ function App() {
       return null;
     }
   });
-  const [activeMode, setActiveMode] = useState(() => {
-    const savedMode = localStorage.getItem(ACTIVE_MODE_KEY);
-    if (savedMode) return savedMode;
-    return currentUser?.role === 'tutor' ? 'teacher' : 'student';
-  });
+  const [activeMode, setActiveMode] = useState(() => getModeForUser(currentUser));
 
   const handleLogin = (userData) => {
     setCurrentUser(userData);
+    const nextMode = getModeForUser(userData);
+    setActiveMode(nextMode);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
+    localStorage.setItem(ACTIVE_MODE_KEY, nextMode);
   };
 
   const handleLogout = () => {
@@ -63,7 +70,10 @@ function App() {
 
   const handleProfileUpdate = (updatedUser) => {
     setCurrentUser(updatedUser);
+    const nextMode = getModeForUser(updatedUser);
+    setActiveMode(nextMode);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    localStorage.setItem(ACTIVE_MODE_KEY, nextMode);
   };
 
   const handleModeChange = (mode) => {
@@ -73,7 +83,10 @@ function App() {
 
   const handleUserUpdate = (updatedUser) => {
     setCurrentUser(updatedUser);
+    const nextMode = getModeForUser(updatedUser);
+    setActiveMode(nextMode);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    localStorage.setItem(ACTIVE_MODE_KEY, nextMode);
   };
 
   return (
@@ -169,6 +182,17 @@ function App() {
           element={
             currentUser ? (
               <BecomeTeacher user={currentUser} onUserUpdate={handleUserUpdate} onModeChange={handleModeChange} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
+        <Route
+          path="/profile/:userId"
+          element={
+            currentUser ? (
+              <Profile user={currentUser} activeMode={activeMode} onModeChange={handleModeChange} />
             ) : (
               <Navigate to="/login" />
             )

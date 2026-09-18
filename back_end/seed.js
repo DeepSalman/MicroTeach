@@ -40,6 +40,7 @@ const TABLES = {
       is_verified TINYINT(1) DEFAULT 0,
       department VARCHAR(100),
       bio TEXT,
+      expertise TEXT,
       phone VARCHAR(20),
       student_id VARCHAR(50),
       wallet_balance DECIMAL(10,2) DEFAULT 0.00,
@@ -77,6 +78,29 @@ const TABLES = {
       status ENUM('active','pending','resolved','closed') DEFAULT 'active',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+    )`,
+  Applications: `
+    CREATE TABLE IF NOT EXISTS Applications (
+      application_id INT AUTO_INCREMENT PRIMARY KEY,
+      post_id INT NOT NULL,
+      applicant_id INT NOT NULL,
+      status ENUM('pending','accepted','rejected') DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_post_applicant (post_id, applicant_id),
+      FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
+      FOREIGN KEY (applicant_id) REFERENCES Users(user_id) ON DELETE CASCADE
+    )`,
+  Post_Comments: `
+    CREATE TABLE IF NOT EXISTS Post_Comments (
+      comment_id INT AUTO_INCREMENT PRIMARY KEY,
+      post_id INT NOT NULL,
+      user_id INT NOT NULL,
+      parent_comment_id INT NULL,
+      comment_text TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_comment_id) REFERENCES Post_Comments(comment_id) ON DELETE CASCADE
     )`,
   Sessions: `
     CREATE TABLE IF NOT EXISTS Sessions (
@@ -205,7 +229,7 @@ async function main() {
   if (fresh) {
     console.log('\n⚠️  Fresh mode — dropping all tables...');
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    for (const name of ['Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
+    for (const name of ['Post_Comments', 'Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
       await conn.query(`DROP TABLE IF EXISTS \`${name}\``);
     }
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
@@ -223,6 +247,22 @@ async function main() {
       tablesCreated++;
     } else {
       console.log(`  ✓ "${name}" already exists — skipping`);
+    }
+  }
+  if (await tableExists(conn, 'Users')) {
+    const [columns] = await conn.query('SHOW COLUMNS FROM Users LIKE ?', ['expertise']);
+    if (columns.length === 0) {
+      await conn.query('ALTER TABLE Users ADD COLUMN expertise TEXT AFTER bio');
+      console.log('  + Added editable expertise to "Users"');
+    }
+  }
+  // Upgrade databases created before threaded replies were added.
+  if (await tableExists(conn, 'Post_Comments')) {
+    const [columns] = await conn.query('SHOW COLUMNS FROM Post_Comments LIKE ?', ['parent_comment_id']);
+    if (columns.length === 0) {
+      await conn.query('ALTER TABLE Post_Comments ADD COLUMN parent_comment_id INT NULL AFTER user_id');
+      await conn.query('ALTER TABLE Post_Comments ADD CONSTRAINT fk_comment_parent FOREIGN KEY (parent_comment_id) REFERENCES Post_Comments(comment_id) ON DELETE CASCADE');
+      console.log('  + Added threaded reply support to "Post_Comments"');
     }
   }
   if (tablesCreated === 0) {
@@ -251,7 +291,7 @@ async function main() {
   if (force && !fresh) {
     console.log('\n⚠️  Clearing existing data...');
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    for (const name of ['Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
+    for (const name of ['Post_Comments', 'Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
       await conn.query(`TRUNCATE TABLE \`${name}\``);
     }
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
@@ -266,9 +306,9 @@ async function main() {
 
   for (const u of USERS) {
     const [r] = await conn.query(
-      `INSERT INTO Users (full_name, email, password, role, is_verified, department, bio, phone, student_id, wallet_balance)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [u.full_name, u.email, hash, u.role, u.is_verified, u.department, u.bio, u.phone, u.student_id, u.wallet_balance]
+      `INSERT INTO Users (full_name, email, password, role, is_verified, department, bio, expertise, phone, student_id, wallet_balance)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [u.full_name, u.email, hash, u.role, u.is_verified, u.department, u.bio, u.expertise || null, u.phone, u.student_id, u.wallet_balance]
     );
     uid[u.email] = r.insertId;
     console.log(`  + ${u.full_name} (${u.email})`);
