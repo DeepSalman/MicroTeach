@@ -12,7 +12,10 @@ router.get('/', async (req, res) => {
         full_name,
         email,
         role,
+        is_verified,
+        department,
         wallet_balance,
+        is_admin,
         created_at
       FROM Users
     `;
@@ -70,6 +73,7 @@ router.get('/profile/:userId', async (req, res) => {
         bio,
         phone,
         student_id,
+        is_admin,
         created_at
       FROM Users
       WHERE user_id = ?
@@ -124,7 +128,7 @@ router.put('/profile/:userId', async (req, res) => {
     await db.query(query, [full_name, department || null, bio || null, phone || null, student_id || null, req.params.userId]);
 
     const updatedQuery = `
-      SELECT user_id, full_name, email, role, is_verified, department, bio, phone, student_id, wallet_balance, created_at
+      SELECT user_id, full_name, email, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin, created_at
       FROM Users WHERE user_id = ?
     `;
     const [rows] = await db.query(updatedQuery, [req.params.userId]);
@@ -155,6 +159,7 @@ router.post('/login', async (req, res) => {
         bio,
         phone,
         student_id,
+        is_admin,
         password
       FROM Users
       WHERE email = ?

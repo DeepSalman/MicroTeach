@@ -8,6 +8,7 @@ import UserList from './UserList';
 import Skills from './Skills';
 import Profile from './Profile';
 import EditProfile from './EditProfile';
+import AdminPanel from './AdminPanel';
 
 // Dashboard - shown after login
 const Dashboard = ({ user, onLogout }) => {
@@ -119,6 +120,18 @@ function App() {
               <EditProfile user={currentUser} onProfileUpdate={handleProfileUpdate} />
             ) : (
               <Navigate to="/login" />
+            )
+          } 
+        />
+
+        {/* Admin Panel - protected route, only for admins */}
+        <Route 
+          path="/admin" 
+          element={
+            currentUser && currentUser.is_admin === 1 ? (
+              <AdminPanel user={currentUser} />
+            ) : (
+              <Navigate to="/" />
             )
           } 
         />

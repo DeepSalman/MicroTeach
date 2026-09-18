@@ -43,6 +43,7 @@ const TABLES = {
       phone VARCHAR(20),
       student_id VARCHAR(50),
       wallet_balance DECIMAL(10,2) DEFAULT 0.00,
+      is_admin TINYINT(1) DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
   Skills: `
@@ -102,7 +103,8 @@ const USERS = [
   { full_name: 'Tanvir Hossain', email: 'tanvir@bracu.ac.bd', role: 'tutor', is_verified: 1, department: 'Electrical & Electronic Engineering', bio: 'EEE tutor specializing in circuits, signal processing, and system architecture. 4.9 star rating.', phone: '+880 1956789012', student_id: '20301782', wallet_balance: 4100.00 },
   { full_name: 'Nusrat Jahan', email: 'nusrat@bracu.ac.bd', role: 'both', is_verified: 0, department: 'Mathematics', bio: 'Math tutor. Calculus, linear algebra, and statistics. Passionate about making math accessible.', phone: '+880 1678901234', student_id: '21101345', wallet_balance: 1200.00 },
   { full_name: 'Imran Sheikh', email: 'imran@bracu.ac.bd', role: 'student', is_verified: 0, department: 'Software Engineering', bio: 'Software engineering student. Need help with OOP, databases, and machine learning concepts.', phone: '+880 1790123456', student_id: '22201678', wallet_balance: 300.00 },
-  { full_name: 'Fatima Akter', email: 'fatima@bracu.ac.bd', role: 'tutor', is_verified: 1, department: 'Data Science & AI', bio: 'ML and data science tutor. Currently working on neural network research. Happy to help with Python, TensorFlow, and statistical modeling.', phone: '+880 1812345678', student_id: '20101923', wallet_balance: 3750.00 }
+  { full_name: 'Fatima Akter', email: 'fatima@bracu.ac.bd', role: 'tutor', is_verified: 1, department: 'Data Science & AI', bio: 'ML and data science tutor. Currently working on neural network research. Happy to help with Python, TensorFlow, and statistical modeling.', phone: '+880 1812345678', student_id: '20101923', wallet_balance: 3750.00 },
+  { full_name: 'Salman Admin', email: 'salman@gmail.com', role: 'both', is_verified: 1, department: 'Administration', bio: 'Platform administrator.', phone: '+880 1999999999', student_id: 'ADMIN001', wallet_balance: 0.00, is_admin: 1 }
 ];
 
 const SKILLS = [
@@ -266,9 +268,9 @@ async function main() {
 
   for (const u of USERS) {
     const [r] = await conn.query(
-      `INSERT INTO Users (full_name, email, password, role, is_verified, department, bio, phone, student_id, wallet_balance)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [u.full_name, u.email, hash, u.role, u.is_verified, u.department, u.bio, u.phone, u.student_id, u.wallet_balance]
+      `INSERT INTO Users (full_name, email, password, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [u.full_name, u.email, hash, u.role, u.is_verified, u.department, u.bio, u.phone, u.student_id, u.wallet_balance, u.is_admin || 0]
     );
     uid[u.email] = r.insertId;
     console.log(`  + ${u.full_name} (${u.email})`);
