@@ -7,6 +7,7 @@ const userRoutes = require('./routes/userRoutes');
 const skillRoutes = require('./routes/skillRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const postRoutes = require('./routes/postRoutes');
+const teacherApplicationRoutes = require('./routes/teacherApplicationRoutes');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/teacher-applications', teacherApplicationRoutes);
 
 // Root Test Route
 app.get('/', (req, res) => {

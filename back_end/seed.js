@@ -92,6 +92,19 @@ const TABLES = {
       FOREIGN KEY (tutor_id) REFERENCES Users(user_id) ON DELETE CASCADE,
       FOREIGN KEY (student_id) REFERENCES Users(user_id) ON DELETE CASCADE,
       FOREIGN KEY (skill_id) REFERENCES Skills(skill_id) ON DELETE CASCADE
+    )`,
+  Teacher_Applications: `
+    CREATE TABLE IF NOT EXISTS Teacher_Applications (
+      application_id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      reason TEXT,
+      expertise TEXT,
+      status ENUM('pending','approved','rejected') DEFAULT 'pending',
+      reviewed_by INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at TIMESTAMP NULL,
+      FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+      FOREIGN KEY (reviewed_by) REFERENCES Users(user_id) ON DELETE SET NULL
     )`
 };
 
@@ -104,7 +117,8 @@ const USERS = [
   { full_name: 'Nusrat Jahan', email: 'nusrat@bracu.ac.bd', role: 'both', is_verified: 0, department: 'Mathematics', bio: 'Math tutor. Calculus, linear algebra, and statistics. Passionate about making math accessible.', phone: '+880 1678901234', student_id: '21101345', wallet_balance: 1200.00 },
   { full_name: 'Imran Sheikh', email: 'imran@bracu.ac.bd', role: 'student', is_verified: 0, department: 'Software Engineering', bio: 'Software engineering student. Need help with OOP, databases, and machine learning concepts.', phone: '+880 1790123456', student_id: '22201678', wallet_balance: 300.00 },
   { full_name: 'Fatima Akter', email: 'fatima@bracu.ac.bd', role: 'tutor', is_verified: 1, department: 'Data Science & AI', bio: 'ML and data science tutor. Currently working on neural network research. Happy to help with Python, TensorFlow, and statistical modeling.', phone: '+880 1812345678', student_id: '20101923', wallet_balance: 3750.00 },
-  { full_name: 'Salman Admin', email: 'salman@gmail.com', role: 'both', is_verified: 1, department: 'Administration', bio: 'Platform administrator.', phone: '+880 1999999999', student_id: 'ADMIN001', wallet_balance: 0.00, is_admin: 1 }
+  { full_name: 'Salman Admin', email: 'salman@gmail.com', role: 'both', is_verified: 1, department: 'Administration', bio: 'Platform administrator.', phone: '+880 1999999999', student_id: 'ADMIN001', wallet_balance: 0.00, is_admin: 1 },
+  { full_name: 'Test Student', email: 'test@student.com', role: 'student', is_verified: 1, department: 'Computer Science & Engineering', bio: 'Testing the platform. 2nd year CS student.', phone: '+880 1888888888', student_id: 'TEST001', wallet_balance: 200.00 }
 ];
 
 const SKILLS = [
@@ -207,7 +221,7 @@ async function main() {
   if (fresh) {
     console.log('\n⚠️  Fresh mode — dropping all tables...');
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    for (const name of ['Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
+    for (const name of ['Teacher_Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
       await conn.query(`DROP TABLE IF EXISTS \`${name}\``);
     }
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
@@ -253,7 +267,7 @@ async function main() {
   if (force && !fresh) {
     console.log('\n⚠️  Clearing existing data...');
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    for (const name of ['Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
+    for (const name of ['Teacher_Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
       await conn.query(`TRUNCATE TABLE \`${name}\``);
     }
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
@@ -319,6 +333,20 @@ async function main() {
     console.log(`  + ${s.tutor} → ${s.student} [${s.status}]`);
   }
 
+  // 12. Seed Teacher Applications
+  console.log('\n📋 Seeding teacher applications...');
+  const applications = [
+    { user_email: 'sadia@bracu.ac.bd', reason: 'I have been helping peers with algorithms and calculus for 2 years. Want to officially become a tutor.', expertise: 'Algorithms & Data Structures, Calculus I & II', status: 'pending' },
+    { user_email: 'imran@bracu.ac.bd', reason: 'Strong background in OOP and databases. Want to tutor junior students.', expertise: 'Object-Oriented Programming, Database Management Systems', status: 'pending' },
+  ];
+  for (const app of applications) {
+    await conn.query(
+      `INSERT INTO Teacher_Applications (user_id, reason, expertise, status) VALUES (?, ?, ?, ?)`,
+      [uid[app.user_email], app.reason, app.expertise, app.status]
+    );
+    console.log(`  + ${app.user_email} [${app.status}]`);
+  }
+
   // Summary
   const [counts] = await conn.query(`
     SELECT
@@ -326,7 +354,8 @@ async function main() {
       (SELECT COUNT(*) FROM Skills) as skills,
       (SELECT COUNT(*) FROM User_Skills) as user_skills,
       (SELECT COUNT(*) FROM Posts) as posts,
-      (SELECT COUNT(*) FROM Sessions) as sessions
+      (SELECT COUNT(*) FROM Sessions) as sessions,
+      (SELECT COUNT(*) FROM Teacher_Applications) as applications
   `);
   const c = counts[0];
 
@@ -338,6 +367,7 @@ async function main() {
   console.log(`   User-Skills: ${c.user_skills}`);
   console.log(`   Posts:       ${c.posts}`);
   console.log(`   Sessions:    ${c.sessions}`);
+  console.log(`   Applications: ${c.applications}`);
   console.log('═'.repeat(50));
   console.log('\n🔑 All users login with password: ' + DEFAULT_PASSWORD);
   console.log('   Example: rafiq@bracu.ac.bd / password123\n');

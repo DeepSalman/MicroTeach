@@ -13,6 +13,7 @@ import UserManagement from './UserManagement';
 import ContentModeration from './ContentModeration';
 import ReportQueue from './ReportQueue';
 import DisputesEscrow from './DisputesEscrow';
+import TeacherApplications from './TeacherApplications';
 
 // Dashboard - shown after login
 const Dashboard = ({ user, onLogout }) => {
@@ -115,7 +116,7 @@ function App() {
           path="/profile" 
           element={
             currentUser ? (
-              <Profile user={currentUser} onLogout={handleLogout} />
+              <Profile user={currentUser} onLogout={handleLogout} onProfileUpdate={handleProfileUpdate} />
             ) : (
               <Navigate to="/login" />
             )
@@ -188,6 +189,18 @@ function App() {
           element={
             currentUser && currentUser.is_admin === 1 ? (
               <DisputesEscrow user={currentUser} />
+            ) : (
+              <Navigate to="/" />
+            )
+          } 
+        />
+
+        {/* Teacher Applications - protected route, only for admins */}
+        <Route 
+          path="/admin/teacher-applications" 
+          element={
+            currentUser && currentUser.is_admin === 1 ? (
+              <TeacherApplications user={currentUser} />
             ) : (
               <Navigate to="/" />
             )

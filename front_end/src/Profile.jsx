@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile } from './api';
+import { fetchUserProfile, fetchUserApplications, submitTeacherApplication } from './api';
 import './Profile.css';
 
-const Profile = ({ user, onLogout }) => {
+const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [applicationStatus, setApplicationStatus] = useState(null);
+  const [applicationData, setApplicationData] = useState(null);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [applyReason, setApplyReason] = useState('');
+  const [applyExpertise, setApplyExpertise] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (user?.user_id) {
       loadProfile();
+      checkApplicationStatus();
     }
   }, [user]);
 
@@ -19,11 +26,56 @@ const Profile = ({ user, onLogout }) => {
     try {
       const response = await fetchUserProfile(user.user_id);
       setProfileData(response.data);
+
+      const freshRole = response.data.user.role;
+      if (freshRole !== user.role) {
+        const updatedUser = { ...user, role: freshRole };
+        localStorage.setItem('microteach_user', JSON.stringify(updatedUser));
+        if (onProfileUpdate) onProfileUpdate(updatedUser);
+      }
     } catch (err) {
       setError('Failed to load profile data.');
       console.error('Profile load error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkApplicationStatus = async () => {
+    try {
+      const response = await fetchUserApplications(user.user_id);
+      if (response.data.length > 0) {
+        const latest = response.data[0];
+        setApplicationStatus(latest.status);
+        setApplicationData(latest);
+      }
+    } catch (err) {
+      console.error('Failed to check application status:', err);
+    }
+  };
+
+  const handleApply = async () => {
+    if (!applyReason.trim()) {
+      alert('Please provide a reason for your application.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await submitTeacherApplication({
+        user_id: user.user_id,
+        reason: applyReason,
+        expertise: applyExpertise
+      });
+      setApplicationStatus('pending');
+      setShowApplyModal(false);
+      setApplyReason('');
+      setApplyExpertise('');
+      alert('Application submitted successfully! Admin will review it shortly.');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to submit application.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -88,6 +140,8 @@ const Profile = ({ user, onLogout }) => {
   const walletBalance = userData?.wallet_balance || 0;
 
   const roleLabels = { student: 'Student', tutor: 'Peer Tutor', both: 'Student & Tutor' };
+  const isStudentOnly = role === 'student';
+  const isApprovedTutor = applicationStatus === 'approved' || role === 'both';
 
   return (
     <div className="profile-page">
@@ -125,6 +179,45 @@ const Profile = ({ user, onLogout }) => {
 
       {/* Main Content */}
       <main className="profile-main">
+        {/* Approval Success Banner */}
+        {isApprovedTutor && (
+          <div className="approval-banner">
+            <div className="approval-banner-inner">
+              <div className="approval-icon">&#10003;</div>
+              <div className="approval-text">
+                <strong>Congratulations! Your tutor application has been approved.</strong>
+                <span>You can now respond to student posts and start tutoring on MicroTeach.</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pending Application Banner */}
+        {applicationStatus === 'pending' && (
+          <div className="pending-banner">
+            <div className="pending-banner-inner">
+              <div className="pending-icon">&#8987;</div>
+              <div className="pending-text">
+                <strong>Your tutor application is under review.</strong>
+                <span>An admin will review your application shortly. You'll be notified once a decision is made.</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rejected Application Banner */}
+        {applicationStatus === 'rejected' && (
+          <div className="rejected-banner">
+            <div className="rejected-banner-inner">
+              <div className="rejected-icon">&#10007;</div>
+              <div className="rejected-text">
+                <strong>Your tutor application was not approved.</strong>
+                <span>You can reapply with updated information below.</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Profile Header Card */}
         <section className="profile-hero">
           <div className="hero-content">
@@ -136,7 +229,9 @@ const Profile = ({ user, onLogout }) => {
               <div className="hero-info">
                 <div className="hero-name-row">
                   <h1>{displayName}</h1>
-                  <span className="verified-badge">{roleLabels[role] || 'Student'}</span>
+                  <span className={`verified-badge ${isApprovedTutor ? 'tutor' : ''}`}>
+                    {roleLabels[role] || 'Student'}
+                  </span>
                   {studentId && <span className="class-badge">ID: {studentId}</span>}
                 </div>
                 {bio && <p className="hero-role">{bio}</p>}
@@ -175,11 +270,25 @@ const Profile = ({ user, onLogout }) => {
                 </svg>
                 Edit Profile
               </button>
-              <button className="btn-icon-action" title="Message Tutor">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-              </button>
+              {isStudentOnly && applicationStatus === null && (
+                <button className="btn-apply-teacher" onClick={() => setShowApplyModal(true)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  Apply to Teach
+                </button>
+              )}
+              {isStudentOnly && applicationStatus === 'pending' && (
+                <span className="application-badge pending">Application Pending</span>
+              )}
+              {isStudentOnly && applicationStatus === 'rejected' && (
+                <button className="btn-apply-teacher" onClick={() => setShowApplyModal(true)}>
+                  Apply Again
+                </button>
+              )}
             </div>
           </div>
         </section>
@@ -296,6 +405,45 @@ const Profile = ({ user, onLogout }) => {
           </div>
         </section>
       </main>
+
+      {/* Apply to Teach Modal */}
+      {showApplyModal && (
+        <div className="modal-overlay" onClick={() => setShowApplyModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Apply to Become a Teacher</h2>
+            <p className="modal-subtitle">Submit your application to start tutoring peers on MicroTeach.</p>
+            
+            <div className="modal-form">
+              <div className="form-group">
+                <label>Why do you want to become a tutor?</label>
+                <textarea
+                  value={applyReason}
+                  onChange={(e) => setApplyReason(e.target.value)}
+                  placeholder="Tell us about your tutoring experience and why you want to help peers..."
+                  rows={4}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Areas of Expertise (optional)</label>
+                <input
+                  type="text"
+                  value={applyExpertise}
+                  onChange={(e) => setApplyExpertise(e.target.value)}
+                  placeholder="e.g., Algorithms, Calculus, Physics"
+                />
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setShowApplyModal(false)}>Cancel</button>
+              <button className="btn-submit" onClick={handleApply} disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit Application'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="home-footer">

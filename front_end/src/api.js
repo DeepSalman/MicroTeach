@@ -17,3 +17,8 @@ export const createSession = (sessionData) => API.post("/sessions", sessionData)
 export const fetchPosts = () => API.get("/posts");
 export const createPost = (postData) => API.post("/posts", postData);
 export const updatePostStatus = (postId, status) => API.patch(`/posts/${postId}/status`, { status });
+
+export const fetchTeacherApplications = () => API.get("/teacher-applications");
+export const fetchUserApplications = (userId) => API.get(`/teacher-applications/user/${userId}`);
+export const submitTeacherApplication = (data) => API.post("/teacher-applications", data);
+export const reviewTeacherApplication = (id, data) => API.put(`/teacher-applications/${id}/review`, data);

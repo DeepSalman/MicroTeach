@@ -1,0 +1,321 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.page-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.breadcrumb-sep { color: #d1d5db; }
+
+.breadcrumb-active {
+  color: #1a1a2e;
+  font-weight: 600;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.ta-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.ta-stat-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ta-stat-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.ta-stat-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.ta-stat-card.pending .ta-stat-number { color: #92400e; }
+.ta-stat-card.approved .ta-stat-number { color: #166534; }
+.ta-stat-card.rejected .ta-stat-number { color: #991b1b; }
+
+.ta-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.ta-filter-btn {
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ta-filter-btn:hover {
+  background: #f9fafb;
+  color: #1a1a2e;
+}
+
+.ta-filter-btn.active {
+  background: #1a1a2e;
+  color: #fff;
+  border-color: #1a1a2e;
+}
+
+.ta-loading, .ta-empty {
+  text-align: center;
+  padding: 48px;
+  color: #6b7280;
+  font-size: 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.ta-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ta-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ta-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #fafbfc;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.ta-card-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ta-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  color: #1a1a2e;
+}
+
+.ta-dot { color: #d1d5db; font-size: 10px; }
+
+.ta-time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.ta-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ta-status.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ta-status.approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ta-status.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ta-card-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ta-applicant {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ta-avatar {
+  width: 40px;
+  height: 40px;
+  background: #1a1a2e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ta-applicant-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ta-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.ta-id-ref {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 400;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.ta-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.ta-email {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.ta-expertise {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ta-expertise-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.ta-skill {
+  font-size: 11px;
+  font-weight: 500;
+  color: #374151;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.ta-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ta-reason-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.ta-reason-text {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+  padding: 12px 14px;
+  background: #fafbfc;
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+}
+
+.ta-card-footer {
+  padding: 12px 18px;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  gap: 8px;
+}
+
+.ta-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  transition: all 0.15s;
+}
+.ta-action:hover { background: #f9fafb; }
+
+.ta-action.primary {
+  background: #1a1a2e;
+  color: #fff;
+  border-color: #1a1a2e;
+}
+.ta-action.primary:hover { background: #2d2d4a; }
+
+.ta-action.ghost {
+  border: none;
+  background: none;
+  color: #9ca3af;
+  margin-left: auto;
+}
+.ta-action.ghost:hover { color: #dc2626; }
+
+.ta-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ta-reviewed {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: auto;
+}
