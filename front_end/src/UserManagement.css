@@ -1,0 +1,238 @@
+@import './AdminPanel.css';
+
+/* ========== BREADCRUMB PATH ========== */
+.breadcrumb-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.bc-sep {
+  color: #d1d5db;
+}
+
+.bc-current {
+  color: #1a1a2e;
+  font-weight: 500;
+}
+
+/* ========== DASHBOARD SUBTITLE ========== */
+.dashboard-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* ========== TOP HEADER EXTRAS ========== */
+.version-tag {
+  background: #e5e7eb;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  margin-left: 8px;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 8px;
+}
+
+.header-user-avatar {
+  width: 36px;
+  height: 36px;
+  background: #1a1a2e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+  color: #fff;
+}
+
+.header-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.header-user-role {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* ========== ROLE & DEPARTMENT ========== */
+.role-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.role-dept {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ========== ACTIVITY ========== */
+.activity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.activity-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.activity-sessions {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ========== WALLET DETAIL ========== */
+.wallet-detail {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* ========== STATUS PILL ========== */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.status-pill.good {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-pill.good .status-pill-dot {
+  background: #22c55e;
+}
+
+.status-pill.review {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-pill.review .status-pill-dot {
+  background: #f59e0b;
+}
+
+.status-pill.restricted {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-pill.restricted .status-pill-dot {
+  background: #ef4444;
+}
+
+/* ========== REVIEW TAG ========== */
+.review-tag {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* ========== ACTION GROUP ========== */
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-more {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+
+.action-more:hover {
+  background: #f9fafb;
+}
+
+/* ========== FOOTER ========== */
+.admin-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 24px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.footer-links {
+  display: flex;
+  gap: 20px;
+}
+
+.footer-links a {
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.footer-links a:hover {
+  color: #1a1a2e;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1280px) {
+  .users-table th:nth-child(5),
+  .users-table td:nth-child(5) {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .users-table th:nth-child(4),
+  .users-table td:nth-child(4),
+  .users-table th:nth-child(5),
+  .users-table td:nth-child(5) {
+    display: none;
+  }
+}

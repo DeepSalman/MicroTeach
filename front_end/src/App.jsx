@@ -9,6 +9,10 @@ import Skills from './Skills';
 import Profile from './Profile';
 import EditProfile from './EditProfile';
 import AdminPanel from './AdminPanel';
+import UserManagement from './UserManagement';
+import ContentModeration from './ContentModeration';
+import ReportQueue from './ReportQueue';
+import DisputesEscrow from './DisputesEscrow';
 
 // Dashboard - shown after login
 const Dashboard = ({ user, onLogout }) => {
@@ -29,17 +33,23 @@ const Dashboard = ({ user, onLogout }) => {
 };
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('microteach_user');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   const handleLogin = (userData) => {
+    localStorage.setItem('microteach_user', JSON.stringify(userData));
     setCurrentUser(userData);
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('microteach_user');
     setCurrentUser(null);
   };
 
   const handleProfileUpdate = (updatedUser) => {
+    localStorage.setItem('microteach_user', JSON.stringify(updatedUser));
     setCurrentUser(updatedUser);
   };
 
@@ -130,6 +140,54 @@ function App() {
           element={
             currentUser && currentUser.is_admin === 1 ? (
               <AdminPanel user={currentUser} />
+            ) : (
+              <Navigate to="/" />
+            )
+          } 
+        />
+
+        {/* User Management - protected route, only for admins */}
+        <Route 
+          path="/admin/users" 
+          element={
+            currentUser && currentUser.is_admin === 1 ? (
+              <UserManagement user={currentUser} />
+            ) : (
+              <Navigate to="/" />
+            )
+          } 
+        />
+
+        {/* Content Moderation - protected route, only for admins */}
+        <Route 
+          path="/admin/moderation" 
+          element={
+            currentUser && currentUser.is_admin === 1 ? (
+              <ContentModeration user={currentUser} />
+            ) : (
+              <Navigate to="/" />
+            )
+          } 
+        />
+
+        {/* Report Queue - protected route, only for admins */}
+        <Route 
+          path="/admin/reports" 
+          element={
+            currentUser && currentUser.is_admin === 1 ? (
+              <ReportQueue user={currentUser} />
+            ) : (
+              <Navigate to="/" />
+            )
+          } 
+        />
+
+        {/* Disputes & Escrow - protected route, only for admins */}
+        <Route 
+          path="/admin/disputes" 
+          element={
+            currentUser && currentUser.is_admin === 1 ? (
+              <DisputesEscrow user={currentUser} />
             ) : (
               <Navigate to="/" />
             )

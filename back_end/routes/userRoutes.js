@@ -14,6 +14,7 @@ router.get('/', async (req, res) => {
         role,
         is_verified,
         department,
+        student_id,
         wallet_balance,
         is_admin,
         created_at
