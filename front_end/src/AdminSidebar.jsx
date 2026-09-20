@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchTeacherApplications } from './api';
 
-const AdminSidebar = ({ user, userCount }) => {
+const AdminSidebar = ({ user, userCount, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -29,8 +29,7 @@ const AdminSidebar = ({ user, userCount }) => {
   const isActive = (path) => location.pathname === path;
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/login');
+    if (onLogout) onLogout();
   };
 
   return (

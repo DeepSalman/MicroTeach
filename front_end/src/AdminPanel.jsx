@@ -4,7 +4,7 @@ import { fetchUsers, fetchPosts, fetchSessions } from './api';
 import AdminSidebar from './AdminSidebar';
 import './AdminPanel.css';
 
-const AdminPanel = ({ user }) => {
+const AdminPanel = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
@@ -124,7 +124,7 @@ const AdminPanel = ({ user }) => {
 
   return (
     <div className="admin-page">
-      <AdminSidebar user={user} userCount={users.length} />
+      <AdminSidebar user={user} userCount={users.length} onLogout={onLogout} />
 
       {/* Main Content */}
       <div className="admin-main">

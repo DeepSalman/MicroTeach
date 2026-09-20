@@ -140,7 +140,7 @@ function App() {
           path="/admin" 
           element={
             currentUser && currentUser.is_admin === 1 ? (
-              <AdminPanel user={currentUser} />
+              <AdminPanel user={currentUser} onLogout={handleLogout} />
             ) : (
               <Navigate to="/" />
             )
