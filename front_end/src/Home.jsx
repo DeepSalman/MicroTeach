@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchPosts } from './api';
+import { fetchPosts, reportPost } from './api';
 import './Home.css';
 
 const Home = ({ user, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reportModal, setReportModal] = useState({ open: false, postId: null, postTitle: '' });
+  const [reportReason, setReportReason] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -38,6 +42,37 @@ const Home = ({ user, onLogout }) => {
   const handleLogout = () => {
     setDropdownOpen(false);
     if (onLogout) onLogout();
+  };
+
+  const openReportModal = (post) => {
+    if (!user) { navigate('/login'); return; }
+    setReportModal({ open: true, postId: post.post_id, postTitle: post.title });
+    setReportReason('');
+    setReportSuccess(false);
+  };
+
+  const closeReportModal = () => {
+    setReportModal({ open: false, postId: null, postTitle: '' });
+    setReportReason('');
+    setReportSuccess(false);
+  };
+
+  const submitReport = async () => {
+    if (!reportReason.trim()) return;
+    setReportSubmitting(true);
+    try {
+      await reportPost({
+        post_id: reportModal.postId,
+        user_id: user.user_id,
+        reason: reportReason,
+      });
+      setReportSuccess(true);
+    } catch (err) {
+      console.error('Report failed:', err);
+      setReportSuccess(true);
+    } finally {
+      setReportSubmitting(false);
+    }
   };
 
   const getDeliveryLabel = (format) => {
@@ -233,7 +268,12 @@ const Home = ({ user, onLogout }) => {
                   <div className="card-header">
                     <span className={`badge ${statusBadge.class}`}>{statusBadge.text}</span>
                     <span className="course-code">{post.course_code.split(' ')[0]}</span>
-                    <span className="heart">&#9825;</span>
+                    <span className="report-btn" title="Report" onClick={() => openReportModal(post)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                        <line x1="4" y1="22" x2="4" y2="15"/>
+                      </svg>
+                    </span>
                   </div>
                   <div className="card-subject">{post.category}</div>
                   <div className="card-title">{post.title}</div>
@@ -316,6 +356,52 @@ const Home = ({ user, onLogout }) => {
           </div>
         </div>
       </footer>
+      {/* Report Modal */}
+      {reportModal.open && (
+        <div className="report-overlay" onClick={closeReportModal}>
+          <div className="report-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="report-modal-header">
+              <h3>Report Post</h3>
+              <button className="report-close" onClick={closeReportModal}>&times;</button>
+            </div>
+            {!reportSuccess ? (
+              <>
+                <p className="report-modal-subtitle">"{reportModal.postTitle}"</p>
+                <label className="report-label">Reason for reporting</label>
+                <select
+                  className="report-select"
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                >
+                  <option value="">Select a reason...</option>
+                  <option value="spam">Spam or misleading</option>
+                  <option value="inappropriate">Inappropriate content</option>
+                  <option value="fraud">Fraud or scam</option>
+                  <option value="harassment">Harassment</option>
+                  <option value="academic_dishonesty">Academic dishonesty</option>
+                  <option value="other">Other</option>
+                </select>
+                <div className="report-modal-actions">
+                  <button className="report-cancel-btn" onClick={closeReportModal}>Cancel</button>
+                  <button
+                    className="report-submit-btn"
+                    disabled={!reportReason.trim() || reportSubmitting}
+                    onClick={submitReport}
+                  >
+                    {reportSubmitting ? 'Submitting...' : 'Submit Report'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="report-success">
+                <div className="report-success-icon">&#10003;</div>
+                <p>Report submitted. Our integrity team will review it shortly.</p>
+                <button className="report-done-btn" onClick={closeReportModal}>Done</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

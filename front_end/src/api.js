@@ -22,3 +22,7 @@ export const fetchTeacherApplications = () => API.get("/teacher-applications");
 export const fetchUserApplications = (userId) => API.get(`/teacher-applications/user/${userId}`);
 export const submitTeacherApplication = (data) => API.post("/teacher-applications", data);
 export const reviewTeacherApplication = (id, data) => API.put(`/teacher-applications/${id}/review`, data);
+
+export const reportPost = (data) => API.post("/reports", data);
+export const fetchReports = () => API.get("/reports");
+export const updateReportStatus = (reportId, status) => API.patch(`/reports/${reportId}/status`, { status });

@@ -105,6 +105,18 @@ const TABLES = {
       reviewed_at TIMESTAMP NULL,
       FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
       FOREIGN KEY (reviewed_by) REFERENCES Users(user_id) ON DELETE SET NULL
+    )`,
+  Reports: `
+    CREATE TABLE IF NOT EXISTS Reports (
+      report_id INT AUTO_INCREMENT PRIMARY KEY,
+      post_id INT NOT NULL,
+      user_id INT NOT NULL,
+      reason VARCHAR(50) NOT NULL,
+      description TEXT,
+      status ENUM('pending','reviewed','dismissed') DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
     )`
 };
 
@@ -347,6 +359,25 @@ async function main() {
     console.log(`  + ${app.user_email} [${app.status}]`);
   }
 
+  // 13. Seed Reports
+  console.log('\n🚨 Seeding reports...');
+  const reports = [
+    { post_title: 'Dynamic Programming memoization table segmentation fault in Bellman-Ford', reporter: 'imran@bracu.ac.bd', reason: 'spam', status: 'pending' },
+    { post_title: 'Polymorphism and Abstract Class hierarchy debug', reporter: 'test@student.com', reason: 'inappropriate', status: 'pending' },
+    { post_title: 'Integration by partial fractions — complex rational functions', reporter: 'sadia@bracu.ac.bd', reason: 'academic_dishonesty', status: 'reviewed' },
+    { post_title: 'Thevenin equivalent circuit for multi-source network', reporter: 'imran@bracu.ac.bd', reason: 'fraud', status: 'pending' },
+  ];
+  for (const r of reports) {
+    const [postRow] = await conn.query('SELECT post_id FROM Posts WHERE title = ?', [r.post_title]);
+    if (postRow.length > 0) {
+      await conn.query(
+        `INSERT INTO Reports (post_id, user_id, reason, status) VALUES (?, ?, ?, ?)`,
+        [postRow[0].post_id, uid[r.reporter], r.reason, r.status]
+      );
+      console.log(`  + ${r.post_title.substring(0, 40)}... [${r.reason}]`);
+    }
+  }
+
   // Summary
   const [counts] = await conn.query(`
     SELECT
@@ -355,7 +386,8 @@ async function main() {
       (SELECT COUNT(*) FROM User_Skills) as user_skills,
       (SELECT COUNT(*) FROM Posts) as posts,
       (SELECT COUNT(*) FROM Sessions) as sessions,
-      (SELECT COUNT(*) FROM Teacher_Applications) as applications
+      (SELECT COUNT(*) FROM Teacher_Applications) as applications,
+      (SELECT COUNT(*) FROM Reports) as reports
   `);
   const c = counts[0];
 
@@ -368,6 +400,7 @@ async function main() {
   console.log(`   Posts:       ${c.posts}`);
   console.log(`   Sessions:    ${c.sessions}`);
   console.log(`   Applications: ${c.applications}`);
+  console.log(`   Reports:     ${c.reports}`);
   console.log('═'.repeat(50));
   console.log('\n🔑 All users login with password: ' + DEFAULT_PASSWORD);
   console.log('   Example: rafiq@bracu.ac.bd / password123\n');

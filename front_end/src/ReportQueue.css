@@ -1,55 +1,82 @@
-.page-header {
+.rq-filters {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
+  gap: 6px;
+  margin-bottom: 20px;
 }
 
-.page-header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.breadcrumb {
+.rq-filter-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  padding: 7px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
   color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-.breadcrumb-sep { color: #d1d5db; }
+.rq-filter-btn:hover {
+  border-color: #d1d5db;
+  color: #374151;
+}
 
-.breadcrumb-active {
-  color: #1a1a2e;
+.rq-filter-btn.active {
+  background: #1a1a2e;
+  color: #fff;
+  border-color: #1a1a2e;
+}
+
+.rq-filter-count {
+  font-size: 11px;
   font-weight: 600;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 6px;
+  border-radius: 10px;
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a1a2e;
+.rq-filter-btn.active .rq-filter-count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.rq-loading,
+.rq-empty {
+  text-align: center;
+  padding: 48px 20px;
+  font-size: 14px;
+  color: #9ca3af;
 }
 
 .rq-queue {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .rq-card {
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.rq-card.reviewed {
+  opacity: 0.65;
+}
+
+.rq-card.dismissed {
+  opacity: 0.5;
 }
 
 .rq-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
+  padding: 10px 16px;
   background: #fafbfc;
   border-bottom: 1px solid #f3f4f6;
 }
@@ -63,41 +90,84 @@
 .rq-id {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   color: #1a1a2e;
 }
 
 .rq-dot { color: #d1d5db; font-size: 10px; }
 
 .rq-course {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #374151;
 }
 
 .rq-time {
-  font-size: 12px;
+  font-size: 11px;
   color: #9ca3af;
 }
 
+.rq-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.rq-status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.rq-status-badge.reviewed {
+  background: #d4f5e2;
+  color: #1a7a4c;
+}
+
+.rq-status-badge.dismissed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
 .rq-card-body {
-  padding: 18px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.rq-requestor {
+.rq-report-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rq-report-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
-.rq-author {
-  font-size: 14px;
+.rq-label {
+  font-size: 11px;
   font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  width: 110px;
+  flex-shrink: 0;
+}
+
+.rq-value {
+  font-size: 13px;
+  font-weight: 500;
   color: #1a1a2e;
+}
+
+.rq-sub {
+  font-weight: 400;
+  color: #9ca3af;
 }
 
 .rq-violation {
@@ -106,18 +176,55 @@
   color: #374151;
   background: #f3f4f6;
   border: 1px solid #e5e7eb;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 6px;
   white-space: nowrap;
 }
 
 .rq-content {
-  font-size: 13px;
+  font-size: 12px;
   color: #6b7280;
-  line-height: 1.6;
+  line-height: 1.5;
   margin: 0;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: #fafbfc;
   border: 1px solid #f3f4f6;
-  border-radius: 8px;
+  border-radius: 6px;
+}
+
+.rq-card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.rq-action-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.rq-action-btn.review {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.rq-action-btn.review:hover {
+  background: #2c2c4a;
+}
+
+.rq-action-btn.dismiss {
+  background: #fff;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.rq-action-btn.dismiss:hover {
+  background: #f9fafb;
+  color: #374151;
 }
