@@ -1,10 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import AdminSidebar from './AdminSidebar';
 import './ReportQueue.css';
 
 const ReportQueue = ({ user }) => {
-  const navigate = useNavigate();
 
   const reportedPosts = [
     {
@@ -42,46 +39,40 @@ const ReportQueue = ({ user }) => {
   ];
 
   return (
-    <div className="admin-page">
-      <AdminSidebar user={user} />
+    <div className="admin-content">
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="breadcrumb">
+            <span>Institutional Governance</span>
+            <span className="breadcrumb-sep">›</span>
+            <span className="breadcrumb-active">Report Queue</span>
+          </div>
+          <h1 className="page-title">Report Queue</h1>
+        </div>
+      </div>
 
-      <div className="admin-main">
-        <div className="admin-content">
-          <div className="page-header">
-            <div className="page-header-left">
-              <div className="breadcrumb">
-                <span>Institutional Governance</span>
-                <span className="breadcrumb-sep">›</span>
-                <span className="breadcrumb-active">Report Queue</span>
+      <div className="rq-queue">
+        {reportedPosts.map((item) => (
+          <div key={item.id} className="rq-card">
+            <div className="rq-card-header">
+              <div className="rq-card-left">
+                <span className="rq-id">#{item.id}</span>
+                <span className="rq-dot">•</span>
+                <span className="rq-course">{item.course}</span>
+                <span className="rq-dot">•</span>
+                <span className="rq-time">{item.time}</span>
               </div>
-              <h1 className="page-title">Report Queue</h1>
+            </div>
+
+            <div className="rq-card-body">
+              <div className="rq-requestor">
+                <span className="rq-author">{item.author}</span>
+                <span className="rq-violation">{item.violation}</span>
+              </div>
+              <p className="rq-content">{item.content}</p>
             </div>
           </div>
-
-          <div className="rq-queue">
-            {reportedPosts.map((item) => (
-              <div key={item.id} className="rq-card">
-                <div className="rq-card-header">
-                  <div className="rq-card-left">
-                    <span className="rq-id">#{item.id}</span>
-                    <span className="rq-dot">•</span>
-                    <span className="rq-course">{item.course}</span>
-                    <span className="rq-dot">•</span>
-                    <span className="rq-time">{item.time}</span>
-                  </div>
-                </div>
-
-                <div className="rq-card-body">
-                  <div className="rq-requestor">
-                    <span className="rq-author">{item.author}</span>
-                    <span className="rq-violation">{item.violation}</span>
-                  </div>
-                  <p className="rq-content">{item.content}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );

@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AdminSidebar from './AdminSidebar';
 import './DisputesEscrow.css';
 
 const DisputesEscrow = ({ user }) => {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
@@ -98,12 +95,8 @@ const DisputesEscrow = ({ user }) => {
   const isExpanded = (id) => id === 'DISP-9402';
 
   return (
-    <div className="admin-page">
-      <AdminSidebar user={user} />
-
-      <div className="admin-main">
-        <div className="admin-content">
-          {/* Header */}
+    <div className="admin-content">
+      {/* Header */}
           <div className="page-header">
             <div className="page-header-left">
               <div className="breadcrumb">
@@ -409,13 +402,11 @@ const DisputesEscrow = ({ user }) => {
                     </div>
                     <span className="de-arbitrator-active">3 active</span>
                   </div>
-                  <button className="de-next-btn">Arbitrate Next in Queue</button>
+                      <button className="de-next-btn">Arbitrate Next in Queue</button>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </div>
   );
 };

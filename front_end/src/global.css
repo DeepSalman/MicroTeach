@@ -124,3 +124,10 @@ code, pre, .mono {
 .font-medium    { font-weight: var(--weight-medium); }
 .font-semibold  { font-weight: var(--weight-semibold); }
 .font-bold      { font-weight: var(--weight-bold); }
+
+/* ========== ADMIN LAYOUT ========== */
+.admin-content {
+  padding: 20px 24px 20px 16px;
+  flex: 1;
+  min-width: 0;
+}

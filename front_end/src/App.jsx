@@ -8,6 +8,7 @@ import UserList from './UserList';
 import Skills from './Skills';
 import Profile from './Profile';
 import EditProfile from './EditProfile';
+import AdminLayout from './AdminLayout';
 import AdminPanel from './AdminPanel';
 import UserManagement from './UserManagement';
 import ContentModeration from './ContentModeration';
@@ -31,6 +32,13 @@ const Dashboard = ({ user, onLogout }) => {
       <Skills />
     </div>
   );
+};
+
+const RequireAdmin = ({ currentUser, children }) => {
+  if (!currentUser || currentUser.is_admin !== 1) {
+    return <Navigate to="/" />;
+  }
+  return children;
 };
 
 function App() {
@@ -135,77 +143,22 @@ function App() {
           } 
         />
 
-        {/* Admin Panel - protected route, only for admins */}
-        <Route 
-          path="/admin" 
+        {/* Admin routes - sidebar renders once via AdminLayout */}
+        <Route
+          path="/admin"
           element={
-            currentUser && currentUser.is_admin === 1 ? (
-              <AdminPanel user={currentUser} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/" />
-            )
-          } 
-        />
-
-        {/* User Management - protected route, only for admins */}
-        <Route 
-          path="/admin/users" 
-          element={
-            currentUser && currentUser.is_admin === 1 ? (
-              <UserManagement user={currentUser} />
-            ) : (
-              <Navigate to="/" />
-            )
-          } 
-        />
-
-        {/* Content Moderation - protected route, only for admins */}
-        <Route 
-          path="/admin/moderation" 
-          element={
-            currentUser && currentUser.is_admin === 1 ? (
-              <ContentModeration user={currentUser} />
-            ) : (
-              <Navigate to="/" />
-            )
-          } 
-        />
-
-        {/* Report Queue - protected route, only for admins */}
-        <Route 
-          path="/admin/reports" 
-          element={
-            currentUser && currentUser.is_admin === 1 ? (
-              <ReportQueue user={currentUser} />
-            ) : (
-              <Navigate to="/" />
-            )
-          } 
-        />
-
-        {/* Disputes & Escrow - protected route, only for admins */}
-        <Route 
-          path="/admin/disputes" 
-          element={
-            currentUser && currentUser.is_admin === 1 ? (
-              <DisputesEscrow user={currentUser} />
-            ) : (
-              <Navigate to="/" />
-            )
-          } 
-        />
-
-        {/* Teacher Applications - protected route, only for admins */}
-        <Route 
-          path="/admin/teacher-applications" 
-          element={
-            currentUser && currentUser.is_admin === 1 ? (
-              <TeacherApplications user={currentUser} />
-            ) : (
-              <Navigate to="/" />
-            )
-          } 
-        />
+            <RequireAdmin currentUser={currentUser}>
+              <AdminLayout user={currentUser} onLogout={handleLogout} />
+            </RequireAdmin>
+          }
+        >
+          <Route index element={<AdminPanel user={currentUser} />} />
+          <Route path="users" element={<UserManagement user={currentUser} />} />
+          <Route path="moderation" element={<ContentModeration user={currentUser} />} />
+          <Route path="reports" element={<ReportQueue user={currentUser} />} />
+          <Route path="disputes" element={<DisputesEscrow user={currentUser} />} />
+          <Route path="teacher-applications" element={<TeacherApplications user={currentUser} />} />
+        </Route>
       </Routes>
     </Router>
   );

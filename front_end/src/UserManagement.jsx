@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchUsers, fetchPosts, fetchSessions } from './api';
-import AdminSidebar from './AdminSidebar';
 import './UserManagement.css';
 
 const UserManagement = ({ user }) => {
@@ -86,15 +85,12 @@ const UserManagement = ({ user }) => {
   const getUserPosts = (userId) => posts.filter(p => p.user_id === userId).length;
 
   if (loading) {
-    return <div className="admin-page"><div className="admin-loading">Loading user management...</div></div>;
+    return <div className="admin-loading">Loading user management...</div>;
   }
 
   return (
-    <div className="admin-page">
-      <AdminSidebar user={user} userCount={users.length} />
-
-      <div className="admin-main">
-        <header className="admin-top-header">
+    <div className="admin-content">
+      <header className="admin-top-header">
           <div className="header-breadcrumb">
             <span className="breadcrumb-label">INSTITUTIONAL NODE</span>
             <span className="version-tag">v2.4</span>
@@ -359,7 +355,6 @@ const UserManagement = ({ user }) => {
             </div>
           </footer>
         </div>
-      </div>
     </div>
   );
 };
