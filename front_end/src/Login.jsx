@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from './api';
+import BookAnimation from './BookAnimation';
 import './Login.css';
 
 const Login = ({ onLogin }) => {
@@ -121,38 +122,9 @@ const Login = ({ onLogin }) => {
           </div>
         </section>
 
-        {/* Right Panel: Orbital Background */}
+        {/* Right Panel: Book Animation */}
         <section className="login-right-panel">
-          <div className="orbital">
-            <svg viewBox="0 0 1000 1000">
-              <defs>
-                <path d="M 500, 500 m -440, 0 a 440,440 0 1,1 880,0 a 440,440 0 1,1 -880,0" id="c-outer"/>
-                <path d="M 500, 500 m -350, 0 a 350,350 0 1,1 700,0 a 350,350 0 1,1 -700,0" id="c-mid1"/>
-                <path d="M 500, 500 m -260, 0 a 260,260 0 1,1 520,0 a 260,260 0 1,1 -520,0" id="c-mid2"/>
-                <path d="M 500, 500 m -170, 0 a 170,170 0 1,1 340,0 a 170,170 0 1,1 -340,0" id="c-inner"/>
-              </defs>
-              <text opacity="0.5">
-                <textPath href="#c-outer" startOffset="0%">
-                  THE CONTENT ARCHITECTURE • MICROTEACH PEER LEARNING • ACADEMIC INTEGRITY • THE CONTENT ARCHITECTURE •
-                </textPath>
-              </text>
-              <text opacity="0.7">
-                <textPath href="#c-mid1" startOffset="25%">
-                  CAMPUS KNOWLEDGE EXCHANGE • REAL-TIME MICRO-TUTORING • VERIFIED .EDU NETWORK •
-                </textPath>
-              </text>
-              <text opacity="0.6">
-                <textPath href="#c-mid2" startOffset="50%">
-                  THE CONTENT ARCHITECTURE • STRICT IDENTITY VERIFICATION • ZERO FRAUD ESCROW •
-                </textPath>
-              </text>
-              <text opacity="0.8">
-                <textPath href="#c-inner" startOffset="10%">
-                  PEER SOLVING • TUTOR PROTOCOL • MICROTEACH •
-                </textPath>
-              </text>
-            </svg>
-          </div>
+          <BookAnimation />
 
           <div className="center-brand">
             <div className="brand-icon">MT</div>

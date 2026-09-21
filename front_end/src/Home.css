@@ -550,11 +550,16 @@
 
 .card-bottom {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid #eee;
+}
+
+.card-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .price {
@@ -581,6 +586,23 @@
 
 .apply-btn:hover {
   background: #2c2c4a;
+}
+
+.apply-btn.login-apply-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  padding: 10px 22px;
+  white-space: nowrap;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.login-apply-btn--full {
+  width: 100%;
+  margin-top: 12px;
 }
 
 .apply-btn.disabled {

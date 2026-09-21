@@ -288,11 +288,16 @@ const Home = ({ user, onLogout }) => {
                     {post.is_urgent && <div className="due">🔥 High Urgency</div>}
                   </div>
                   <div className="card-bottom">
-                    <div className="price"><strong>৳{post.bounty}</strong> / session</div>
-                    {isOwnPost ? (
-                      <span className="your-post-badge">Your Post</span>
-                    ) : (
-                      <button className="apply-btn">Apply Now</button>
+                    <div className="card-bottom-row">
+                      <div className="price"><strong>৳{post.bounty}</strong></div>
+                      {isOwnPost ? (
+                        <span className="your-post-badge">Your Post</span>
+                      ) : user ? (
+                        <button className="apply-btn">Apply Now</button>
+                      ) : null}
+                    </div>
+                    {!isOwnPost && !user && (
+                      <Link to="/login" className="apply-btn login-apply-btn login-apply-btn--full">Login or Sign Up to Apply</Link>
                     )}
                   </div>
                 </div>
