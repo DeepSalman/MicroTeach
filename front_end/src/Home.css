@@ -588,6 +588,17 @@
   background: #2c2c4a;
 }
 
+.apply-btn.applied-btn {
+  background: transparent;
+  color: #d4a017;
+  border: 2px dashed #d4a017;
+  font-size: 12px;
+}
+
+.apply-btn.applied-btn:hover {
+  background: rgba(212, 160, 23, 0.08);
+}
+
 .apply-btn.login-apply-btn {
   text-decoration: none;
   display: inline-flex;
@@ -620,6 +631,40 @@
   border: 1px solid #d4f5e2;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.own-post-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.applicant-count-badge {
+  padding: 4px 10px;
+  background: #eef0ff;
+  color: #3730a3;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.view-details-btn {
+  padding: 8px 16px;
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.view-details-btn:hover {
+  background: #2c2c4a;
 }
 
 /* Show More */

@@ -117,6 +117,18 @@ const TABLES = {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+    )`,
+  Post_Applications: `
+    CREATE TABLE IF NOT EXISTS Post_Applications (
+      application_id INT AUTO_INCREMENT PRIMARY KEY,
+      post_id INT NOT NULL,
+      user_id INT NOT NULL,
+      message TEXT,
+      status ENUM('pending','accepted','rejected') DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_application (post_id, user_id),
+      FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
     )`
 };
 
@@ -233,7 +245,7 @@ async function main() {
   if (fresh) {
     console.log('\n⚠️  Fresh mode — dropping all tables...');
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    for (const name of ['Teacher_Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
+    for (const name of ['Post_Applications', 'Teacher_Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
       await conn.query(`DROP TABLE IF EXISTS \`${name}\``);
     }
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
@@ -269,6 +281,38 @@ async function main() {
       `);
       const c = counts[0];
       console.log(`\n📋 Data already seeded (${c.users} users, ${c.posts} posts, ${c.skills} skills)`);
+
+      // Seed Post_Applications if empty (new table)
+      const postAppsEmpty = await tableIsEmpty(conn, 'Post_Applications');
+      if (postAppsEmpty) {
+        console.log('\n📨 Post_Applications table is empty — seeding...');
+        const uid = {};
+        const [userRows] = await conn.query('SELECT user_id, email FROM Users');
+        userRows.forEach(u => { uid[u.email] = u.user_id; });
+
+        const postApplications = [
+          { post_title: 'Dynamic Programming memoization table segmentation fault in Bellman-Ford', applicant: 'rafiq@bracu.ac.bd', message: 'I am a TA for CSE 221 and specialize in DP. Can help you debug the memoization table.', status: 'pending' },
+          { post_title: 'Dynamic Programming memoization table segmentation fault in Bellman-Ford', applicant: 'fatima@bracu.ac.bd', message: 'Experienced with Bellman-Ford and dynamic programming. Happy to walk through the solution.', status: 'pending' },
+          { post_title: 'Polymorphism and Abstract Class hierarchy debug', applicant: 'rafiq@bracu.ac.bd', message: 'Java OOP is my forte. Can debug virtual method dispatch issues quickly.', status: 'pending' },
+          { post_title: 'Integration by partial fractions — complex rational functions', applicant: 'nusrat@bracu.ac.bd', message: 'Math tutor specializing in calculus. Can break down partial fractions step by step.', status: 'pending' },
+          { post_title: 'Thevenin equivalent circuit for multi-source network', applicant: 'tanvir@bracu.ac.bd', message: 'EEE tutor with 4.9 star rating. Circuit analysis is my specialty.', status: 'pending' },
+          { post_title: 'Projectile motion with air resistance — numerical method approach', applicant: 'fatima@bracu.ac.bd', message: 'Python and numerical methods expert. Can help with Euler method implementation.', status: 'accepted' },
+        ];
+        for (const pa of postApplications) {
+          const [postRow] = await conn.query('SELECT post_id FROM Posts WHERE title = ?', [pa.post_title]);
+          if (postRow.length > 0 && uid[pa.applicant]) {
+            await conn.query(
+              `INSERT INTO Post_Applications (post_id, user_id, message, status) VALUES (?, ?, ?, ?)`,
+              [postRow[0].post_id, uid[pa.applicant], pa.message, pa.status]
+            );
+            console.log(`  + ${pa.applicant} → ${pa.post_title.substring(0, 35)}... [${pa.status}]`);
+          }
+        }
+        console.log('✅ Post Applications seeded');
+      } else {
+        console.log('   Post_Applications already has data — skipping');
+      }
+
       console.log('   Use --force to re-seed or --fresh to start over\n');
       await conn.end();
       return;
@@ -279,7 +323,7 @@ async function main() {
   if (force && !fresh) {
     console.log('\n⚠️  Clearing existing data...');
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    for (const name of ['Teacher_Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
+    for (const name of ['Post_Applications', 'Teacher_Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
       await conn.query(`TRUNCATE TABLE \`${name}\``);
     }
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
@@ -378,6 +422,27 @@ async function main() {
     }
   }
 
+  // 14. Seed Post Applications
+  console.log('\n📨 Seeding post applications...');
+  const postApplications = [
+    { post_title: 'Dynamic Programming memoization table segmentation fault in Bellman-Ford', applicant: 'rafiq@bracu.ac.bd', message: 'I am a TA for CSE 221 and specialize in DP. Can help you debug the memoization table.', status: 'pending' },
+    { post_title: 'Dynamic Programming memoization table segmentation fault in Bellman-Ford', applicant: 'fatima@bracu.ac.bd', message: 'Experienced with Bellman-Ford and dynamic programming. Happy to walk through the solution.', status: 'pending' },
+    { post_title: 'Polymorphism and Abstract Class hierarchy debug', applicant: 'rafiq@bracu.ac.bd', message: 'Java OOP is my forte. Can debug virtual method dispatch issues quickly.', status: 'pending' },
+    { post_title: 'Integration by partial fractions — complex rational functions', applicant: 'nusrat@bracu.ac.bd', message: 'Math tutor specializing in calculus. Can break down partial fractions step by step.', status: 'pending' },
+    { post_title: 'Thevenin equivalent circuit for multi-source network', applicant: 'tanvir@bracu.ac.bd', message: 'EEE tutor with 4.9 star rating. Circuit analysis is my specialty.', status: 'pending' },
+    { post_title: 'Projectile motion with air resistance — numerical method approach', applicant: 'fatima@bracu.ac.bd', message: 'Python and numerical methods expert. Can help with Euler method implementation.', status: 'accepted' },
+  ];
+  for (const pa of postApplications) {
+    const [postRow] = await conn.query('SELECT post_id FROM Posts WHERE title = ?', [pa.post_title]);
+    if (postRow.length > 0) {
+      await conn.query(
+        `INSERT INTO Post_Applications (post_id, user_id, message, status) VALUES (?, ?, ?, ?)`,
+        [postRow[0].post_id, uid[pa.applicant], pa.message, pa.status]
+      );
+      console.log(`  + ${pa.applicant} → ${pa.post_title.substring(0, 35)}... [${pa.status}]`);
+    }
+  }
+
   // Summary
   const [counts] = await conn.query(`
     SELECT
@@ -387,20 +452,22 @@ async function main() {
       (SELECT COUNT(*) FROM Posts) as posts,
       (SELECT COUNT(*) FROM Sessions) as sessions,
       (SELECT COUNT(*) FROM Teacher_Applications) as applications,
-      (SELECT COUNT(*) FROM Reports) as reports
+      (SELECT COUNT(*) FROM Reports) as reports,
+      (SELECT COUNT(*) FROM Post_Applications) as post_applications
   `);
   const c = counts[0];
 
   console.log('\n' + '═'.repeat(50));
   console.log('✅ SETUP COMPLETE');
   console.log('═'.repeat(50));
-  console.log(`   Users:       ${c.users}`);
-  console.log(`   Skills:      ${c.skills}`);
-  console.log(`   User-Skills: ${c.user_skills}`);
-  console.log(`   Posts:       ${c.posts}`);
-  console.log(`   Sessions:    ${c.sessions}`);
-  console.log(`   Applications: ${c.applications}`);
-  console.log(`   Reports:     ${c.reports}`);
+  console.log(`   Users:             ${c.users}`);
+  console.log(`   Skills:            ${c.skills}`);
+  console.log(`   User-Skills:       ${c.user_skills}`);
+  console.log(`   Posts:             ${c.posts}`);
+  console.log(`   Sessions:          ${c.sessions}`);
+  console.log(`   Applications:      ${c.applications}`);
+  console.log(`   Reports:           ${c.reports}`);
+  console.log(`   Post Applications: ${c.post_applications}`);
   console.log('═'.repeat(50));
   console.log('\n🔑 All users login with password: ' + DEFAULT_PASSWORD);
   console.log('   Example: rafiq@bracu.ac.bd / password123\n');

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, fetchUserApplications, submitTeacherApplication } from './api';
+import { fetchUserProfile, fetchUserApplications, submitTeacherApplication, fetchUserPostApplications, fetchPostApplicationCount } from './api';
+import PostDetailModal from './PostDetailModal';
 import './Profile.css';
 
 const Profile = ({ user, onLogout, onProfileUpdate }) => {
@@ -14,11 +15,15 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const [applyReason, setApplyReason] = useState('');
   const [applyExpertise, setApplyExpertise] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [postApplications, setPostApplications] = useState([]);
+  const [postApplicantCounts, setPostApplicantCounts] = useState({});
+  const [detailModalPost, setDetailModalPost] = useState(null);
 
   useEffect(() => {
     if (user?.user_id) {
       loadProfile();
       checkApplicationStatus();
+      loadPostApplications();
     }
   }, [user]);
 
@@ -32,6 +37,10 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
         const updatedUser = { ...user, role: freshRole };
         localStorage.setItem('microteach_user', JSON.stringify(updatedUser));
         if (onProfileUpdate) onProfileUpdate(updatedUser);
+      }
+
+      if (response.data.posts?.length > 0) {
+        loadApplicantCounts(response.data.posts);
       }
     } catch (err) {
       setError('Failed to load profile data.');
@@ -52,6 +61,30 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
     } catch (err) {
       console.error('Failed to check application status:', err);
     }
+  };
+
+  const loadPostApplications = async () => {
+    try {
+      const response = await fetchUserPostApplications(user.user_id);
+      setPostApplications(response.data);
+    } catch (err) {
+      console.error('Failed to load post applications:', err);
+    }
+  };
+
+  const loadApplicantCounts = async (posts) => {
+    const counts = {};
+    await Promise.all(
+      posts.map(async (post) => {
+        try {
+          const response = await fetchPostApplicationCount(post.post_id);
+          counts[post.post_id] = response.data.count;
+        } catch {
+          counts[post.post_id] = 0;
+        }
+      })
+    );
+    setPostApplicantCounts(counts);
   };
 
   const handleApply = async () => {
@@ -318,6 +351,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
             {posts && posts.length > 0 ? (
               posts.map((post) => {
                 const statusBadge = getStatusBadge(post.status);
+                const applicantCount = postApplicantCounts[post.post_id] || 0;
                 return (
                   <div key={post.post_id} className="post-card">
                     <div className="post-card-header">
@@ -334,10 +368,20 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                     <h3 className="post-card-title">{post.title}</h3>
                     <p className="post-card-desc">{post.description || 'No description provided.'}</p>
                     <div className="post-card-footer">
-                      <span className="format-tag">{getDeliveryLabel(post.delivery_format)}</span>
-                      <div className="post-card-actions">
-                        <button className="btn-secondary-sm">View Details</button>
-                        <button className="btn-outline-sm">Close Post</button>
+                      <div className="post-card-footer-top">
+                        <span className="format-tag">{getDeliveryLabel(post.delivery_format)}</span>
+                        {applicantCount > 0 && (
+                          <span className="applicant-count-tag">
+                            <span className="meta-icon">people</span>
+                            {applicantCount} applicant{applicantCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                      <div className="post-card-footer-bottom">
+                        <div className="post-card-actions">
+                          <button className="btn-secondary-sm" onClick={() => setDetailModalPost(post)}>View Details</button>
+                          <button className="btn-outline-sm">Close Post</button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -360,7 +404,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
               <div>
                 <div className="section-title-row">
                   <h2>Applied Requests</h2>
-                  <span className="count-badge secondary">0 Applications</span>
+                  <span className="count-badge secondary">{postApplications.length} Application{postApplications.length !== 1 ? 's' : ''}</span>
                 </div>
                 <p>Micro-tutoring requests and peer applications submitted by {displayName}</p>
               </div>
@@ -370,10 +414,38 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
             </div>
           </div>
 
-          <div className="empty-state">
-            <p>You haven't applied to any tutoring requests yet. Browse available bounties to start helping peers!</p>
-            <button className="btn-primary" onClick={() => navigate('/')}>Browse Bounties</button>
-          </div>
+          {postApplications.length > 0 ? (
+            <div className="posts-grid">
+              {postApplications.map((app) => {
+                const statusClass = app.status === 'accepted' ? 'active' : app.status === 'rejected' ? 'closed' : 'pending';
+                return (
+                  <div key={app.application_id} className="post-card">
+                    <div className="post-card-header">
+                      <span className="course-badge">{app.course_code?.split(' ')[0]}</span>
+                      <span className={`status-badge ${statusClass}`}>● {app.status.charAt(0).toUpperCase() + app.status.slice(1)}</span>
+                    </div>
+                    <div className="post-card-meta">
+                      <span className="posted-time">
+                        <span className="meta-icon">schedule</span>
+                        Applied {formatDate(app.created_at)}
+                      </span>
+                      <span className="bounty">৳ {app.bounty}</span>
+                    </div>
+                    <h3 className="post-card-title">{app.post_title}</h3>
+                    {app.message && <p className="post-card-desc">Your message: "{app.message}"</p>}
+                    <div className="post-card-footer">
+                      <span className="format-tag">Posted by {app.post_author}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <p>You haven't applied to any tutoring requests yet. Browse available bounties to start helping peers!</p>
+              <button className="btn-primary" onClick={() => navigate('/')}>Browse Bounties</button>
+            </div>
+          )}
         </section>
 
         {/* Reviews Section */}
@@ -443,6 +515,16 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Post Detail Modal */}
+      {detailModalPost && (
+        <PostDetailModal
+          post={detailModalPost}
+          user={user}
+          onClose={() => setDetailModalPost(null)}
+          onStatusChange={() => loadApplicantCounts(posts)}
+        />
       )}
 
       {/* Footer */}

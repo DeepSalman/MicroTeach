@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchPosts, reportPost } from './api';
+import { fetchPosts, reportPost, fetchUserPostApplications, fetchPostApplicationCount } from './api';
+import ApplyModal from './ApplyModal';
+import PostDetailModal from './PostDetailModal';
 import './Home.css';
 
 const Home = ({ user, onLogout }) => {
@@ -11,6 +13,10 @@ const Home = ({ user, onLogout }) => {
   const [reportReason, setReportReason] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
+  const [applyModalPost, setApplyModalPost] = useState(null);
+  const [appliedPostIds, setAppliedPostIds] = useState(new Set());
+  const [postApplicantCounts, setPostApplicantCounts] = useState({});
+  const [detailModalPost, setDetailModalPost] = useState(null);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -28,15 +34,49 @@ const Home = ({ user, onLogout }) => {
     loadPosts();
   }, []);
 
+  useEffect(() => {
+    if (user?.user_id) {
+      loadAppliedPosts();
+    } else {
+      setAppliedPostIds(new Set());
+    }
+  }, [user]);
+
+  const loadAppliedPosts = async () => {
+    try {
+      const response = await fetchUserPostApplications(user.user_id);
+      const ids = new Set(response.data.map(app => app.post_id));
+      setAppliedPostIds(ids);
+    } catch (err) {
+      console.error('Failed to load applied posts:', err);
+    }
+  };
+
   const loadPosts = async () => {
     try {
       const response = await fetchPosts();
       setPosts(response.data);
+      loadApplicantCounts(response.data);
     } catch (err) {
       console.error('Failed to load posts:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadApplicantCounts = async (postsData) => {
+    const counts = {};
+    await Promise.all(
+      postsData.map(async (post) => {
+        try {
+          const response = await fetchPostApplicationCount(post.post_id);
+          counts[post.post_id] = response.data.count;
+        } catch {
+          counts[post.post_id] = 0;
+        }
+      })
+    );
+    setPostApplicantCounts(counts);
   };
 
   const handleLogout = () => {
@@ -287,13 +327,22 @@ const Home = ({ user, onLogout }) => {
                     {post.deadline && <div className="time">⏰ Due: {post.deadline}</div>}
                     {post.is_urgent && <div className="due">🔥 High Urgency</div>}
                   </div>
-                  <div className="card-bottom">
+                    <div className="card-bottom">
                     <div className="card-bottom-row">
                       <div className="price"><strong>৳{post.bounty}</strong></div>
                       {isOwnPost ? (
-                        <span className="your-post-badge">Your Post</span>
+                        <div className="own-post-actions">
+                          {postApplicantCounts[post.post_id] > 0 && (
+                            <span className="applicant-count-badge">{postApplicantCounts[post.post_id]} applicant{postApplicantCounts[post.post_id] !== 1 ? 's' : ''}</span>
+                          )}
+                          <button className="view-details-btn" onClick={() => setDetailModalPost(post)}>View Details</button>
+                        </div>
                       ) : user ? (
-                        <button className="apply-btn">Apply Now</button>
+                        appliedPostIds.has(post.post_id) ? (
+                          <button className="apply-btn applied-btn" onClick={() => setApplyModalPost(post)}>Applied</button>
+                        ) : (
+                          <button className="apply-btn" onClick={() => setApplyModalPost(post)}>Apply Now</button>
+                        )
                       ) : null}
                     </div>
                     {!isOwnPost && !user && (
@@ -406,6 +455,35 @@ const Home = ({ user, onLogout }) => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Apply Modal */}
+      {applyModalPost && (
+        <ApplyModal
+          post={applyModalPost}
+          user={user}
+          onClose={() => setApplyModalPost(null)}
+          onApplySuccess={() => {
+            setAppliedPostIds(prev => new Set([...prev, applyModalPost.post_id]));
+          }}
+          onWithdrawSuccess={() => {
+            setAppliedPostIds(prev => {
+              const next = new Set(prev);
+              next.delete(applyModalPost.post_id);
+              return next;
+            });
+          }}
+        />
+      )}
+
+      {/* Post Detail Modal (for post owners) */}
+      {detailModalPost && (
+        <PostDetailModal
+          post={detailModalPost}
+          user={user}
+          onClose={() => setDetailModalPost(null)}
+          onStatusChange={() => loadApplicantCounts(posts)}
+        />
       )}
     </div>
   );

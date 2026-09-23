@@ -26,3 +26,10 @@ export const reviewTeacherApplication = (id, data) => API.put(`/teacher-applicat
 export const reportPost = (data) => API.post("/reports", data);
 export const fetchReports = () => API.get("/reports");
 export const updateReportStatus = (reportId, status) => API.patch(`/reports/${reportId}/status`, { status });
+
+export const fetchPostApplications = (postId) => API.get(`/post-applications/post/${postId}`);
+export const fetchPostApplicationCount = (postId) => API.get(`/post-applications/post/${postId}/count`);
+export const fetchUserPostApplications = (userId) => API.get(`/post-applications/user/${userId}`);
+export const applyToPost = (data) => API.post("/post-applications", data);
+export const withdrawApplication = (id) => API.delete(`/post-applications/${id}`);
+export const updateApplicationStatus = (id, data) => API.patch(`/post-applications/${id}/status`, data);
