@@ -21,17 +21,14 @@ router.post('/', async (req, res) => {
        WHERE pa.post_id = ? AND pa.user_id = ? AND pa.status = 'completed'`,
       [post_id, reviewee_id]
     );
-    if (app.length === 0) {
+    // Also allow if reviewer is the tutor (reviewing poster)
+    const [appAsTutor] = await db.query(
+      `SELECT pa.status FROM Post_Applications pa
+       WHERE pa.post_id = ? AND pa.user_id = ? AND pa.status = 'completed'`,
+      [post_id, reviewer_id]
+    );
+    if (app.length === 0 && appAsTutor.length === 0) {
       return res.status(400).json({ message: 'This session is not completed yet.' });
-    }
-
-    // Check if reviewer is the post owner (poster reviews tutor)
-    const [post] = await db.query('SELECT user_id FROM Posts WHERE post_id = ?', [post_id]);
-    if (post.length === 0) {
-      return res.status(404).json({ message: 'Post not found.' });
-    }
-    if (String(post[0].user_id) !== String(reviewer_id)) {
-      return res.status(403).json({ message: 'Only the post owner can review the tutor.' });
     }
 
     // Check duplicate

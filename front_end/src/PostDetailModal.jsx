@@ -242,6 +242,17 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                         {isCompleted && (
                           <div className="pd-accepted-actions">
                             <span className="pd-completed-badge">Session Complete</span>
+                            {!reviewedApps.has(app.application_id) && (
+                              <button
+                                className="pd-review-btn"
+                                onClick={() => setReviewModal({ open: true, revieweeId: app.user_id, revieweeName: app.applicant_name })}
+                              >
+                                Write Review
+                              </button>
+                            )}
+                            {reviewedApps.has(app.application_id) && (
+                              <span className="pd-reviewed-badge">Reviewed</span>
+                            )}
                           </div>
                         )}
                         {isCancelRequested && (
@@ -314,6 +325,17 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
         message={alertModal.message}
         type={alertModal.type}
         confirmText="OK"
+      />
+
+      {/* Review Modal */}
+      <ReviewModal
+        isOpen={reviewModal.open}
+        onClose={() => setReviewModal({ open: false, revieweeId: null, revieweeName: '' })}
+        reviewerId={user.user_id}
+        revieweeId={reviewModal.revieweeId}
+        postId={post.post_id}
+        revieweeName={reviewModal.revieweeName}
+        onReviewSubmitted={loadApplications}
       />
     </div>
   );

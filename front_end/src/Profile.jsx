@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, fetchUserApplications, submitTeacherApplication, fetchUserPostApplications, fetchPostApplicationCount, updateApplicationStatus, closePost } from './api';
+import { fetchUserProfile, fetchUserApplications, submitTeacherApplication, fetchUserPostApplications, fetchPostApplicationCount, updateApplicationStatus, closePost, checkReviewExists, fetchUserReviews, fetchUserRating } from './api';
 import PostDetailModal from './PostDetailModal';
 import ChatModal from './ChatModal';
 import WalletModal from './WalletModal';
 import ConfirmModal from './ConfirmModal';
+import ReviewModal from './ReviewModal';
 import './Profile.css';
 
 const Profile = ({ user, onLogout, onProfileUpdate }) => {
@@ -27,14 +28,32 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', type: 'info', onConfirm: () => {} });
   const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'info' });
+  const [reviewModal, setReviewModal] = useState({ open: false, revieweeId: null, revieweeName: '' });
+  const [reviewedPosts, setReviewedPosts] = useState(new Set());
+  const [userReviews, setUserReviews] = useState([]);
+  const [userRating, setUserRating] = useState({ avg_rating: 0, review_count: 0 });
 
   useEffect(() => {
     if (user?.user_id) {
       loadProfile();
       checkApplicationStatus();
       loadPostApplications();
+      loadReviews();
     }
   }, [user]);
+
+  const loadReviews = async () => {
+    try {
+      const [reviewsRes, ratingRes] = await Promise.all([
+        fetchUserReviews(user.user_id),
+        fetchUserRating(user.user_id)
+      ]);
+      setUserReviews(reviewsRes.data || []);
+      setUserRating(ratingRes.data || { avg_rating: 0, review_count: 0 });
+    } catch (err) {
+      console.error('Failed to load reviews:', err);
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -77,6 +96,20 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
     try {
       const response = await fetchUserPostApplications(user.user_id);
       setPostApplications(response.data);
+
+      // Check review status for completed apps
+      const reviewed = new Set();
+      for (const app of response.data) {
+        if (app.status === 'completed') {
+          try {
+            const res = await checkReviewExists(app.post_id, user.user_id);
+            if (res.data.exists) {
+              reviewed.add(app.post_id);
+            }
+          } catch (e) {}
+        }
+      }
+      setReviewedPosts(reviewed);
     } catch (err) {
       console.error('Failed to load post applications:', err);
     }
@@ -506,6 +539,20 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                           <span className="completed-tag">Session completed</span>
                         )}
                       </div>
+                      {isCompleted && (
+                        <div className="post-card-footer-bottom">
+                          <div className="post-card-actions">
+                            {!reviewedPosts.has(app.post_id) && (
+                              <button className="btn-review-sm" onClick={() => setReviewModal({ open: true, revieweeId: app.post_author_id, revieweeName: app.post_author, postId: app.post_id })}>
+                                Leave Review
+                              </button>
+                            )}
+                            {reviewedPosts.has(app.post_id) && (
+                              <span className="completed-tag">Reviewed</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       {isAccepted && (
                         <div className="post-card-footer-bottom">
                           <div className="post-card-actions">
@@ -588,25 +635,46 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
               <div>
                 <div className="section-title-row">
                   <h2>Student Reviews & Endorsements</h2>
-                  <span className="count-badge tertiary">0 Verified Sessions</span>
+                  <span className="count-badge tertiary">{userRating.review_count} Verified Session{userRating.review_count !== 1 ? 's' : ''}</span>
                 </div>
                 <p>Feedback and academic peer endorsements across semesters</p>
               </div>
             </div>
             <div className="section-header-right">
               <div className="rating-box">
-                <span className="rating-number">0.00</span>
+                <span className="rating-number">{Number(userRating.avg_rating || 0).toFixed(2)}</span>
                 <div className="rating-info">
-                  <div className="stars">☆☆☆☆☆</div>
-                  <span className="completion-rate">No sessions yet</span>
+                  <div className="stars">{userRating.avg_rating > 0 ? '★'.repeat(Math.round(userRating.avg_rating)) + '☆'.repeat(5 - Math.round(userRating.avg_rating)) : '☆☆☆☆☆'}</div>
+                  <span className="completion-rate">{userRating.review_count > 0 ? `${userRating.review_count} review${userRating.review_count !== 1 ? 's' : ''}` : 'No sessions yet'}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="empty-state">
-            <p>No reviews yet. Complete tutoring sessions to build your reputation!</p>
-          </div>
+          {userReviews.length > 0 ? (
+            <div className="reviews-list">
+              {userReviews.map((review) => (
+                <div key={review.review_id} className="review-card">
+                  <div className="review-card-header">
+                    <div className="review-avatar">{review.reviewer_name?.charAt(0) || '?'}</div>
+                    <div className="review-meta">
+                      <span className="reviewer-name">{review.reviewer_name}</span>
+                      <span className="review-date">{new Date(review.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="review-stars-display">
+                      {'★'.repeat(Math.round(review.rating))}{'☆'.repeat(5 - Math.round(review.rating))}
+                      <span className="review-rating-value">{Number(review.rating).toFixed(1)}</span>
+                    </div>
+                  </div>
+                  {review.comment && <p className="review-comment">{review.comment}</p>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <p>No reviews yet. Complete tutoring sessions to build your reputation!</p>
+            </div>
+          )}
         </section>
       </main>
 
@@ -692,6 +760,17 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
         message={alertModal.message}
         type={alertModal.type}
         confirmText="OK"
+      />
+
+      {/* Review Modal */}
+      <ReviewModal
+        isOpen={reviewModal.open}
+        onClose={() => setReviewModal({ open: false, revieweeId: null, revieweeName: '', postId: null })}
+        reviewerId={user.user_id}
+        revieweeId={reviewModal.revieweeId}
+        postId={reviewModal.postId}
+        revieweeName={reviewModal.revieweeName}
+        onReviewSubmitted={loadPostApplications}
       />
 
       {/* Footer */}
