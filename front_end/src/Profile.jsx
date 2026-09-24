@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, fetchUserApplications, submitTeacherApplication, fetchUserPostApplications, fetchPostApplicationCount } from './api';
+import { fetchUserProfile, fetchUserApplications, submitTeacherApplication, fetchUserPostApplications, fetchPostApplicationCount, updateApplicationStatus } from './api';
 import PostDetailModal from './PostDetailModal';
+import ChatModal from './ChatModal';
 import './Profile.css';
 
 const Profile = ({ user, onLogout, onProfileUpdate }) => {
@@ -18,6 +19,8 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const [postApplications, setPostApplications] = useState([]);
   const [postApplicantCounts, setPostApplicantCounts] = useState({});
   const [detailModalPost, setDetailModalPost] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatStartUser, setChatStartUser] = useState(null);
 
   useEffect(() => {
     if (user?.user_id) {
@@ -192,6 +195,11 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
           <div className="logo-text">MicroTeach<span>Campus Hub</span></div>
         </div>
         <div className="header-actions">
+          <button className="icon-btn" title="Messages" onClick={() => setChatOpen(true)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
           <button className="icon-btn" onClick={() => navigate('/')}>Home</button>
           <div className="avatar">
             {displayName.charAt(0).toUpperCase()}
@@ -417,12 +425,24 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
           {postApplications.length > 0 ? (
             <div className="posts-grid">
               {postApplications.map((app) => {
-                const statusClass = app.status === 'accepted' ? 'active' : app.status === 'rejected' ? 'closed' : 'pending';
+                const isAccepted = app.status === 'accepted';
+                const isRejected = app.status === 'rejected';
+                const isPending = app.status === 'pending';
+                const isCancelRequested = app.status === 'cancellation_requested';
+                const isCancelled = app.status === 'cancelled';
+                const isCompletionRequested = app.status === 'completion_requested';
+                const isCompleted = app.status === 'completed';
                 return (
-                  <div key={app.application_id} className="post-card">
+                  <div key={app.application_id} className={`post-card ${isAccepted ? 'post-card--accepted' : ''} ${isCancelRequested ? 'post-card--cancel-requested' : ''} ${isCancelled ? 'post-card--cancelled' : ''} ${isCompleted ? 'post-card--completed' : ''}`}>
                     <div className="post-card-header">
                       <span className="course-badge">{app.course_code?.split(' ')[0]}</span>
-                      <span className={`status-badge ${statusClass}`}>● {app.status.charAt(0).toUpperCase() + app.status.slice(1)}</span>
+                      {isAccepted && <span className="status-badge status-badge--accepted">✓ Accepted</span>}
+                      {isRejected && <span className="status-badge status-badge--rejected">✕ Rejected</span>}
+                      {isPending && <span className="status-badge status-badge--pending">● Pending</span>}
+                      {isCancelRequested && <span className="status-badge status-badge--pending">⚠ Cancel Requested</span>}
+                      {isCancelled && <span className="status-badge status-badge--rejected">✕ Cancelled</span>}
+                      {isCompletionRequested && <span className="status-badge status-badge--accepted">✓ Complete Requested</span>}
+                      {isCompleted && <span className="status-badge status-badge--accepted">✓ Completed</span>}
                     </div>
                     <div className="post-card-meta">
                       <span className="posted-time">
@@ -434,7 +454,85 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                     <h3 className="post-card-title">{app.post_title}</h3>
                     {app.message && <p className="post-card-desc">Your message: "{app.message}"</p>}
                     <div className="post-card-footer">
-                      <span className="format-tag">Posted by {app.post_author}</span>
+                      <div className="post-card-footer-top">
+                        <span className="format-tag">Posted by {app.post_author}</span>
+                        {isAccepted && (
+                          <span className="accepted-tag">You've been matched!</span>
+                        )}
+                        {isCancelRequested && (
+                          <span className="cancel-requested-tag">Post owner wants to cancel</span>
+                        )}
+                        {isCancelled && (
+                          <span className="cancelled-tag">Session cancelled</span>
+                        )}
+                        {isCompletionRequested && (
+                          <span className="completion-requested-tag">Post owner marked complete</span>
+                        )}
+                        {isCompleted && (
+                          <span className="completed-tag">Session completed</span>
+                        )}
+                      </div>
+                      {isAccepted && (
+                        <div className="post-card-footer-bottom">
+                          <div className="post-card-actions">
+                            <button className="btn-complete-sm" onClick={async () => {
+                              await updateApplicationStatus(app.application_id, { status: 'completion_requested', owner_id: app.post_author_id, requested_by: user.user_id });
+                              loadPostApplications();
+                            }}>
+                              Mark Complete
+                            </button>
+                            <button className="btn-message-sm" onClick={() => {
+                              setChatStartUser(app.post_author_id);
+                              setChatOpen(true);
+                            }}>
+                              <span className="meta-icon">chat</span> Message
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {isCompletionRequested && String(app.completion_requested_by) !== String(user.user_id) && (
+                        <div className="post-card-footer-bottom">
+                          <div className="post-card-actions">
+                            <button className="btn-complete-sm" onClick={async () => {
+                              await updateApplicationStatus(app.application_id, { status: 'completed', owner_id: app.post_author_id });
+                              loadPostApplications();
+                            }}>
+                              Accept Completion
+                            </button>
+                            <button className="btn-keep-sm" onClick={async () => {
+                              await updateApplicationStatus(app.application_id, { status: 'accepted', owner_id: app.post_author_id });
+                              loadPostApplications();
+                            }}>
+                              Not Yet
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {isCompletionRequested && String(app.completion_requested_by) === String(user.user_id) && (
+                        <div className="post-card-footer-bottom">
+                          <div className="post-card-actions">
+                            <span className="waiting-tag">Waiting for post owner...</span>
+                          </div>
+                        </div>
+                      )}
+                      {isCancelRequested && (
+                        <div className="post-card-footer-bottom">
+                          <div className="post-card-actions">
+                            <button className="btn-confirm-cancel-sm" onClick={async () => {
+                              await updateApplicationStatus(app.application_id, { status: 'cancelled', owner_id: app.post_author_id });
+                              loadPostApplications();
+                            }}>
+                              Confirm Cancellation
+                            </button>
+                            <button className="btn-keep-sm" onClick={async () => {
+                              await updateApplicationStatus(app.application_id, { status: 'accepted', owner_id: app.post_author_id });
+                              loadPostApplications();
+                            }}>
+                              Keep Tutoring
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -524,7 +622,17 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
           user={user}
           onClose={() => setDetailModalPost(null)}
           onStatusChange={() => loadApplicantCounts(posts)}
+          onChat={(otherUserId) => {
+            setDetailModalPost(null);
+            setChatStartUser(otherUserId);
+            setChatOpen(true);
+          }}
         />
+      )}
+
+      {/* Chat Modal */}
+      {chatOpen && user && (
+        <ChatModal user={user} onClose={() => { setChatOpen(false); setChatStartUser(null); }} startWithUserId={chatStartUser} />
       )}
 
       {/* Footer */}

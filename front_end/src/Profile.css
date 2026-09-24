@@ -92,7 +92,7 @@
 }
 
 .profile-page .header-actions .icon-btn {
-  padding: 8px 16px;
+  padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid #ddd;
   background: #fff;
@@ -101,6 +101,9 @@
   cursor: pointer;
   color: #333;
   transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .profile-page .header-actions .icon-btn:hover {
@@ -824,7 +827,168 @@
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
-  color: #27ae60;
+}
+
+.status-badge--accepted {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge--rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.post-card--accepted {
+  border-left: 3px solid #10b981;
+}
+
+.accepted-tag {
+  padding: 4px 10px;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cancel-requested-tag {
+  padding: 4px 10px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cancelled-tag {
+  padding: 4px 10px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.completion-requested-tag {
+  padding: 4px 10px;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.completed-tag {
+  padding: 4px 10px;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.waiting-tag {
+  padding: 4px 10px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.post-card--completed {
+  border-left: 3px solid #10b981;
+}
+
+.post-card--cancel-requested {
+  border-left: 3px solid #f59e0b;
+}
+
+.post-card--cancelled {
+  border-left: 3px solid #dc2626;
+  opacity: 0.7;
+}
+
+.btn-complete-sm {
+  flex: 1;
+  padding: 8px 0;
+  background: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-complete-sm:hover {
+  background: #059669;
+}
+
+.btn-confirm-cancel-sm {
+  flex: 1;
+  padding: 8px 0;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-confirm-cancel-sm:hover {
+  background: #b91c1c;
+}
+
+.btn-keep-sm {
+  flex: 1;
+  padding: 8px 0;
+  background: #fff;
+  color: #065f46;
+  border: 1px solid #10b981;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-keep-sm:hover {
+  background: #d1fae5;
+}
+
+.btn-message-sm {
+  flex: 1;
+  padding: 8px 0;
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-message-sm:hover {
+  background: #2c2c4a;
+}
+
+.btn-message-sm .meta-icon {
+  font-size: 14px;
 }
 
 .post-card-meta {

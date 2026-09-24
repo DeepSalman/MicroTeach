@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchPostApplications, updateApplicationStatus } from './api';
 import './PostDetailModal.css';
 
-const PostDetailModal = ({ post, user, onClose, onStatusChange }) => {
+const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
@@ -23,10 +23,10 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange }) => {
     }
   };
 
-  const handleStatusChange = async (applicationId, newStatus) => {
+  const handleStatusChange = async (applicationId, newStatus, requestedBy) => {
     setActionLoading(applicationId);
     try {
-      await updateApplicationStatus(applicationId, { status: newStatus, owner_id: user.user_id });
+      await updateApplicationStatus(applicationId, { status: newStatus, owner_id: user.user_id, requested_by: requestedBy || null });
       loadApplications();
       if (onStatusChange) onStatusChange();
     } catch (err) {
@@ -66,11 +66,17 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange }) => {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
+  const hasAcceptedApplicant = applications.some(a => a.status === 'accepted' || a.status === 'cancellation_requested' || a.status === 'completion_requested' || a.status === 'completed');
+
   const getStatusBadge = (status) => {
     const badges = {
       'pending': { class: 'status-pending', text: 'Pending' },
       'accepted': { class: 'status-accepted', text: 'Accepted' },
-      'rejected': { class: 'status-rejected', text: 'Rejected' }
+      'rejected': { class: 'status-rejected', text: 'Rejected' },
+      'cancellation_requested': { class: 'status-pending', text: 'Cancel Requested' },
+      'cancelled': { class: 'status-rejected', text: 'Cancelled' },
+      'completion_requested': { class: 'status-accepted', text: 'Completion Requested' },
+      'completed': { class: 'status-accepted', text: 'Completed' }
     };
     return badges[status] || badges['pending'];
   };
@@ -116,8 +122,14 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange }) => {
                   const badge = getStatusBadge(app.status);
                   const rating = Number(app.avg_rating) || 0;
                   const reviewCount = app.review_count || 0;
+                  const isAccepted = app.status === 'accepted';
+                  const isPending = app.status === 'pending';
+                  const isCancelRequested = app.status === 'cancellation_requested';
+                  const isCancelled = app.status === 'cancelled';
+                  const isCompletionRequested = app.status === 'completion_requested';
+                  const isCompleted = app.status === 'completed';
                   return (
-                    <div key={app.application_id} className="pd-item">
+                    <div key={app.application_id} className={`pd-item ${isAccepted ? 'pd-item--accepted' : ''} ${isCancelRequested ? 'pd-item--cancel-requested' : ''} ${isCancelled ? 'pd-item--cancelled' : ''} ${isCompleted ? 'pd-item--completed' : ''}`}>
                       <div className="pd-item-left">
                         <div className="pd-item-avatar">
                           {app.applicant_name ? app.applicant_name.charAt(0).toUpperCase() : '?'}
@@ -141,19 +153,84 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange }) => {
                           {reviewCount > 0 && <span className="pd-review-count">({reviewCount})</span>}
                         </div>
                         <span className="pd-view-profile">View Profile</span>
-                        {app.status === 'pending' && (
-                          <div className="pd-actions">
+                        {isAccepted && (
+                          <div className="pd-accepted-actions">
+                            <span className="pd-chat-icon" onClick={() => onChat && onChat(app.user_id)}>chat</span>
+                            <button
+                              className="pd-complete-btn"
+                              onClick={() => handleStatusChange(app.application_id, 'completion_requested', post.user_id)}
+                              disabled={actionLoading === app.application_id}
+                            >
+                              {actionLoading === app.application_id ? '...' : 'Mark Complete'}
+                            </button>
+                            <button
+                              className="pd-cancel-btn"
+                              onClick={() => handleStatusChange(app.application_id, 'cancellation_requested')}
+                              disabled={actionLoading === app.application_id}
+                            >
+                              {actionLoading === app.application_id ? '...' : 'Request Cancellation'}
+                            </button>
+                          </div>
+                        )}
+                        {isCompletionRequested && String(app.completion_requested_by) !== String(post.user_id) && (
+                          <div className="pd-accepted-actions">
+                            <button
+                              className="pd-complete-btn"
+                              onClick={() => handleStatusChange(app.application_id, 'completed')}
+                              disabled={actionLoading === app.application_id}
+                            >
+                              {actionLoading === app.application_id ? '...' : 'Accept Completion'}
+                            </button>
+                            <button
+                              className="pd-cancel-btn"
+                              onClick={() => handleStatusChange(app.application_id, 'accepted')}
+                              disabled={actionLoading === app.application_id}
+                            >
+                              {actionLoading === app.application_id ? '...' : 'Not Yet'}
+                            </button>
+                          </div>
+                        )}
+                        {isCompletionRequested && String(app.completion_requested_by) === String(post.user_id) && (
+                          <div className="pd-accepted-actions">
+                            <span className="pd-waiting-badge">Waiting for tutor...</span>
+                          </div>
+                        )}
+                        {isCompleted && (
+                          <div className="pd-accepted-actions">
+                            <span className="pd-completed-badge">Session Complete</span>
+                          </div>
+                        )}
+                        {isCancelRequested && (
+                          <div className="pd-accepted-actions">
+                            <button
+                              className="pd-cancel-btn"
+                              onClick={() => handleStatusChange(app.application_id, 'cancelled')}
+                              disabled={actionLoading === app.application_id}
+                            >
+                              {actionLoading === app.application_id ? '...' : 'Cancel Request'}
+                            </button>
                             <button
                               className="pd-accept-btn"
                               onClick={() => handleStatusChange(app.application_id, 'accepted')}
                               disabled={actionLoading === app.application_id}
+                            >
+                              {actionLoading === app.application_id ? '...' : 'Keep Tutor'}
+                            </button>
+                          </div>
+                        )}
+                        {isPending && (
+                          <div className="pd-actions">
+                            <button
+                              className="pd-accept-btn"
+                              onClick={() => handleStatusChange(app.application_id, 'accepted')}
+                              disabled={actionLoading === app.application_id || hasAcceptedApplicant}
                             >
                               {actionLoading === app.application_id ? '...' : 'Accept'}
                             </button>
                             <button
                               className="pd-reject-btn"
                               onClick={() => handleStatusChange(app.application_id, 'rejected')}
-                              disabled={actionLoading === app.application_id}
+                              disabled={actionLoading === app.application_id || hasAcceptedApplicant}
                             >
                               {actionLoading === app.application_id ? '...' : 'Reject'}
                             </button>

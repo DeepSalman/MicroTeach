@@ -33,3 +33,11 @@ export const fetchUserPostApplications = (userId) => API.get(`/post-applications
 export const applyToPost = (data) => API.post("/post-applications", data);
 export const withdrawApplication = (id) => API.delete(`/post-applications/${id}`);
 export const updateApplicationStatus = (id, data) => API.patch(`/post-applications/${id}/status`, data);
+
+// Messaging
+export const fetchInbox = (userId) => API.get(`/messages/inbox/${userId}`);
+export const fetchMessages = (conversationId, beforeSeq) => API.get(`/messages/${conversationId}/messages${beforeSeq ? `?before_seq=${beforeSeq}` : ''}`);
+export const sendMessage = (conversationId, data) => API.post(`/messages/${conversationId}/messages`, data);
+export const markAsRead = (conversationId, data) => API.patch(`/messages/${conversationId}/read`, data);
+export const startConversation = (data) => API.post('/messages/start', data);
+export const fetchUnreadCount = (userId) => API.get(`/messages/unread/${userId}`);

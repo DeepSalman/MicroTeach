@@ -12,6 +12,7 @@ router.get('/post/:postId', async (req, res) => {
         pa.user_id,
         pa.message,
         pa.status,
+        pa.completion_requested_by,
         pa.created_at,
         u.full_name AS applicant_name,
         u.department AS applicant_department,
@@ -46,6 +47,7 @@ router.get('/user/:userId', async (req, res) => {
         pa.user_id,
         pa.message,
         pa.status,
+        pa.completion_requested_by,
         pa.created_at,
         p.title AS post_title,
         p.course_code,
@@ -53,6 +55,7 @@ router.get('/user/:userId', async (req, res) => {
         p.bounty,
         p.deadline,
         p.status AS post_status,
+        p.user_id AS post_author_id,
         u.full_name AS post_author
       FROM Post_Applications pa
       JOIN Posts p ON pa.post_id = p.post_id
@@ -114,8 +117,8 @@ router.delete('/:id', async (req, res) => {
 
 // 5. Update application status (post owner only)
 router.patch('/:id/status', async (req, res) => {
-  const { status, owner_id } = req.body;
-  const validStatuses = ['pending', 'accepted', 'rejected'];
+  const { status, owner_id, requested_by } = req.body;
+  const validStatuses = ['pending', 'accepted', 'rejected', 'cancellation_requested', 'cancelled', 'completion_requested', 'completed'];
 
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ message: 'Invalid status.' });
@@ -136,7 +139,13 @@ router.patch('/:id/status', async (req, res) => {
       return res.status(403).json({ message: 'Only the post owner can update application status.' });
     }
 
-    await db.query('UPDATE Post_Applications SET status = ? WHERE application_id = ?', [status, req.params.id]);
+    if (status === 'completion_requested') {
+      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = ? WHERE application_id = ?', [status, requested_by || null, req.params.id]);
+    } else if (status === 'completed' || status === 'accepted') {
+      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
+    } else {
+      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
+    }
     res.json({ message: 'Application status updated!' });
   } catch (error) {
     res.status(500).json({ error: error.message });

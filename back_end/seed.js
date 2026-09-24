@@ -124,7 +124,7 @@ const TABLES = {
       post_id INT NOT NULL,
       user_id INT NOT NULL,
       message TEXT,
-      status ENUM('pending','accepted','rejected') DEFAULT 'pending',
+      status ENUM('pending','accepted','rejected','cancellation_requested','cancelled','completion_requested','completed') DEFAULT 'pending',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY unique_application (post_id, user_id),
       FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
