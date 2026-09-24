@@ -36,7 +36,7 @@ const AdminSidebar = ({ user, userCount, onLogout }) => {
     <aside className="admin-sidebar">
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">MT</div>
+          <div className="sidebar-logo-icon"><img src="/logo.png" alt="MicroTeach" /></div>
           <div className="sidebar-logo-text">
             <span className="logo-title">MicroTeach</span>
             <span className="logo-subtitle">Admin Portal <span className="version">v2.4</span></span>

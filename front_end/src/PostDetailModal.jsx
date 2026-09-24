@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { fetchPostApplications, updateApplicationStatus, closePost } from './api';
+import { fetchPostApplications, updateApplicationStatus, closePost, checkReviewExists } from './api';
 import ConfirmModal from './ConfirmModal';
+import ReviewModal from './ReviewModal';
 import './PostDetailModal.css';
 
 const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
@@ -9,6 +10,8 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   const [actionLoading, setActionLoading] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', type: 'info', onConfirm: () => {} });
   const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'info' });
+  const [reviewModal, setReviewModal] = useState({ open: false, revieweeId: null, revieweeName: '' });
+  const [reviewedApps, setReviewedApps] = useState(new Set());
 
   useEffect(() => {
     loadApplications();
@@ -38,6 +41,20 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
     try {
       const response = await fetchPostApplications(post.post_id);
       setApplications(response.data);
+
+      // Check review status for completed apps
+      const reviewed = new Set();
+      for (const app of response.data) {
+        if (app.status === 'completed') {
+          try {
+            const res = await checkReviewExists(post.post_id, user.user_id);
+            if (res.data.exists) {
+              reviewed.add(app.application_id);
+            }
+          } catch (e) {}
+        }
+      }
+      setReviewedApps(reviewed);
     } catch (err) {
       console.error('Failed to load applications:', err);
     } finally {

@@ -126,8 +126,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
       {/* Header */}
       <header className="home-header">
         <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <div className="logo-icon">MT</div>
-          <div className="logo-text">MicroTeach<span>Campus Hub</span></div>
+          <div className="logo-icon"><img src="/logo.png" alt="MicroTeach" /></div>
         </div>
         <div className="header-actions">
           <button className="back-btn" onClick={() => navigate('/profile')}>

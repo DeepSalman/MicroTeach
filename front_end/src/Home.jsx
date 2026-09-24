@@ -154,8 +154,7 @@ const Home = ({ user, onLogout }) => {
       <header className="home-header">
         <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="logo">
-            <div className="logo-icon">MT</div>
-            <div className="logo-text">MicroTeach<span>Campus Hub</span></div>
+            <div className="logo-icon"><img src="/logo.png" alt="MicroTeach" /></div>
           </div>
         </Link>
         <div className="search-bar">

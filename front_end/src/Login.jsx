@@ -127,8 +127,7 @@ const Login = ({ onLogin }) => {
           <BookAnimation />
 
           <div className="center-brand">
-            <div className="brand-icon">MT</div>
-            <h2>MicroTeach</h2>
+            <div className="brand-icon"><img src="/logo.png" alt="MicroTeach" /></div>
             <p>Campus peer tutoring network powered by escrow-secured sessions and verified .edu identities.</p>
           </div>
         </section>

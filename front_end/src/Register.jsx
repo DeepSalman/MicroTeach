@@ -87,13 +87,8 @@ const Register = () => {
         <div className="register-header">
           <div className="register-logo">
             <div className="register-logo-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" />
-              </svg>
+              <img src="/logo.png" alt="MicroTeach" />
             </div>
-            <span className="register-logo-text">
-              MicroTeach<span className="register-logo-dot">✦</span>
-            </span>
           </div>
           <h1 className="register-title">Create your account</h1>
           <p className="register-subtitle">Join your campus peer learning &amp; micro-tutoring network</p>

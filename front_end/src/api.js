@@ -49,3 +49,9 @@ export const fetchTransactions = (userId) => API.get(`/wallet/transactions/${use
 
 // Posts
 export const closePost = (postId, userId) => API.post(`/posts/${postId}/close`, { user_id: userId });
+
+// Reviews
+export const submitReview = (data) => API.post('/reviews', data);
+export const fetchUserReviews = (userId) => API.get(`/reviews/user/${userId}`);
+export const checkReviewExists = (postId, reviewerId) => API.get(`/reviews/check/${postId}/${reviewerId}`);
+export const fetchUserRating = (userId) => API.get(`/reviews/rating/${userId}`);
