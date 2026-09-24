@@ -41,3 +41,11 @@ export const sendMessage = (conversationId, data) => API.post(`/messages/${conve
 export const markAsRead = (conversationId, data) => API.patch(`/messages/${conversationId}/read`, data);
 export const startConversation = (data) => API.post('/messages/start', data);
 export const fetchUnreadCount = (userId) => API.get(`/messages/unread/${userId}`);
+
+// Wallet
+export const fetchWalletBalance = (userId) => API.get(`/wallet/balance/${userId}`);
+export const topUpWallet = (data) => API.post('/wallet/topup', data);
+export const fetchTransactions = (userId) => API.get(`/wallet/transactions/${userId}`);
+
+// Posts
+export const closePost = (postId, userId) => API.post(`/posts/${postId}/close`, { user_id: userId });

@@ -237,6 +237,33 @@
 }
 
 /* Bounty Input */
+.wallet-balance-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.wallet-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.wallet-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.wallet-amount.insufficient {
+  color: #dc2626;
+}
+
 .bounty-input {
   position: relative;
   display: flex;
@@ -254,6 +281,16 @@
 .bounty-field {
   padding-left: 32px;
   font-size: 16px;
+  font-weight: 600;
+}
+
+.bounty-field.bounty-exceeds {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.insufficient-hint {
+  color: #dc2626 !important;
   font-weight: 600;
 }
 

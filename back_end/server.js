@@ -11,6 +11,7 @@ const teacherApplicationRoutes = require('./routes/teacherApplicationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const postApplicationRoutes = require('./routes/postApplicationRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const walletRoutes = require('./routes/walletRoutes');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/teacher-applications', teacherApplicationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/post-applications', postApplicationRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Root Test Route
 app.get('/', (req, res) => {

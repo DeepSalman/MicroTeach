@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, fetchUserApplications, submitTeacherApplication, fetchUserPostApplications, fetchPostApplicationCount, updateApplicationStatus } from './api';
+import { fetchUserProfile, fetchUserApplications, submitTeacherApplication, fetchUserPostApplications, fetchPostApplicationCount, updateApplicationStatus, closePost } from './api';
 import PostDetailModal from './PostDetailModal';
 import ChatModal from './ChatModal';
+import WalletModal from './WalletModal';
+import ConfirmModal from './ConfirmModal';
 import './Profile.css';
 
 const Profile = ({ user, onLogout, onProfileUpdate }) => {
@@ -21,6 +23,10 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const [detailModalPost, setDetailModalPost] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatStartUser, setChatStartUser] = useState(null);
+  const [walletOpen, setWalletOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', type: 'info', onConfirm: () => {} });
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'info' });
 
   useEffect(() => {
     if (user?.user_id) {
@@ -34,6 +40,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
     try {
       const response = await fetchUserProfile(user.user_id);
       setProfileData(response.data);
+      setWalletBalance(response.data.user?.wallet_balance || 0);
 
       const freshRole = response.data.user.role;
       if (freshRole !== user.role) {
@@ -75,6 +82,25 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
     }
   };
 
+  const handleClosePost = async (postId) => {
+    setConfirmModal({
+      open: true,
+      title: 'Close Post',
+      message: 'Are you sure you want to close this post? The bounty will be refunded to your wallet.',
+      type: 'danger',
+      confirmText: 'Close Post',
+      onConfirm: async () => {
+        try {
+          const res = await closePost(postId, user.user_id);
+          setAlertModal({ open: true, title: 'Post Closed', message: res.data.message, type: 'success' });
+          await loadPostApplications();
+        } catch (err) {
+          setAlertModal({ open: true, title: 'Error', message: err.response?.data?.message || 'Failed to close post.', type: 'danger' });
+        }
+      }
+    });
+  };
+
   const loadApplicantCounts = async (posts) => {
     const counts = {};
     await Promise.all(
@@ -92,7 +118,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
 
   const handleApply = async () => {
     if (!applyReason.trim()) {
-      alert('Please provide a reason for your application.');
+      setAlertModal({ open: true, title: 'Missing Reason', message: 'Please provide a reason for your application.', type: 'danger' });
       return;
     }
 
@@ -107,9 +133,9 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
       setShowApplyModal(false);
       setApplyReason('');
       setApplyExpertise('');
-      alert('Application submitted successfully! Admin will review it shortly.');
+      setAlertModal({ open: true, title: 'Application Submitted', message: 'Application submitted successfully! Admin will review it shortly.', type: 'success' });
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to submit application.');
+      setAlertModal({ open: true, title: 'Error', message: err.response?.data?.message || 'Failed to submit application.', type: 'danger' });
     } finally {
       setSubmitting(false);
     }
@@ -173,7 +199,6 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const studentId = userData?.student_id || '';
   const role = userData?.role || user?.role || 'student';
   const memberSince = userData?.created_at ? new Date(userData.created_at).getFullYear() : '2025';
-  const walletBalance = userData?.wallet_balance || 0;
 
   const roleLabels = { student: 'Student', tutor: 'Peer Tutor', both: 'Student & Tutor' };
   const isStudentOnly = role === 'student';
@@ -195,6 +220,14 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
           <div className="logo-text">MicroTeach<span>Campus Hub</span></div>
         </div>
         <div className="header-actions">
+          <button className="wallet-balance-btn" onClick={() => setWalletOpen(true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+              <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
+            </svg>
+            <span>৳{walletBalance ? Number(walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 0 }) : '0'}</span>
+          </button>
           <button className="icon-btn" title="Messages" onClick={() => setChatOpen(true)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -388,7 +421,9 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                       <div className="post-card-footer-bottom">
                         <div className="post-card-actions">
                           <button className="btn-secondary-sm" onClick={() => setDetailModalPost(post)}>View Details</button>
-                          <button className="btn-outline-sm">Close Post</button>
+                          {post.status !== 'closed' && (
+                            <button className="btn-outline-sm" onClick={() => handleClosePost(post.post_id)}>Close Post</button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -634,6 +669,31 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
       {chatOpen && user && (
         <ChatModal user={user} onClose={() => { setChatOpen(false); setChatStartUser(null); }} startWithUserId={chatStartUser} />
       )}
+
+      {/* Wallet Modal */}
+      <WalletModal isOpen={walletOpen} onClose={() => setWalletOpen(false)} user={user} onBalanceUpdate={(bal) => setWalletBalance(bal)} />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        onClose={() => setConfirmModal({ ...confirmModal, open: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+      />
+
+      {/* Alert Modal */}
+      <ConfirmModal
+        isOpen={alertModal.open}
+        onClose={() => setAlertModal({ ...alertModal, open: false })}
+        onConfirm={() => setAlertModal({ ...alertModal, open: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        confirmText="OK"
+      />
 
       {/* Footer */}
       <footer className="home-footer">

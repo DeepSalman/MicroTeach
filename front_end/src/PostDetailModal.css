@@ -54,6 +54,22 @@
   color: #1a1a2e;
 }
 
+.pd-close-post {
+  padding: 6px 14px;
+  border: 1.5px solid #dc2626;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pd-close-post:hover {
+  background: #fef2f2;
+}
+
 .pd-body {
   flex: 1;
   overflow-y: auto;

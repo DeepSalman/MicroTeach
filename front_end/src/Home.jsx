@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchPosts, reportPost, fetchUserPostApplications, fetchPostApplicationCount } from './api';
+import { fetchPosts, reportPost, fetchUserPostApplications, fetchPostApplicationCount, fetchWalletBalance } from './api';
 import ApplyModal from './ApplyModal';
 import PostDetailModal from './PostDetailModal';
 import ChatModal from './ChatModal';
+import WalletModal from './WalletModal';
 import './Home.css';
 
 const Home = ({ user, onLogout }) => {
@@ -20,6 +21,8 @@ const Home = ({ user, onLogout }) => {
   const [detailModalPost, setDetailModalPost] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatStartUser, setChatStartUser] = useState(null);
+  const [walletOpen, setWalletOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -40,6 +43,7 @@ const Home = ({ user, onLogout }) => {
   useEffect(() => {
     if (user?.user_id) {
       loadAppliedPosts();
+      fetchWalletBalance(user.user_id).then(res => setWalletBalance(res.data.balance || 0)).catch(() => {});
     } else {
       setAppliedPostIds(new Set());
     }
@@ -161,6 +165,16 @@ const Home = ({ user, onLogout }) => {
           <button className="search-btn">&#128269;</button>
         </div>
         <div className="header-actions">
+          {user && (
+            <button className="wallet-balance-btn" onClick={() => setWalletOpen(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+                <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
+              </svg>
+              <span>৳{walletBalance ? Number(walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 0 }) : '0'}</span>
+            </button>
+          )}
           <button className="icon-btn" title="Messages" onClick={() => user ? setChatOpen(true) : navigate('/login')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -503,6 +517,9 @@ const Home = ({ user, onLogout }) => {
       {chatOpen && user && (
         <ChatModal user={user} onClose={() => { setChatOpen(false); setChatStartUser(null); }} startWithUserId={chatStartUser} />
       )}
+
+      {/* Wallet Modal */}
+      <WalletModal isOpen={walletOpen} onClose={() => setWalletOpen(false)} user={user} onBalanceUpdate={(bal) => setWalletBalance(bal)} />
     </div>
   );
 };

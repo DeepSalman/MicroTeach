@@ -101,7 +101,7 @@ router.get('/profile/:userId', async (req, res) => {
         status,
         created_at
       FROM Posts
-      WHERE user_id = ?
+      WHERE user_id = ? AND status != 'closed'
       ORDER BY created_at DESC
     `;
     const [posts] = await db.query(postsQuery, [req.params.userId]);
@@ -160,6 +160,7 @@ router.post('/login', async (req, res) => {
         bio,
         phone,
         student_id,
+        wallet_balance,
         is_admin,
         password
       FROM Users

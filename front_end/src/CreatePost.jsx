@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPost } from './api';
+import { createPost, fetchWalletBalance } from './api';
 import './CreatePost.css';
 
 const CreatePost = ({ user }) => {
@@ -17,6 +17,15 @@ const CreatePost = ({ user }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  useEffect(() => {
+    if (user?.user_id) {
+      fetchWalletBalance(user.user_id)
+        .then(res => setWalletBalance(res.data.balance || 0))
+        .catch(() => {});
+    }
+  }, [user]);
 
   const categories = [
     { name: 'Algorithms & DS', code: 'CSE 221', icon: '📊' },
@@ -32,6 +41,9 @@ const CreatePost = ({ user }) => {
     { id: 'annotated_pdf', name: 'Annotated PDF', desc: 'Hand-drawn diagrams, commented code segments, and logic breakdown.', badge: 'Annotated Notes', icon: '✏️', tag: 'Asynchronous review' },
     { id: 'video_walkthrough', name: 'Video Walkthrough', desc: '5-10 min screen recording explaining step-by-step logic & proof.', badge: 'Video Walkthrough', icon: '🎬', tag: 'Self-paced replay' }
   ];
+
+  const bountyAmount = parseFloat(formData.bounty) || 0;
+  const insufficientBalance = bountyAmount > 0 && bountyAmount > walletBalance;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -59,6 +71,12 @@ const CreatePost = ({ user }) => {
 
     if (!formData.courseCode.trim()) {
       setError('Please enter a course code.');
+      return;
+    }
+
+    const bountyAmount = parseFloat(formData.bounty) || 0;
+    if (bountyAmount > 0 && bountyAmount > walletBalance) {
+      setError(`Insufficient wallet balance. Your balance is ৳${walletBalance.toFixed(2)}, but the bounty is ৳${bountyAmount.toFixed(2)}. Please top up your wallet.`);
       return;
     }
 
@@ -260,12 +278,18 @@ const CreatePost = ({ user }) => {
               </div>
               <div className="form-field">
                 <label className="field-label">Escrow Bounty (৳ BDT)</label>
+                <div className="wallet-balance-display">
+                  <span className="wallet-label">Your Balance:</span>
+                  <span className={`wallet-amount ${walletBalance < (parseFloat(formData.bounty) || 0) ? 'insufficient' : ''}`}>
+                    ৳{Number(walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
                 <div className="bounty-input">
                   <span className="bounty-symbol">৳</span>
                   <input
                     type="number"
                     name="bounty"
-                    className="form-input bounty-field"
+                    className={`form-input bounty-field ${bountyAmount > walletBalance ? 'bounty-exceeds' : ''}`}
                     min="100"
                     max="5000"
                     step="50"
@@ -273,7 +297,14 @@ const CreatePost = ({ user }) => {
                     onChange={handleChange}
                   />
                 </div>
-                <span className="field-hint">Typical accepted bounty: ৳250 – ৳450</span>
+                {parseFloat(formData.bounty) > walletBalance && (
+                  <span className="field-hint insufficient-hint">
+                    Insufficient balance. Please top up your wallet.
+                  </span>
+                )}
+                {parseFloat(formData.bounty) <= walletBalance && (
+                  <span className="field-hint">Typical accepted bounty: ৳250 – ৳450</span>
+                )}
               </div>
             </div>
 
@@ -310,8 +341,8 @@ const CreatePost = ({ user }) => {
             <button type="button" className="btn-save-draft" onClick={() => navigate('/')}>
               Save Draft
             </button>
-            <button type="submit" className="btn-publish" disabled={loading}>
-              {loading ? 'Publishing...' : 'Publish Problem Card'}
+            <button type="submit" className="btn-publish" disabled={loading || insufficientBalance}>
+              {loading ? 'Publishing...' : insufficientBalance ? 'Insufficient Balance' : 'Publish Problem Card'}
               <span>→</span>
             </button>
           </div>

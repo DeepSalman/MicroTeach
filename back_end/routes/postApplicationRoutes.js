@@ -141,7 +141,114 @@ router.patch('/:id/status', async (req, res) => {
 
     if (status === 'completion_requested') {
       await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = ? WHERE application_id = ?', [status, requested_by || null, req.params.id]);
-    } else if (status === 'completed' || status === 'accepted') {
+    } else if (status === 'completed') {
+      // Use DB transaction to ensure poster deduction and tutor credit are atomic
+      const conn = await db.getConnection();
+      try {
+        await conn.beginTransaction();
+
+        // Mark application as completed
+        await conn.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
+
+        // Get post bounty and user IDs
+        const [post] = await conn.query(
+          `SELECT p.bounty, p.user_id AS poster_id, pa.user_id AS tutor_id
+           FROM Post_Applications pa
+           JOIN Posts p ON pa.post_id = p.post_id
+           WHERE pa.application_id = ?`,
+          [req.params.id]
+        );
+
+        if (post.length > 0 && parseFloat(post[0].bounty) > 0) {
+          const bounty = parseFloat(post[0].bounty);
+          const poster_id = post[0].poster_id;
+          const tutor_id = post[0].tutor_id;
+
+          // Verify bounty was actually held from poster (escrow check)
+          const [heldTx] = await conn.query(
+            "SELECT transaction_id FROM Transactions WHERE user_id = ? AND type = 'bounty_held' AND (reference_id = ? OR (reference_id IS NULL AND amount = ?)) LIMIT 1",
+            [poster_id, app[0].post_id, bounty]
+          );
+
+          if (heldTx.length === 0) {
+            // No escrow found — tutor cannot be credited
+            await conn.commit();
+            res.json({ message: 'Application marked completed. No bounty transferred (escrow not found).' });
+            return;
+          }
+
+          // Credit the tutor
+          const [tutorRows] = await conn.query('SELECT wallet_balance FROM Users WHERE user_id = ?', [tutor_id]);
+          const tutorBalance = parseFloat(tutorRows[0].wallet_balance) || 0;
+          const newTutorBalance = tutorBalance + bounty;
+
+          await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newTutorBalance, tutor_id]);
+          await conn.query(
+            'INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description) VALUES (?, ?, ?, ?, ?, ?)',
+            [tutor_id, 'bounty_received', bounty, newTutorBalance, app[0].post_id, `Received ৳${bounty} bounty for post #${app[0].post_id}`]
+          );
+        }
+
+        await conn.commit();
+      } catch (err) {
+        await conn.rollback();
+        throw err;
+      } finally {
+        conn.release();
+      }
+    } else if (status === 'cancelled') {
+      // Use DB transaction for refund
+      const conn = await db.getConnection();
+      try {
+        await conn.beginTransaction();
+
+        await conn.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
+
+        const [post] = await conn.query(
+          `SELECT p.bounty, p.user_id AS poster_id
+           FROM Post_Applications pa
+           JOIN Posts p ON pa.post_id = p.post_id
+           WHERE pa.application_id = ?`,
+          [req.params.id]
+        );
+
+        if (post.length > 0 && parseFloat(post[0].bounty) > 0) {
+          const bounty = parseFloat(post[0].bounty);
+          const poster_id = post[0].poster_id;
+
+          // Verify bounty_held exists before refunding
+          const [heldTx] = await conn.query(
+            "SELECT transaction_id FROM Transactions WHERE user_id = ? AND type = 'bounty_held' AND (reference_id = ? OR (reference_id IS NULL AND amount = ?)) LIMIT 1",
+            [poster_id, app[0].post_id, bounty]
+          );
+
+          // Check no refund already processed
+          const [existingRefund] = await conn.query(
+            "SELECT transaction_id FROM Transactions WHERE user_id = ? AND reference_id = ? AND type = 'refund' LIMIT 1",
+            [poster_id, app[0].post_id]
+          );
+
+          if (heldTx.length > 0 && existingRefund.length === 0) {
+            const [posterRows] = await conn.query('SELECT wallet_balance FROM Users WHERE user_id = ?', [poster_id]);
+            const posterBalance = parseFloat(posterRows[0].wallet_balance) || 0;
+            const newPosterBalance = posterBalance + bounty;
+
+            await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newPosterBalance, poster_id]);
+            await conn.query(
+              'INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description) VALUES (?, ?, ?, ?, ?, ?)',
+              [poster_id, 'refund', bounty, newPosterBalance, app[0].post_id, `Refunded ৳${bounty} bounty for post #${app[0].post_id}`]
+            );
+          }
+        }
+
+        await conn.commit();
+      } catch (err) {
+        await conn.rollback();
+        throw err;
+      } finally {
+        conn.release();
+      }
+    } else if (status === 'accepted') {
       await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
     } else {
       await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);

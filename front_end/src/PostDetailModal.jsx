@@ -1,15 +1,37 @@
 import { useState, useEffect } from 'react';
-import { fetchPostApplications, updateApplicationStatus } from './api';
+import { fetchPostApplications, updateApplicationStatus, closePost } from './api';
+import ConfirmModal from './ConfirmModal';
 import './PostDetailModal.css';
 
 const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', type: 'info', onConfirm: () => {} });
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'info' });
 
   useEffect(() => {
     loadApplications();
   }, [post.post_id]);
+
+  const handleClosePost = () => {
+    setConfirmModal({
+      open: true,
+      title: 'Close Post',
+      message: 'Are you sure you want to close this post?',
+      type: 'danger',
+      confirmText: 'Close Post',
+      onConfirm: async () => {
+        try {
+          const res = await closePost(post.post_id, user.user_id);
+          setAlertModal({ open: true, title: 'Post Closed', message: res.data.message, type: 'success' });
+          setTimeout(() => onClose(), 1200);
+        } catch (err) {
+          setAlertModal({ open: true, title: 'Error', message: err.response?.data?.message || 'Failed to close post.', type: 'danger' });
+        }
+      }
+    });
+  };
 
   const loadApplications = async () => {
     setLoading(true);
@@ -86,7 +108,12 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
       <div className="pd-modal" onClick={(e) => e.stopPropagation()}>
         <div className="pd-header">
           <h3>Post Details</h3>
-          <button className="pd-close" onClick={onClose}>&times;</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {post.status !== 'closed' && (
+              <button className="pd-close-post" onClick={handleClosePost}>Close Post</button>
+            )}
+            <button className="pd-close" onClick={onClose}>&times;</button>
+          </div>
         </div>
 
         <div className="pd-body">
@@ -249,6 +276,28 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
           <button className="pd-close-btn" onClick={onClose}>Close</button>
         </div>
       </div>
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        onClose={() => setConfirmModal({ ...confirmModal, open: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+      />
+
+      {/* Alert Modal */}
+      <ConfirmModal
+        isOpen={alertModal.open}
+        onClose={() => setAlertModal({ ...alertModal, open: false })}
+        onConfirm={() => setAlertModal({ ...alertModal, open: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        confirmText="OK"
+      />
     </div>
   );
 };
