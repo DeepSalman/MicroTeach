@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchPosts, reportPost, fetchUserPostApplications, fetchPostApplicationCount, fetchWalletBalance } from './api';
+import { fetchPosts, reportPost, fetchUserPostApplications, fetchPostApplicationCount, fetchWalletBalance, fetchUserProfile, fetchUserApplications } from './api';
 import ApplyModal from './ApplyModal';
 import PostDetailModal from './PostDetailModal';
 import ChatModal from './ChatModal';
@@ -27,6 +27,8 @@ const Home = ({ user, onLogout }) => {
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [applyTeacherOpen, setApplyTeacherOpen] = useState(false);
+  const [dbUserRole, setDbUserRole] = useState(user?.role || 'student');
+  const [teacherAppStatus, setTeacherAppStatus] = useState(null);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -48,8 +50,30 @@ const Home = ({ user, onLogout }) => {
     if (user?.user_id) {
       loadAppliedPosts();
       fetchWalletBalance(user.user_id).then(res => setWalletBalance(res.data.balance || 0)).catch(() => {});
+
+      // Fetch live role from DB to verify teacher privileges
+      fetchUserProfile(user.user_id)
+        .then(res => {
+          if (res.data && res.data.role) {
+            setDbUserRole(res.data.role);
+          }
+        })
+        .catch(() => {});
+
+      // Check if user has submitted teacher application
+      fetchUserApplications(user.user_id)
+        .then(res => {
+          if (res.data && res.data.length > 0) {
+            setTeacherAppStatus(res.data[0].status);
+          } else {
+            setTeacherAppStatus(null);
+          }
+        })
+        .catch(() => {});
     } else {
       setAppliedPostIds(new Set());
+      setDbUserRole('student');
+      setTeacherAppStatus(null);
     }
   }, [user]);
 
@@ -372,10 +396,28 @@ const Home = ({ user, onLogout }) => {
                           <button className="view-details-btn" onClick={() => setDetailModalPost(post)}>View Details</button>
                         </div>
                       ) : user ? (
-                        appliedPostIds.has(post.post_id) ? (
-                          <button className="apply-btn applied-btn" onClick={() => setApplyModalPost(post)}>Applied</button>
+                        (dbUserRole === 'both' || dbUserRole === 'tutor') ? (
+                          appliedPostIds.has(post.post_id) ? (
+                            <button className="apply-btn applied-btn" onClick={() => setApplyModalPost(post)}>Applied</button>
+                          ) : (
+                            <button className="apply-btn" onClick={() => setApplyModalPost(post)}>Apply Now</button>
+                          )
+                        ) : teacherAppStatus === 'pending' ? (
+                          <button
+                            className="apply-btn pending-teacher-btn"
+                            title="Your teacher application is under review by admin"
+                            onClick={() => setApplyTeacherOpen(true)}
+                          >
+                            ⏳ Application Pending
+                          </button>
                         ) : (
-                          <button className="apply-btn" onClick={() => setApplyModalPost(post)}>Apply Now</button>
+                          <button
+                            className="apply-btn apply-teacher-btn"
+                            title="Only verified teachers can apply. Click to apply for teacher"
+                            onClick={() => setApplyTeacherOpen(true)}
+                          >
+                            🎓 Apply for Teacher
+                          </button>
                         )
                       ) : null}
                     </div>
@@ -495,8 +537,12 @@ const Home = ({ user, onLogout }) => {
       {applyModalPost && (
         <ApplyModal
           post={applyModalPost}
-          user={user}
+          user={{ ...user, role: dbUserRole }}
           onClose={() => setApplyModalPost(null)}
+          onOpenTeacherModal={() => {
+            setApplyModalPost(null);
+            setApplyTeacherOpen(true);
+          }}
           onApplySuccess={() => {
             setAppliedPostIds(prev => new Set([...prev, applyModalPost.post_id]));
           }}
@@ -547,7 +593,10 @@ const Home = ({ user, onLogout }) => {
           user={user}
           isOpen={applyTeacherOpen}
           onClose={() => setApplyTeacherOpen(false)}
-          onSuccess={() => setApplyTeacherOpen(false)}
+          onSuccess={() => {
+            setApplyTeacherOpen(false);
+            setTeacherAppStatus('pending');
+          }}
         />
       )}
 

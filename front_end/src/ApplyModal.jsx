@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchPostApplications, applyToPost, withdrawApplication } from './api';
 import './ApplyModal.css';
 
-const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess }) => {
+const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, onOpenTeacherModal }) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -12,6 +12,7 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess }) 
 
   const myApplication = user ? applications.find(a => String(a.user_id) === String(user.user_id)) : null;
   const isOwnPost = user && String(post.user_id) === String(user.user_id);
+  const isTeacher = user && (user.role === 'both' || user.role === 'tutor');
 
   useEffect(() => {
     loadApplications();
@@ -165,18 +166,31 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess }) 
             )}
           </div>
 
-          {/* Apply Form */}
+          {/* Apply Form or Teacher Requirement Notice */}
           {user && !isOwnPost && !myApplication && (
-            <div className="apply-form-section">
-              <div className="apply-form-label">Your Message (optional)</div>
-              <textarea
-                className="apply-message-input"
-                placeholder="Why are you a good fit for this? Mention your experience..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={3}
-              />
-            </div>
+            isTeacher ? (
+              <div className="apply-form-section">
+                <div className="apply-form-label">Your Message (optional)</div>
+                <textarea
+                  className="apply-message-input"
+                  placeholder="Why are you a good fit for this? Mention your experience..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            ) : (
+              <div className="apply-teacher-required-banner">
+                <div className="apply-teacher-banner-icon">🎓</div>
+                <div className="apply-teacher-banner-content">
+                  <h4>Teacher Verification Required</h4>
+                  <p>
+                    Only verified peer tutors can apply for tutoring gigs and claim bounties. 
+                    Submit your student ID and NID card verification to start tutoring peers.
+                  </p>
+                </div>
+              </div>
+            )
           )}
 
           {error && <div className="apply-error">{error}</div>}
@@ -186,13 +200,25 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess }) 
         <div className="apply-modal-footer">
           <button className="apply-cancel-btn" onClick={onClose}>Close</button>
           {user && !isOwnPost && !myApplication && (
-            <button
-              className="apply-submit-btn"
-              onClick={handleApply}
-              disabled={submitting}
-            >
-              {submitting ? 'Applying...' : 'Apply Now'}
-            </button>
+            isTeacher ? (
+              <button
+                className="apply-submit-btn"
+                onClick={handleApply}
+                disabled={submitting}
+              >
+                {submitting ? 'Applying...' : 'Apply Now'}
+              </button>
+            ) : (
+              <button
+                className="apply-submit-btn apply-teacher-redirect-btn"
+                onClick={() => {
+                  onClose();
+                  if (onOpenTeacherModal) onOpenTeacherModal();
+                }}
+              >
+                🎓 Apply for Teacher &rarr;
+              </button>
+            )
           )}
           {myApplication && (
             <div className="apply-my-status">

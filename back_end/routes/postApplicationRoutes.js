@@ -94,6 +94,17 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'You cannot apply to your own post.' });
     }
 
+    // Check if user is a verified teacher (role must be 'both' or 'tutor')
+    const [userRows] = await db.query('SELECT role, is_verified FROM Users WHERE user_id = ?', [user_id]);
+    if (userRows.length === 0) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    if (userRows[0].role !== 'both' && userRows[0].role !== 'tutor') {
+      return res.status(403).json({ 
+        message: 'Only verified tutors/teachers can apply for tutoring gigs. Please apply to become a teacher first.' 
+      });
+    }
+
     const query = `
       INSERT INTO Post_Applications (post_id, user_id, message)
       VALUES (?, ?, ?)

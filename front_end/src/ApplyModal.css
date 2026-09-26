@@ -458,3 +458,46 @@
   color: #888;
   font-style: italic;
 }
+
+/* ── Teacher Required Banner inside ApplyModal ── */
+.apply-teacher-required-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border: 1.5px solid #ddd6fe;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.apply-teacher-banner-icon {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.apply-teacher-banner-content h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4c1d95;
+}
+
+.apply-teacher-banner-content p {
+  margin: 0;
+  font-size: 12px;
+  color: #5b21b6;
+  line-height: 1.45;
+}
+
+.apply-teacher-redirect-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.apply-teacher-redirect-btn:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+  transform: translateY(-1px);
+}

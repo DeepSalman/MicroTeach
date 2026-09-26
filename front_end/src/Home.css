@@ -1033,3 +1033,41 @@
   background: #fee2e2 !important;
   color: #b91c1c !important;
 }
+
+/* ── Card Apply for Teacher Button (when user is not both/tutor) ── */
+.apply-btn.apply-teacher-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.28) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.apply-btn.apply-teacher-btn:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4) !important;
+}
+
+/* ── Card Pending Teacher Application Button ── */
+.apply-btn.pending-teacher-btn {
+  background: #fffbeb !important;
+  color: #b45309 !important;
+  border: 1.5px solid #fde68a !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.apply-btn.pending-teacher-btn:hover {
+  background: #fef3c7 !important;
+  border-color: #fcd34d !important;
+  color: #92400e !important;
+}
