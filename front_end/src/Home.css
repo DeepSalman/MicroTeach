@@ -1004,3 +1004,22 @@
 .report-done-btn:hover {
   background: #2c2c4a;
 }
+
+/* ── Apply to Teach navbar button ── */
+.btn-become-tutor-nav {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s, transform 0.15s;
+  letter-spacing: 0.02em;
+}
+.btn-become-tutor-nav:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}

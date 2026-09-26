@@ -1,0 +1,240 @@
+.atm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.atm-modal {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.atm-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  z-index: 1;
+}
+.atm-header-icon { font-size: 32px; }
+.atm-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+.atm-subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+.atm-close-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #9ca3af;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+.atm-close-btn:hover { color: #111827; }
+
+/* ── Form ── */
+.atm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.atm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.atm-field-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+.atm-req { color: #ef4444; }
+
+.atm-textarea,
+.atm-input {
+  width: 100%;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #111827;
+  background: #f9fafb;
+  resize: vertical;
+  transition: border-color 0.2s, background 0.2s;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.atm-textarea:focus,
+.atm-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: #fff;
+}
+.atm-char-hint,
+.atm-field-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: right;
+}
+.atm-field-hint { text-align: left; }
+
+/* ── Documents section ── */
+.atm-docs-section {
+  background: #f8faff;
+  border: 1.5px solid #e0e7ff;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.atm-docs-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e40af;
+}
+.atm-docs-icon { font-size: 18px; }
+.atm-docs-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+.atm-docs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 520px) {
+  .atm-docs-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Error ── */
+.atm-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* ── Actions ── */
+.atm-form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+.atm-cancel-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.atm-cancel-btn:hover:not(:disabled) { background: #e5e7eb; }
+.atm-submit-btn {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 26px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+.atm-submit-btn:hover:not(:disabled) { background: #4f46e5; }
+.atm-submit-btn:disabled,
+.atm-cancel-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.atm-btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: atm-spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes atm-spin { to { transform: rotate(360deg); } }
+
+/* ── Success ── */
+.atm-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 48px 24px;
+  text-align: center;
+}
+.atm-success-icon { font-size: 52px; }
+.atm-success h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+.atm-success p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+  max-width: 380px;
+}
+.atm-done-btn {
+  background: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 32px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.atm-done-btn:hover { background: #059669; }

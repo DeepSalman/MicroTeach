@@ -1,0 +1,234 @@
+.idc-root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.idc-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Dropzone ── */
+.idc-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 28px 16px;
+  cursor: pointer;
+  background: #f9fafb;
+  transition: border-color 0.2s, background 0.2s;
+  min-height: 160px;
+  position: relative;
+}
+.idc-dropzone:hover {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+.idc-dz-icon { font-size: 36px; }
+.idc-dz-text { font-size: 14px; color: #4b5563; }
+.idc-dz-hint { font-size: 12px; color: #9ca3af; }
+.idc-dz-divider {
+  display: flex;
+  align-items: center;
+  width: 80%;
+  gap: 8px;
+  color: #9ca3af;
+  font-size: 12px;
+}
+.idc-dz-divider::before,
+.idc-dz-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+.idc-file-input { display: none; }
+
+/* ── Camera Button ── */
+.idc-cam-btn {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.idc-cam-btn:hover { background: #4f46e5; }
+
+/* ── Camera Viewfinder ── */
+.idc-camera-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+.idc-video {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+  max-height: 260px;
+  object-fit: cover;
+}
+.idc-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* Bracket corners */
+.idc-bracket {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: #fff;
+  border-style: solid;
+  opacity: 0.9;
+}
+.idc-bracket--tl { top: 16px; left: 16px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+.idc-bracket--tr { top: 16px; right: 16px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+.idc-bracket--bl { bottom: 48px; left: 16px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+.idc-bracket--br { bottom: 48px; right: 16px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+/* Laser scan line */
+.idc-laser {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #e11d48 40%, #fb7185 50%, #e11d48 60%, transparent 100%);
+  box-shadow: 0 0 8px 2px rgba(225, 29, 72, 0.55);
+  animation: laser-scan 1s ease-in-out infinite;
+  top: 20px;
+}
+@keyframes laser-scan {
+  0%   { top: 20px; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: calc(100% - 52px); opacity: 0; }
+}
+
+.idc-camera-hint {
+  position: absolute;
+  bottom: 44px;
+  left: 0; right: 0;
+  text-align: center;
+  color: rgba(255,255,255,0.8);
+  font-size: 12px;
+}
+
+.idc-camera-actions {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.45);
+}
+
+/* Shutter button */
+.idc-shutter-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.idc-shutter-btn:hover:not(:disabled) { background: rgba(255,255,255,0.28); }
+.idc-shutter-btn:disabled { opacity: 0.6; }
+.idc-shutter-ring {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  display: block;
+}
+.idc-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.idc-cancel-cam-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.5);
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.idc-cancel-cam-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* ── Preview ── */
+.idc-preview-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #10b981;
+}
+.idc-preview-img {
+  width: 100%;
+  display: block;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.idc-preview-watermark {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.55);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.idc-retake-btn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+.idc-retake-btn:hover { background: rgba(0,0,0,0.7); }
+
+/* ── Error ── */
+.idc-error {
+  font-size: 12px;
+  color: #ef4444;
+  padding: 6px 10px;
+  background: #fef2f2;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+}
+
+/* ── Hidden canvas ── */
+.idc-canvas-hidden { display: none; }

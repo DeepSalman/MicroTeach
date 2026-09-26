@@ -6,6 +6,7 @@ import ChatModal from './ChatModal';
 import WalletModal from './WalletModal';
 import ConfirmModal from './ConfirmModal';
 import ReviewModal from './ReviewModal';
+import ApplyTeacherModal from './ApplyTeacherModal';
 import './Profile.css';
 
 const Profile = ({ user, onLogout, onProfileUpdate }) => {
@@ -673,42 +674,16 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
       </main>
 
       {/* Apply to Teach Modal */}
-      {showApplyModal && (
-        <div className="modal-overlay" onClick={() => setShowApplyModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Apply to Become a Teacher</h2>
-            <p className="modal-subtitle">Submit your application to start tutoring peers on MicroTeach.</p>
-            
-            <div className="modal-form">
-              <div className="form-group">
-                <label>Why do you want to become a tutor?</label>
-                <textarea
-                  value={applyReason}
-                  onChange={(e) => setApplyReason(e.target.value)}
-                  placeholder="Tell us about your tutoring experience and why you want to help peers..."
-                  rows={4}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Areas of Expertise (optional)</label>
-                <input
-                  type="text"
-                  value={applyExpertise}
-                  onChange={(e) => setApplyExpertise(e.target.value)}
-                  placeholder="e.g., Algorithms, Calculus, Physics"
-                />
-              </div>
-            </div>
-
-            <div className="modal-actions">
-              <button className="btn-cancel" onClick={() => setShowApplyModal(false)}>Cancel</button>
-              <button className="btn-submit" onClick={handleApply} disabled={submitting}>
-                {submitting ? 'Submitting...' : 'Submit Application'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {user && (
+        <ApplyTeacherModal
+          user={user}
+          isOpen={showApplyModal}
+          onClose={() => setShowApplyModal(false)}
+          onSuccess={() => {
+            setShowApplyModal(false);
+            checkApplicationStatus();
+          }}
+        />
       )}
 
       {/* Post Detail Modal */}

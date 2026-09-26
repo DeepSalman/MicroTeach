@@ -319,3 +319,141 @@
   color: #9ca3af;
   margin-left: auto;
 }
+
+/* ── Document Thumbnails ── */
+.ta-documents-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed #e5e7eb;
+}
+.ta-docs-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+.ta-docs-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ta-doc-thumb-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 130px;
+  min-height: 100px;
+  position: relative;
+  overflow: hidden;
+}
+.ta-doc-thumb-btn:hover {
+  border-color: #6366f1;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.15);
+}
+.ta-doc-thumb-img {
+  width: 110px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.ta-doc-thumb-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  text-align: center;
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ta-doc-thumb-zoom {
+  font-size: 10px;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+/* ── Lightbox ── */
+.ta-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+.ta-modal-box {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  max-width: 780px;
+  width: 100%;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+}
+.ta-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.ta-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+.ta-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0 6px;
+  line-height: 1;
+}
+.ta-modal-close:hover { color: #111827; }
+.ta-modal-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+  max-height: 65vh;
+  overflow: hidden;
+}
+.ta-modal-img {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  display: block;
+}
+.ta-modal-footer {
+  padding: 14px 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+.ta-modal-download-btn {
+  background: #6366f1;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.ta-modal-download-btn:hover { background: #4f46e5; }

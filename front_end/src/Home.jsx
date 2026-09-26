@@ -5,6 +5,7 @@ import ApplyModal from './ApplyModal';
 import PostDetailModal from './PostDetailModal';
 import ChatModal from './ChatModal';
 import WalletModal from './WalletModal';
+import ApplyTeacherModal from './ApplyTeacherModal';
 import './Home.css';
 
 const Home = ({ user, onLogout }) => {
@@ -23,6 +24,7 @@ const Home = ({ user, onLogout }) => {
   const [chatStartUser, setChatStartUser] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [applyTeacherOpen, setApplyTeacherOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -159,6 +161,11 @@ const Home = ({ user, onLogout }) => {
           <input type="text" placeholder="Search courses, topics, or tutors..." />
         </div>
         <div className="header-actions">
+          {user && user.role === 'student' && (
+            <button className="btn-become-tutor-nav" onClick={() => setApplyTeacherOpen(true)}>
+              Apply to Teach
+            </button>
+          )}
           {user && (
             <button className="wallet-balance-btn" onClick={() => setWalletOpen(true)}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -209,6 +216,11 @@ const Home = ({ user, onLogout }) => {
                           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                         Admin Panel
+                      </button>
+                    )}
+                    {user.role === 'student' && (
+                      <button className="dropdown-item" onClick={() => { setDropdownOpen(false); setApplyTeacherOpen(true); }}>
+                        🎓 Apply to Teach
                       </button>
                     )}
                     <button className="dropdown-item logout" onClick={handleLogout}>
@@ -397,7 +409,7 @@ const Home = ({ user, onLogout }) => {
           </div>
           <div className="footer-col">
             <h3>Hosting &amp; Tutoring</h3>
-            <a href="#" onClick={(e) => e.preventDefault()}>Become a Verified Tutor</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); if (user && user.role === 'student') setApplyTeacherOpen(true); }}>Become a Verified Tutor</a>
             <a href="#" onClick={(e) => e.preventDefault()}>Hourly &amp; Milestone Rates</a>
             <a href="#" onClick={(e) => e.preventDefault()}>Escrow Payout Guidelines</a>
             <a href="#" onClick={(e) => e.preventDefault()}>Tutor Code of Conduct</a>
@@ -509,6 +521,16 @@ const Home = ({ user, onLogout }) => {
       {/* Chat Modal */}
       {chatOpen && user && (
         <ChatModal user={user} onClose={() => { setChatOpen(false); setChatStartUser(null); }} startWithUserId={chatStartUser} />
+      )}
+
+      {/* Apply Teacher Modal */}
+      {user && (
+        <ApplyTeacherModal
+          user={user}
+          isOpen={applyTeacherOpen}
+          onClose={() => setApplyTeacherOpen(false)}
+          onSuccess={() => setApplyTeacherOpen(false)}
+        />
       )}
 
       {/* Wallet Modal */}
