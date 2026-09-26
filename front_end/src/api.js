@@ -37,7 +37,14 @@ export const updateApplicationStatus = (id, data) => API.patch(`/post-applicatio
 // Messaging
 export const fetchInbox = (userId) => API.get(`/messages/inbox/${userId}`);
 export const fetchMessages = (conversationId, beforeSeq) => API.get(`/messages/${conversationId}/messages${beforeSeq ? `?before_seq=${beforeSeq}` : ''}`);
-export const sendMessage = (conversationId, data) => API.post(`/messages/${conversationId}/messages`, data);
+export const sendMessage = (conversationId, data) => {
+  if (typeof FormData !== 'undefined' && data instanceof FormData) {
+    return API.post(`/messages/${conversationId}/messages`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
+  return API.post(`/messages/${conversationId}/messages`, data);
+};
 export const markAsRead = (conversationId, data) => API.patch(`/messages/${conversationId}/read`, data);
 export const startConversation = (data) => API.post('/messages/start', data);
 export const fetchUnreadCount = (userId) => API.get(`/messages/unread/${userId}`);

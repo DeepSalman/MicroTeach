@@ -391,3 +391,362 @@
     border-bottom: 1px solid #eee;
   }
 }
+
+/* ─── Attachment Button in Input Bar ─── */
+.chat-attach-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f3f4f6;
+  color: #4b5563;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.chat-attach-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+  transform: translateY(-1px);
+}
+
+.chat-send-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: chatSpin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes chatSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Pre-upload File Preview Strip ─── */
+.chat-file-preview-strip {
+  padding: 8px 16px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  max-width: 320px;
+}
+
+.chat-preview-img {
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+}
+
+.chat-preview-pdf-icon {
+  width: 36px;
+  height: 42px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.chat-preview-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.chat-preview-filename {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-preview-filesize {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.chat-preview-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.chat-preview-close:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+/* ─── Images inside Chat Bubbles ─── */
+.chat-msg-bubble.has-image {
+  padding: 4px;
+  background: transparent !important;
+  border: none !important;
+}
+
+.chat-msg-image-wrap {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #000;
+  display: inline-block;
+}
+
+.chat-msg-img {
+  display: block;
+  max-width: 280px;
+  max-height: 280px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.chat-msg-img:hover {
+  opacity: 0.94;
+  transform: scale(1.01);
+}
+
+.chat-msg-caption {
+  padding: 6px 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.chat-msg.mine .chat-msg-image-wrap {
+  background: #1a1a2e;
+}
+.chat-msg.mine .chat-msg-caption {
+  color: #ffffff;
+  background: #1a1a2e;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.chat-msg.theirs .chat-msg-image-wrap {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+.chat-msg.theirs .chat-msg-caption {
+  color: #1f2937;
+  background: #ffffff;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* ─── PDF Cards inside Chat Bubbles ─── */
+.chat-msg-bubble.has-pdf {
+  padding: 10px 12px;
+}
+
+.chat-msg-pdf-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+  max-width: 280px;
+}
+
+.chat-pdf-icon-badge {
+  width: 36px;
+  height: 42px;
+  background: #ef4444;
+  color: #ffffff;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+}
+
+.chat-pdf-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chat-pdf-name {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-msg.mine .chat-pdf-name {
+  color: #ffffff;
+}
+.chat-msg.theirs .chat-pdf-name {
+  color: #111827;
+}
+
+.chat-pdf-size {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.chat-pdf-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.chat-msg.mine .chat-pdf-action-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+.chat-msg.mine .chat-pdf-action-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.chat-msg.theirs .chat-pdf-action-btn {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+.chat-msg.theirs .chat-pdf-action-btn:hover {
+  background: #e5e7eb;
+  color: #000;
+}
+
+/* ─── Drag & Drop Overlay ─── */
+.chat-main.dragging {
+  position: relative;
+}
+
+.chat-drag-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(99, 102, 241, 0.15);
+  backdrop-filter: blur(2px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  border: 2px dashed #6366f1;
+}
+
+.chat-drag-box {
+  background: #ffffff;
+  padding: 16px 24px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4f46e5;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.chat-drag-icon {
+  font-size: 24px;
+}
+
+/* ─── Image Lightbox Modal ─── */
+.chat-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.chat-lightbox-box {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chat-lightbox-img {
+  max-width: 85vw;
+  max-height: 80vh;
+  border-radius: 10px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  object-fit: contain;
+}
+
+.chat-lightbox-close {
+  position: absolute;
+  top: -40px;
+  right: -10px;
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.chat-lightbox-actions {
+  margin-top: 14px;
+}
+
+.chat-lightbox-download {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  text-decoration: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.15s ease;
+}
+
+.chat-lightbox-download:hover {
+  background: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
