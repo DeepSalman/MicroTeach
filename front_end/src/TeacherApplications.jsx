@@ -2,14 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { fetchTeacherApplications, reviewTeacherApplication } from './api';
 import './TeacherApplications.css';
 
-const BASE_URL = 'http://localhost:3001';
-
 const TeacherApplications = ({ user }) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState(null);
-  const [previewDoc, setPreviewDoc] = useState(null); // { url, label }
 
   useEffect(() => {
     loadApplications();
@@ -57,6 +54,7 @@ const TeacherApplications = ({ user }) => {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
@@ -69,24 +67,22 @@ const TeacherApplications = ({ user }) => {
     return app.status === filter;
   });
 
-  const pendingCount  = applications.filter((a) => a.status === 'pending').length;
+  const pendingCount = applications.filter((a) => a.status === 'pending').length;
   const approvedCount = applications.filter((a) => a.status === 'approved').length;
   const rejectedCount = applications.filter((a) => a.status === 'rejected').length;
 
-  const getInitials = (name) => name.split(' ').map((n) => n[0]).join('');
+  const getInitials = (name) => {
+    return name.split(' ').map((n) => n[0]).join('');
+  };
+
   const parseExpertise = (expertise) => {
     if (!expertise) return [];
     return expertise.split(',').map((s) => s.trim()).filter(Boolean);
   };
+
   const getStatusLabel = (status) => {
     const labels = { pending: 'Pending Review', approved: 'Approved', rejected: 'Rejected' };
     return labels[status] || status;
-  };
-
-  const docLabel = (type) => {
-    if (type === 'student_id_card') return 'Student ID Card';
-    if (type === 'nid_card')        return 'National ID (NID)';
-    return type;
   };
 
   return (
@@ -159,7 +155,7 @@ const TeacherApplications = ({ user }) => {
                   <div className="ta-avatar">{getInitials(app.full_name)}</div>
                   <div className="ta-applicant-info">
                     <span className="ta-name">
-                      {app.full_name} <span className="ta-id-ref">#{app.user_student_id || app.student_id}</span>
+                      {app.full_name} <span className="ta-id-ref">#{app.student_id}</span>
                     </span>
                     <span className="ta-meta">
                       {app.department} • {app.email}
@@ -181,32 +177,6 @@ const TeacherApplications = ({ user }) => {
                   <span className="ta-reason-label">Application Reason:</span>
                   <p className="ta-reason-text">"{app.reason}"</p>
                 </div>
-
-                {/* ── Document Thumbnails ── */}
-                {app.documents && app.documents.length > 0 && (
-                  <div className="ta-documents-section">
-                    <span className="ta-docs-label">📄 Identity Documents</span>
-                    <div className="ta-docs-grid">
-                      {app.documents.map((doc) => (
-                        <button
-                          key={doc.document_id}
-                          className="ta-doc-thumb-btn"
-                          onClick={() => setPreviewDoc({ url: `${BASE_URL}/${doc.file_path}`, label: docLabel(doc.document_type) })}
-                          title={`View ${docLabel(doc.document_type)}`}
-                        >
-                          <img
-                            src={`${BASE_URL}/${doc.file_path}`}
-                            alt={docLabel(doc.document_type)}
-                            className="ta-doc-thumb-img"
-                            onError={(e) => { e.target.style.display = 'none'; }}
-                          />
-                          <span className="ta-doc-thumb-label">{docLabel(doc.document_type)}</span>
-                          <span className="ta-doc-thumb-zoom">🔍 View</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {app.status === 'pending' && (
@@ -237,26 +207,6 @@ const TeacherApplications = ({ user }) => {
               )}
             </div>
           ))}
-        </div>
-      )}
-
-      {/* ── Lightbox Modal ── */}
-      {previewDoc && (
-        <div className="ta-modal-overlay" onClick={() => setPreviewDoc(null)}>
-          <div className="ta-modal-box" onClick={(e) => e.stopPropagation()}>
-            <div className="ta-modal-header">
-              <span className="ta-modal-title">{previewDoc.label}</span>
-              <button className="ta-modal-close" onClick={() => setPreviewDoc(null)}>×</button>
-            </div>
-            <div className="ta-modal-body">
-              <img src={previewDoc.url} alt={previewDoc.label} className="ta-modal-img" />
-            </div>
-            <div className="ta-modal-footer">
-              <a href={previewDoc.url} target="_blank" rel="noreferrer" className="ta-modal-download-btn">
-                ⬇ Open Full Size
-              </a>
-            </div>
-          </div>
         </div>
       )}
     </div>

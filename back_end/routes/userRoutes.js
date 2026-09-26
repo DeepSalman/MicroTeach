@@ -27,9 +27,42 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Find approved tutors, optionally limited to a department.
+router.get('/teachers', async (req, res) => {
+  try {
+    const department = req.query.department || '';
+    const [rows] = await db.query(`
+      SELECT
+        u.user_id,
+        u.full_name,
+        u.role,
+        u.is_verified,
+        u.department,
+        u.bio,
+        u.student_id,
+        u.created_at,
+        (
+          SELECT ta.expertise
+          FROM Teacher_Applications ta
+          WHERE ta.user_id = u.user_id AND ta.status = 'approved'
+          ORDER BY ta.reviewed_at DESC, ta.created_at DESC
+          LIMIT 1
+        ) AS expertise
+      FROM Users
+      AS u
+      WHERE u.role IN ('tutor', 'both')
+        AND (? = '' OR u.department = ?)
+      ORDER BY u.is_verified DESC, u.full_name ASC
+    `, [department, department]);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 2. Register a new user
 router.post('/register', async (req, res) => {
-  const { full_name, email, password, role, department } = req.body;
+  const { full_name, email, password, department } = req.body;
 
   if (!full_name || !email || !password) {
     return res.status(400).json({ message: 'Full name, email, and password are required.' });
@@ -50,7 +83,7 @@ router.post('/register', async (req, res) => {
       full_name,
       email,
       hashedPassword,
-      role || 'student',
+      'student',
       department || null
     ]);
     res.status(201).json({ message: 'User registered successfully!', userId: result.insertId });
@@ -72,6 +105,13 @@ router.get('/profile/:userId', async (req, res) => {
         wallet_balance,
         department,
         bio,
+        (
+          SELECT ta.expertise
+          FROM Teacher_Applications ta
+          WHERE ta.user_id = Users.user_id AND ta.status = 'approved'
+          ORDER BY ta.reviewed_at DESC, ta.created_at DESC
+          LIMIT 1
+        ) AS expertise,
         phone,
         student_id,
         is_admin,

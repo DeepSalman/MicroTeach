@@ -183,6 +183,10 @@
   gap: 16px;
 }
 
+.course-details-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .form-field {
   display: flex;
   flex-direction: column;
@@ -509,6 +513,10 @@
   }
   
   .delivery-options {
+    grid-template-columns: 1fr;
+  }
+
+  .course-details-grid {
     grid-template-columns: 1fr;
   }
   

@@ -15,8 +15,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
     department: '',
     bio: '',
     phone: '',
-    student_id: '',
-    role: 'student'
+    student_id: ''
   });
 
   useEffect(() => {
@@ -35,8 +34,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
         department: userData.department || '',
         bio: userData.bio || '',
         phone: userData.phone || '',
-        student_id: userData.student_id || '',
-        role: userData.role || 'student'
+        student_id: userData.student_id || ''
       });
     } catch (err) {
       setError('Failed to load profile data.');
@@ -100,11 +98,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
     'Other'
   ];
 
-  const roles = [
-    { value: 'student', label: 'Student' },
-    { value: 'tutor', label: 'Peer Tutor' },
-    { value: 'both', label: 'Student & Tutor' }
-  ];
+  const roleLabel = user?.role === 'tutor' ? 'Peer Tutor' : user?.role === 'both' ? 'Student & Tutor' : 'Student';
 
   if (loading) {
     return (
@@ -176,7 +170,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
                   )}
                 </div>
                 <p>{formData.email}</p>
-                <span className="preview-role">{roles.find(r => r.value === formData.role)?.label || 'Student'}</span>
+                <span className="preview-role">{roleLabel}</span>
               </div>
             </div>
 
@@ -235,25 +229,6 @@ const EditProfile = ({ user, onProfileUpdate }) => {
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </select>
-                </div>
-              </div>
-              <div className="form-grid">
-                <div className="form-field">
-                  <label>Role</label>
-                  <div className="role-options">
-                    {roles.map(r => (
-                      <label key={r.value} className={`role-option ${formData.role === r.value ? 'active' : ''}`}>
-                        <input
-                          type="radio"
-                          name="role"
-                          value={r.value}
-                          checked={formData.role === r.value}
-                          onChange={handleChange}
-                        />
-                        <span>{r.label}</span>
-                      </label>
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>

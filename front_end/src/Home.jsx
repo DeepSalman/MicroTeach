@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchPosts, reportPost, fetchUserPostApplications, fetchPostApplicationCount, fetchWalletBalance } from './api';
+import { fetchPosts, fetchTeachers, fetchUsers, reportPost, fetchUserPostApplications, fetchPostApplicationCount, fetchWalletBalance } from './api';
 import ApplyModal from './ApplyModal';
 import PostDetailModal from './PostDetailModal';
 import ChatModal from './ChatModal';
 import WalletModal from './WalletModal';
-import ApplyTeacherModal from './ApplyTeacherModal';
+import PostComments from './PostComments';
 import './Home.css';
 
-const Home = ({ user, onLogout }) => {
+const Home = ({ user, activeMode = 'student', onModeChange, onLogout }) => {
+  const [teachers, setTeachers] = useState([]);
+  const [teachersLoading, setTeachersLoading] = useState(true);
+  const [teachersError, setTeachersError] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,13 +23,17 @@ const Home = ({ user, onLogout }) => {
   const [appliedPostIds, setAppliedPostIds] = useState(new Set());
   const [postApplicantCounts, setPostApplicantCounts] = useState({});
   const [detailModalPost, setDetailModalPost] = useState(null);
+  const [previewPost, setPreviewPost] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatStartUser, setChatStartUser] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
-  const [applyTeacherOpen, setApplyTeacherOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const visiblePosts = user && activeMode === 'student'
+    ? posts.filter((post) => String(post.user_id) === String(user.user_id))
+    : posts;
+  const visibleTeachers = teachers.filter((teacher) => String(teacher.user_id) !== String(user?.user_id));
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -37,6 +44,15 @@ const Home = ({ user, onLogout }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!previewPost) return undefined;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setPreviewPost(null);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [previewPost]);
 
   useEffect(() => {
     loadPosts();
@@ -72,6 +88,38 @@ const Home = ({ user, onLogout }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (activeMode !== 'student' || !user?.user_id) return undefined;
+    let cancelled = false;
+
+    const loadDirectory = async () => {
+      try {
+        const response = await fetchTeachers(user.department || '');
+        if (!cancelled) setTeachers(response.data);
+      } catch (err) {
+        try {
+          const response = await fetchUsers();
+          const department = (user.department || '').trim().toLowerCase();
+          const tutors = response.data.filter((candidate) => {
+            const isTutor = candidate.role === 'tutor' || candidate.role === 'both';
+            const sameDepartment = !department || (candidate.department || '').trim().toLowerCase() === department;
+            return isTutor && sameDepartment;
+          });
+          if (!cancelled) setTeachers(tutors);
+        } catch (fallbackError) {
+          console.error('Failed to load tutors:', err, fallbackError);
+          if (!cancelled) setTeachersError('Tutors could not be loaded right now.');
+        }
+      } finally {
+        if (!cancelled) setTeachersLoading(false);
+      }
+    };
+
+    loadDirectory();
+
+    return () => { cancelled = true; };
+  }, [user?.user_id, user?.department, activeMode]);
 
   const loadApplicantCounts = async (postsData) => {
     const counts = {};
@@ -161,11 +209,6 @@ const Home = ({ user, onLogout }) => {
           <input type="text" placeholder="Search courses, topics, or tutors..." />
         </div>
         <div className="header-actions">
-          {user && user.role === 'student' && (
-            <button className="btn-become-tutor-nav" onClick={() => setApplyTeacherOpen(true)}>
-              Apply to Teach
-            </button>
-          )}
           {user && (
             <button className="wallet-balance-btn" onClick={() => setWalletOpen(true)}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -181,6 +224,16 @@ const Home = ({ user, onLogout }) => {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           </button>
+          {user && (
+            <button
+              className={`mode-indicator ${activeMode}`}
+              onClick={() => user.role === 'both' && onModeChange(activeMode === 'student' ? 'teacher' : 'student')}
+              title={user.role === 'both' ? 'Switch profile' : 'Current profile'}
+              disabled={user.role !== 'both'}
+            >
+              {activeMode === 'teacher' ? 'Tutor Profile' : 'Student Profile'}
+            </button>
+          )}
           <button className="icon-btn">&#9776;</button>
           
           {/* Avatar with Dropdown */}
@@ -209,6 +262,11 @@ const Home = ({ user, onLogout }) => {
                       </svg>
                       Your Profile
                     </button>
+                    {user.role === 'both' && (
+                      <button className="dropdown-item" onClick={() => { setDropdownOpen(false); onModeChange(activeMode === 'student' ? 'teacher' : 'student'); }}>
+                        Switch to {activeMode === 'student' ? 'Tutor' : 'Student'} Profile
+                      </button>
+                    )}
                     {user.is_admin === 1 && (
                       <button className="dropdown-item" onClick={() => { setDropdownOpen(false); navigate('/admin'); }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -216,11 +274,6 @@ const Home = ({ user, onLogout }) => {
                           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                         Admin Panel
-                      </button>
-                    )}
-                    {user.role === 'student' && (
-                      <button className="dropdown-item" onClick={() => { setDropdownOpen(false); setApplyTeacherOpen(true); }}>
-                        🎓 Apply to Teach
                       </button>
                     )}
                     <button className="dropdown-item logout" onClick={handleLogout}>
@@ -259,56 +312,16 @@ const Home = ({ user, onLogout }) => {
         </div>
       </header>
 
-      {/* Categories */}
-      <nav className="categories">
-        <div className="cat-tab active">
-          <span className="cat-icon">&#9783;</span>
-          Algorithms &amp; DS
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#8721;</span>
-          Calculus &amp; Math
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9881;</span>
-          Physics &amp; Lab
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9783;</span>
-          Object-Oriented
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9881;</span>
-          System Architecture
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9889;</span>
-          Circuits &amp; EEE
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#128161;</span>
-          Machine Learning
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9201;</span>
-          Cram Sessions
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#128190;</span>
-          Database...
-        </div>
-        <button className="filters-btn">
-          &#9881; Filters
-          <span className="filters-badge">3</span>
-        </button>
-      </nav>
-
       {/* Main Content */}
       <main className="home-main">
         <div className="main-header">
           <div>
-            <h1>My Applications &amp; Campus Engagements</h1>
-            <p className="subtitle">Manage live peer-tutoring calls, pending solution pitches, and milestone payouts.</p>
+            <h1>{activeMode === 'teacher' ? 'Tutor Opportunities' : 'Campus Tutoring Marketplace'}</h1>
+            <p className="subtitle">
+              {activeMode === 'teacher'
+                ? 'Review student requests and apply to tutor the topics you know best.'
+                : 'Browse campus tutoring requests and manage your academic engagements.'}
+            </p>
           </div>
           {user && (
             <button className="create-post-btn" onClick={() => navigate('/create-post')}>
@@ -324,18 +337,31 @@ const Home = ({ user, onLogout }) => {
         <div className="cards">
           {loading ? (
             <div className="loading-message">Loading posts...</div>
-          ) : posts.length === 0 ? (
-            <div className="empty-message">No posts yet. Create the first one!</div>
+          ) : visiblePosts.length === 0 ? (
+            <div className="empty-message">{activeMode === 'student' ? 'You have not created any posts yet.' : 'No posts yet. Create the first one!'}</div>
           ) : (
-            posts.map((post) => {
+            visiblePosts.map((post) => {
               const statusBadge = getStatusBadge(post.status);
               const isOwnPost = user && String(post.user_id) === String(user.user_id);
               return (
-                <div key={post.post_id} className="card">
+                <div
+                  key={post.post_id}
+                  className="card card-interactive"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View details for ${post.title}`}
+                  onClick={() => isOwnPost ? setDetailModalPost(post) : setPreviewPost(post)}
+                  onKeyDown={(event) => {
+                    if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                      event.preventDefault();
+                      isOwnPost ? setDetailModalPost(post) : setPreviewPost(post);
+                    }
+                  }}
+                >
                   <div className="card-header">
                     <span className={`badge ${statusBadge.class}`}>{statusBadge.text}</span>
                     <span className="course-code">{post.course_code.split(' ')[0]}</span>
-                    <span className="report-btn" title="Report" onClick={() => openReportModal(post)}>
+                    <span className="report-btn" title="Report" onClick={(event) => { event.stopPropagation(); openReportModal(post); }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
                         <line x1="4" y1="22" x2="4" y2="15"/>
@@ -362,13 +388,13 @@ const Home = ({ user, onLogout }) => {
                           {postApplicantCounts[post.post_id] > 0 && (
                             <span className="applicant-count-badge">{postApplicantCounts[post.post_id]} applicant{postApplicantCounts[post.post_id] !== 1 ? 's' : ''}</span>
                           )}
-                          <button className="view-details-btn" onClick={() => setDetailModalPost(post)}>View Details</button>
+                          <button className="view-details-btn" onClick={(event) => { event.stopPropagation(); setDetailModalPost(post); }}>View Details</button>
                         </div>
                       ) : user ? (
                         appliedPostIds.has(post.post_id) ? (
-                          <button className="apply-btn applied-btn" onClick={() => setApplyModalPost(post)}>Applied</button>
+                          <button className="apply-btn applied-btn" onClick={(event) => { event.stopPropagation(); setApplyModalPost(post); }}>Applied</button>
                         ) : (
-                          <button className="apply-btn" onClick={() => setApplyModalPost(post)}>Apply Now</button>
+                          <button className="apply-btn" onClick={(event) => { event.stopPropagation(); setApplyModalPost(post); }}>Apply Now</button>
                         )
                       ) : null}
                     </div>
@@ -381,6 +407,58 @@ const Home = ({ user, onLogout }) => {
             })
           )}
         </div>
+        
+        {activeMode === 'student' && user && (
+          <section className="home-tutor-directory" aria-labelledby="home-tutor-directory-title">
+            <div className="home-tutor-directory-heading">
+              <div>
+                <h2 id="home-tutor-directory-title">
+                  Tutors{user.department ? ` in ${user.department}` : ' on campus'}
+                </h2>
+                <p>Browse approved peer tutors and contact them directly.</p>
+              </div>
+            </div>
+
+            {teachersLoading ? (
+              <p className="home-tutor-directory-state">Loading tutors...</p>
+            ) : teachersError ? (
+              <p className="home-tutor-directory-state" role="alert">{teachersError}</p>
+            ) : visibleTeachers.length === 0 ? (
+              <p className="home-tutor-directory-state">No approved tutors are listed{user.department ? ` in ${user.department}` : ''} yet.</p>
+            ) : (
+              <div className="home-tutor-grid">
+                {visibleTeachers.map((teacher) => (
+                  <article className="home-tutor-card" key={teacher.user_id}>
+                    <div className="home-tutor-card-main">
+                      <div className="home-tutor-avatar" aria-hidden="true">
+                        {(teacher.full_name || 'T').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="home-tutor-info">
+                        <h3>{teacher.full_name}</h3>
+                        <p>{teacher.department || 'Campus tutor'}</p>
+                        <span className={`home-tutor-verification ${Number(teacher.is_verified) === 1 ? 'verified' : ''}`}>
+                          {Number(teacher.is_verified) === 1 ? 'Verified tutor' : 'Approved tutor'}
+                        </span>
+                      </div>
+                    </div>
+                    {teacher.bio && <p className="home-tutor-bio">{teacher.bio}</p>}
+                    <div className="home-tutor-actions">
+                      <button type="button" className="home-tutor-view" onClick={() => navigate(`/profile/${teacher.user_id}`)}>
+                        View Profile
+                      </button>
+                      <button type="button" className="home-tutor-message" onClick={() => {
+                        setChatStartUser(teacher.user_id);
+                        setChatOpen(true);
+                      }}>
+                        Message
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Show More */}
         <div className="show-more">
@@ -409,7 +487,7 @@ const Home = ({ user, onLogout }) => {
           </div>
           <div className="footer-col">
             <h3>Hosting &amp; Tutoring</h3>
-            <a href="#" onClick={(e) => { e.preventDefault(); if (user && user.role === 'student') setApplyTeacherOpen(true); }}>Become a Verified Tutor</a>
+            <a href="#" onClick={(e) => e.preventDefault()}>Become a Verified Tutor</a>
             <a href="#" onClick={(e) => e.preventDefault()}>Hourly &amp; Milestone Rates</a>
             <a href="#" onClick={(e) => e.preventDefault()}>Escrow Payout Guidelines</a>
             <a href="#" onClick={(e) => e.preventDefault()}>Tutor Code of Conduct</a>
@@ -484,6 +562,47 @@ const Home = ({ user, onLogout }) => {
         </div>
       )}
 
+      {/* Post Preview Modal */}
+      {previewPost && (
+        <div className="post-preview-overlay" onClick={() => setPreviewPost(null)}>
+          <section
+            className="post-preview-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="post-preview-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="post-preview-header">
+              <div>
+                <span className="post-preview-category">{previewPost.category}</span>
+                <h2 id="post-preview-title">{previewPost.title}</h2>
+              </div>
+              <button type="button" className="post-preview-close" aria-label="Close post details" onClick={() => setPreviewPost(null)}>×</button>
+            </div>
+            <div className="post-preview-meta">
+              <span>{previewPost.course_code}</span>
+              <span>{getDeliveryLabel(previewPost.delivery_format)}</span>
+              {previewPost.deadline && <span>Due {previewPost.deadline}</span>}
+              {previewPost.is_urgent && <span className="post-preview-urgent">High urgency</span>}
+            </div>
+            <p className="post-preview-description">{previewPost.description || 'No additional details provided.'}</p>
+            <PostComments postId={previewPost.post_id} user={user} />
+            <div className="post-preview-footer">
+              <div>
+                <strong>৳{Number(previewPost.bounty || 0).toLocaleString()}</strong>
+                <span>Posted by {previewPost.author_name || 'Campus member'} · {previewPost.author_department || 'Campus community'}</span>
+              </div>
+              <button type="button" className="post-preview-apply" onClick={() => {
+                setApplyModalPost(previewPost);
+                setPreviewPost(null);
+              }}>
+                {appliedPostIds.has(previewPost.post_id) ? 'View Application' : 'Apply to Post'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {/* Apply Modal */}
       {applyModalPost && (
         <ApplyModal
@@ -521,16 +640,6 @@ const Home = ({ user, onLogout }) => {
       {/* Chat Modal */}
       {chatOpen && user && (
         <ChatModal user={user} onClose={() => { setChatOpen(false); setChatStartUser(null); }} startWithUserId={chatStartUser} />
-      )}
-
-      {/* Apply Teacher Modal */}
-      {user && (
-        <ApplyTeacherModal
-          user={user}
-          isOpen={applyTeacherOpen}
-          onClose={() => setApplyTeacherOpen(false)}
-          onSuccess={() => setApplyTeacherOpen(false)}
-        />
       )}
 
       {/* Wallet Modal */}

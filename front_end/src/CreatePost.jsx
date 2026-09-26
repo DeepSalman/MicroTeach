@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPost, fetchWalletBalance } from './api';
 import './CreatePost.css';
+
+const getMinimumDeadline = () => {
+  const now = new Date();
+  const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return localDateTime.toISOString().slice(0, 16);
+};
 
 const CreatePost = ({ user }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     category: 'Algorithms & DS',
-    courseCode: 'CSE 221 - Algorithms & Data Structures',
+    courseName: 'Algorithms & Data Structures',
+    courseCode: 'CSE 221',
     title: '',
     description: '',
     deliveryFormat: 'live_call',
@@ -18,6 +25,7 @@ const CreatePost = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [walletBalance, setWalletBalance] = useState(0);
+  const [minimumDeadline] = useState(getMinimumDeadline);
 
   useEffect(() => {
     if (user?.user_id) {
@@ -28,12 +36,12 @@ const CreatePost = ({ user }) => {
   }, [user]);
 
   const categories = [
-    { name: 'Algorithms & DS', code: 'CSE 221', icon: '📊' },
-    { name: 'Calculus & Math', code: 'MTH 201', icon: '∑' },
-    { name: 'Physics & Lab', code: 'PHY 102', icon: '⚛' },
-    { name: 'System Architecture', code: 'CSE 331', icon: '⚙' },
-    { name: 'Circuits & EEE', code: 'EEE 163', icon: '⚡' },
-    { name: 'Others', code: '', icon: '📌' }
+    { name: 'Algorithms & DS', courseName: 'Algorithms & Data Structures', code: 'CSE 221', icon: '📊' },
+    { name: 'Calculus & Math', courseName: 'Calculus & Mathematics', code: 'MTH 201', icon: '∑' },
+    { name: 'Physics & Lab', courseName: 'Physics', code: 'PHY 102', icon: '⚛' },
+    { name: 'System Architecture', courseName: 'Computer Architecture', code: 'CSE 331', icon: '⚙' },
+    { name: 'Circuits & EEE', courseName: 'Electrical & Electronic Engineering', code: 'EEE 163', icon: '⚡' },
+    { name: 'Others', courseName: '', code: '', icon: '📌' }
   ];
 
   const deliveryOptions = [
@@ -57,7 +65,8 @@ const CreatePost = ({ user }) => {
     setFormData({
       ...formData,
       category: cat.name,
-      courseCode: cat.code ? `${cat.code} - Core Topic` : ''
+      courseName: cat.courseName,
+      courseCode: cat.code
     });
   };
 
@@ -69,8 +78,14 @@ const CreatePost = ({ user }) => {
       return;
     }
 
-    if (!formData.courseCode.trim()) {
-      setError('Please enter a course code.');
+    if (!formData.courseName.trim() || !formData.courseCode.trim()) {
+      setError('Please enter a course name and course code.');
+      return;
+    }
+
+    const deadlineTime = Date.parse(formData.deadline);
+    if (formData.deadline && (!Number.isFinite(deadlineTime) || deadlineTime <= Date.now())) {
+      setError('The deadline must be in the future.');
       return;
     }
 
@@ -87,7 +102,7 @@ const CreatePost = ({ user }) => {
       await createPost({
         user_id: user.user_id,
         category: formData.category,
-        course_code: formData.courseCode,
+        course_code: `${formData.courseCode.trim()} - ${formData.courseName.trim()}`,
         title: formData.title,
         description: formData.description,
         delivery_format: formData.deliveryFormat,
@@ -169,16 +184,31 @@ const CreatePost = ({ user }) => {
               <span className="step-label">Step 2 of 5</span>
             </div>
             <div className="form-grid">
-              <div className="form-field">
-                <label className="field-label">Course Code & Module</label>
-                <input
-                  type="text"
-                  name="courseCode"
-                  className="form-input"
-                  placeholder={formData.category === 'Others' ? 'e.g. Machine Learning - Neural Networks' : 'e.g. CSE 221 - Algorithms'}
-                  value={formData.courseCode}
-                  onChange={handleChange}
-                />
+              <div className="form-grid course-details-grid">
+                <div className="form-field">
+                  <label className="field-label">Course Code</label>
+                  <input
+                    type="text"
+                    name="courseCode"
+                    className="form-input"
+                    placeholder="e.g. CSE 221"
+                    value={formData.courseCode}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Course Name</label>
+                  <input
+                    type="text"
+                    name="courseName"
+                    className="form-input"
+                    placeholder="e.g. Algorithms and Data Structures"
+                    value={formData.courseName}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
               </div>
             </div>
             <div className="form-field">
@@ -267,14 +297,14 @@ const CreatePost = ({ user }) => {
               <div className="form-field">
                 <label className="field-label">Target Resolution Deadline</label>
                 <input
-                  type="text"
+                  type="datetime-local"
                   name="deadline"
                   className="form-input"
-                  placeholder="e.g. Today at 10:00 PM"
+                  min={minimumDeadline}
                   value={formData.deadline}
                   onChange={handleChange}
                 />
-                <span className="field-hint">Tutors must deliver before this deadline to claim payout.</span>
+                <span className="field-hint">Choose the date and time tutors must deliver by.</span>
               </div>
               <div className="form-field">
                 <label className="field-label">Escrow Bounty (৳ BDT)</label>

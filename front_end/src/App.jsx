@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './Home';
 import Login from './Login';
@@ -15,6 +15,17 @@ import ContentModeration from './ContentModeration';
 import ReportQueue from './ReportQueue';
 import DisputesEscrow from './DisputesEscrow';
 import TeacherApplications from './TeacherApplications';
+import TutorProfile from './TutorProfile';
+
+const ACTIVE_MODE_KEY = 'microteach_active_mode';
+
+const getModeForUser = (user) => {
+  if (user?.role === 'tutor') return 'teacher';
+  if (user?.role !== 'both') return 'student';
+
+  const savedMode = localStorage.getItem(ACTIVE_MODE_KEY);
+  return savedMode === 'teacher' || savedMode === 'student' ? savedMode : 'student';
+};
 
 // Dashboard - shown after login
 const Dashboard = ({ user, onLogout }) => {
@@ -46,20 +57,35 @@ function App() {
     const saved = localStorage.getItem('microteach_user');
     return saved ? JSON.parse(saved) : null;
   });
+  const [activeMode, setActiveMode] = useState(() => getModeForUser(currentUser));
 
   const handleLogin = (userData) => {
     localStorage.setItem('microteach_user', JSON.stringify(userData));
     setCurrentUser(userData);
+    const nextMode = getModeForUser(userData);
+    setActiveMode(nextMode);
+    localStorage.setItem(ACTIVE_MODE_KEY, nextMode);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('microteach_user');
+    localStorage.removeItem(ACTIVE_MODE_KEY);
     setCurrentUser(null);
+    setActiveMode('student');
   };
 
   const handleProfileUpdate = (updatedUser) => {
     localStorage.setItem('microteach_user', JSON.stringify(updatedUser));
     setCurrentUser(updatedUser);
+    const nextMode = getModeForUser(updatedUser);
+    setActiveMode(nextMode);
+    localStorage.setItem(ACTIVE_MODE_KEY, nextMode);
+  };
+
+  const handleModeChange = (mode) => {
+    if (currentUser?.role !== 'both' || !['student', 'teacher'].includes(mode)) return;
+    setActiveMode(mode);
+    localStorage.setItem(ACTIVE_MODE_KEY, mode);
   };
 
   return (
@@ -68,7 +94,13 @@ function App() {
         {/* Landing page - marketplace home, passes user state */}
         <Route 
           path="/" 
-          element={<Home user={currentUser} onLogout={handleLogout} />} 
+          element={
+            currentUser ? (
+              <Home user={currentUser} activeMode={activeMode} onModeChange={handleModeChange} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
         />
 
         {/* Login page */}
@@ -124,11 +156,22 @@ function App() {
           path="/profile" 
           element={
             currentUser ? (
-              <Profile user={currentUser} onLogout={handleLogout} onProfileUpdate={handleProfileUpdate} />
+              <Profile user={currentUser} activeMode={activeMode} onModeChange={handleModeChange} onLogout={handleLogout} onProfileUpdate={handleProfileUpdate} />
             ) : (
               <Navigate to="/login" />
             )
           } 
+        />
+
+        <Route
+          path="/profile/:userId"
+          element={
+            currentUser ? (
+              <TutorProfile user={currentUser} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
 
         {/* Edit Profile page - protected route */}

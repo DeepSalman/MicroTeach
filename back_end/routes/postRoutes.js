@@ -64,6 +64,66 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
+router.get('/:postId/comments', async (req, res) => {
+  try {
+    const [comments] = await db.query(`
+      SELECT c.comment_id, c.post_id, c.user_id, c.parent_comment_id,
+        c.comment_text, c.created_at, u.full_name AS author_name
+      FROM Post_Comments c
+      JOIN Users u ON u.user_id = c.user_id
+      WHERE c.post_id = ?
+      ORDER BY c.created_at ASC, c.comment_id ASC
+    `, [req.params.postId]);
+    res.json(comments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/:postId/comments', async (req, res) => {
+  const { user_id, parent_comment_id } = req.body;
+  const commentText = typeof req.body.comment_text === 'string' ? req.body.comment_text.trim() : '';
+
+  if (!user_id || !commentText) {
+    return res.status(400).json({ message: 'User ID and comment are required.' });
+  }
+  if (commentText.length > 500) {
+    return res.status(400).json({ message: 'Comments must be 500 characters or fewer.' });
+  }
+
+  try {
+    const [posts] = await db.query('SELECT post_id FROM Posts WHERE post_id = ?', [req.params.postId]);
+    if (posts.length === 0) {
+      return res.status(404).json({ message: 'Post not found.' });
+    }
+
+    if (parent_comment_id) {
+      const [parents] = await db.query(
+        'SELECT comment_id FROM Post_Comments WHERE comment_id = ? AND post_id = ?',
+        [parent_comment_id, req.params.postId]
+      );
+      if (parents.length === 0) {
+        return res.status(400).json({ message: 'Reply target does not belong to this post.' });
+      }
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO Post_Comments (post_id, user_id, parent_comment_id, comment_text) VALUES (?, ?, ?, ?)',
+      [req.params.postId, user_id, parent_comment_id || null, commentText]
+    );
+    const [[comment]] = await db.query(`
+      SELECT c.comment_id, c.post_id, c.user_id, c.parent_comment_id,
+        c.comment_text, c.created_at, u.full_name AS author_name
+      FROM Post_Comments c
+      JOIN Users u ON u.user_id = c.user_id
+      WHERE c.comment_id = ?
+    `, [result.insertId]);
+    res.status(201).json(comment);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 3. Create a new post (deducts bounty from wallet)
 router.post('/', async (req, res) => {
   const { user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent } = req.body;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchPostApplications, updateApplicationStatus, closePost, checkReviewExists } from './api';
 import ConfirmModal from './ConfirmModal';
 import ReviewModal from './ReviewModal';
+import PostComments from './PostComments';
 import './PostDetailModal.css';
 
 const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
@@ -148,6 +149,8 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
               {post.deadline && <span className="pd-deadline">Due: {post.deadline}</span>}
             </div>
           </div>
+
+          <PostComments postId={post.post_id} user={user} />
 
           {/* Applied Teachers */}
           <div className="pd-section">

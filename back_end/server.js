@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 require('dotenv').config();
 
 const db = require('./db');
@@ -19,9 +18,6 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-// Serve uploaded files (teacher documents, etc.)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use('/api/users', userRoutes);

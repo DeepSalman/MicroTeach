@@ -3,6 +3,7 @@ import axios from "axios";
 const API = axios.create({ baseURL: "http://localhost:3001/api" });
 
 export const fetchUsers = () => API.get("/users");
+export const fetchTeachers = (department) => API.get('/users/teachers', { params: { department } });
 export const fetchUserProfile = (userId) => API.get(`/users/profile/${userId}`);
 export const updateUserProfile = (userId, data) => API.put(`/users/profile/${userId}`, data);
 export const registerUser = (userData) => API.post("/users/register", userData);
@@ -15,12 +16,14 @@ export const fetchSessions = () => API.get("/sessions");
 export const createSession = (sessionData) => API.post("/sessions", sessionData);
 
 export const fetchPosts = () => API.get("/posts");
+export const fetchPostComments = (postId) => API.get(`/posts/${postId}/comments`);
+export const addPostComment = (postId, data) => API.post(`/posts/${postId}/comments`, data);
 export const createPost = (postData) => API.post("/posts", postData);
 export const updatePostStatus = (postId, status) => API.patch(`/posts/${postId}/status`, { status });
 
 export const fetchTeacherApplications = () => API.get("/teacher-applications");
 export const fetchUserApplications = (userId) => API.get(`/teacher-applications/user/${userId}`);
-export const submitTeacherApplication = (data) => API.post("/teacher-applications", data, { headers: { 'Content-Type': 'multipart/form-data' } });
+export const submitTeacherApplication = (data) => API.post("/teacher-applications", data);
 export const reviewTeacherApplication = (id, data) => API.put(`/teacher-applications/${id}/review`, data);
 
 export const reportPost = (data) => API.post("/reports", data);

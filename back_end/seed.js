@@ -131,6 +131,18 @@ const TABLES = {
       FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
     )`,
+  Post_Comments: `
+    CREATE TABLE IF NOT EXISTS Post_Comments (
+      comment_id INT AUTO_INCREMENT PRIMARY KEY,
+      post_id INT NOT NULL,
+      user_id INT NOT NULL,
+      parent_comment_id INT NULL,
+      comment_text TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_comment_id) REFERENCES Post_Comments(comment_id) ON DELETE CASCADE
+    )`,
   Transactions: `
     CREATE TABLE IF NOT EXISTS Transactions (
       transaction_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -199,7 +211,7 @@ const TABLES = {
 const DROP_ORDER = [
   'Messages', 'Conversation_Members', 'Conversations',
   'Reviews', 'Transactions',
-  'Post_Applications', 'Reports', 'Teacher_Applications',
+  'Post_Comments', 'Post_Applications', 'Reports', 'Teacher_Applications',
   'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users'
 ];
 
