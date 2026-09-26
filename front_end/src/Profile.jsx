@@ -239,12 +239,6 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
 
   return (
     <div className="profile-page">
-      {/* Top Banner */}
-      <div className="top-banner">
-        <span className="dot"></span>
-        <strong>Spring Midterm Sprint:</strong> Verified peer STEM tutors are live on campus.
-        <a href="#" onClick={(e) => e.preventDefault()}>Learn how it works</a>
-      </div>
 
       {/* Header */}
       <header className="home-header">

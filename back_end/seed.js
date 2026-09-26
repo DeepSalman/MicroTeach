@@ -125,12 +125,83 @@ const TABLES = {
       user_id INT NOT NULL,
       message TEXT,
       status ENUM('pending','accepted','rejected','cancellation_requested','cancelled','completion_requested','completed') DEFAULT 'pending',
+      completion_requested_by INT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY unique_application (post_id, user_id),
       FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+    )`,
+  Transactions: `
+    CREATE TABLE IF NOT EXISTS Transactions (
+      transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      type VARCHAR(50) NOT NULL,
+      amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      balance_after DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      reference_id INT NULL,
+      description VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+      INDEX idx_tx_user_type (user_id, type),
+      INDEX idx_tx_ref (reference_id)
+    )`,
+  Reviews: `
+    CREATE TABLE IF NOT EXISTS Reviews (
+      review_id INT AUTO_INCREMENT PRIMARY KEY,
+      reviewer_id INT NOT NULL,
+      reviewee_id INT NOT NULL,
+      post_id INT NOT NULL,
+      rating DECIMAL(2,1) NOT NULL,
+      comment TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_review (reviewer_id, post_id),
+      FOREIGN KEY (reviewer_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+      FOREIGN KEY (reviewee_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+      FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE
+    )`,
+  Conversations: `
+    CREATE TABLE IF NOT EXISTS Conversations (
+      conversation_id INT AUTO_INCREMENT PRIMARY KEY,
+      post_id INT NULL,
+      last_message_preview VARCHAR(255) DEFAULT '',
+      last_message_at DATETIME(3) NULL DEFAULT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE SET NULL
+    )`,
+  Conversation_Members: `
+    CREATE TABLE IF NOT EXISTS Conversation_Members (
+      conversation_id INT NOT NULL,
+      user_id INT NOT NULL,
+      last_read_seq INT NOT NULL DEFAULT 0,
+      last_delivered_seq INT NOT NULL DEFAULT 0,
+      muted TINYINT(1) NOT NULL DEFAULT 0,
+      PRIMARY KEY (conversation_id, user_id),
+      FOREIGN KEY (conversation_id) REFERENCES Conversations(conversation_id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+    )`,
+  Messages: `
+    CREATE TABLE IF NOT EXISTS Messages (
+      conversation_id INT NOT NULL,
+      seq INT NOT NULL,
+      sender_id INT NOT NULL,
+      kind VARCHAR(30) NOT NULL DEFAULT 'text',
+      body TEXT NOT NULL,
+      client_msg_id VARCHAR(64) NULL,
+      created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+      PRIMARY KEY (conversation_id, seq),
+      UNIQUE KEY unique_client_msg (conversation_id, client_msg_id),
+      FOREIGN KEY (conversation_id) REFERENCES Conversations(conversation_id) ON DELETE CASCADE,
+      FOREIGN KEY (sender_id) REFERENCES Users(user_id) ON DELETE CASCADE
     )`
 };
+
+// Children before parents so foreign keys never block a drop/truncate
+const DROP_ORDER = [
+  'Messages', 'Conversation_Members', 'Conversations',
+  'Reviews', 'Transactions',
+  'Post_Applications', 'Reports', 'Teacher_Applications',
+  'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users'
+];
 
 // ── Sample Data ──────────────────────────────────────────────
 
@@ -223,6 +294,7 @@ async function main() {
   // 1. Connect to MySQL (no database selected yet)
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD
   });
@@ -245,7 +317,7 @@ async function main() {
   if (fresh) {
     console.log('\n⚠️  Fresh mode — dropping all tables...');
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    for (const name of ['Post_Applications', 'Teacher_Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
+    for (const name of DROP_ORDER) {
       await conn.query(`DROP TABLE IF EXISTS \`${name}\``);
     }
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
@@ -323,8 +395,8 @@ async function main() {
   if (force && !fresh) {
     console.log('\n⚠️  Clearing existing data...');
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    for (const name of ['Post_Applications', 'Teacher_Applications', 'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users']) {
-      await conn.query(`TRUNCATE TABLE \`${name}\``);
+    for (const name of DROP_ORDER) {
+      await conn.query(`DELETE FROM \`${name}\``);
     }
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
     console.log('✅ Data cleared');
