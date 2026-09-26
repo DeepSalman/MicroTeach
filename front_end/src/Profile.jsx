@@ -7,6 +7,7 @@ import WalletModal from './WalletModal';
 import ConfirmModal from './ConfirmModal';
 import ReviewModal from './ReviewModal';
 import ApplyTeacherModal from './ApplyTeacherModal';
+import TransactionReportModal from './TransactionReportModal';
 import './Profile.css';
 
 const Profile = ({ user, onLogout, onProfileUpdate }) => {
@@ -17,6 +18,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const [applicationStatus, setApplicationStatus] = useState(null);
   const [applicationData, setApplicationData] = useState(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [txDisputeModalPost, setTxDisputeModalPost] = useState(null);
   const [applyReason, setApplyReason] = useState('');
   const [applyExpertise, setApplyExpertise] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -449,7 +451,10 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                         <div className="post-card-actions">
                           <button className="btn-secondary-sm" onClick={() => setDetailModalPost(post)}>View Details</button>
                           {post.status !== 'closed' && (
-                            <button className="btn-outline-sm" onClick={() => handleClosePost(post.post_id)}>Close Post</button>
+                            <>
+                              <button className="btn-outline-sm" onClick={() => handleClosePost(post.post_id)}>Close Post</button>
+                              <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost(post)}>⚖️ Dispute Gig</button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -563,6 +568,9 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                             }}>
                               <span className="meta-icon">chat</span> Message
                             </button>
+                            <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id })}>
+                              ⚖️ Dispute
+                            </button>
                           </div>
                         </div>
                       )}
@@ -672,6 +680,17 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
           )}
         </section>
       </main>
+
+      {/* Transaction Dispute Modal */}
+      {txDisputeModalPost && (
+        <TransactionReportModal
+          post={txDisputeModalPost}
+          user={user}
+          isOpen={!!txDisputeModalPost}
+          onClose={() => setTxDisputeModalPost(null)}
+          onSuccess={() => setTxDisputeModalPost(null)}
+        />
+      )}
 
       {/* Apply to Teach Modal */}
       {user && (

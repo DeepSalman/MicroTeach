@@ -6,6 +6,7 @@ import PostDetailModal from './PostDetailModal';
 import ChatModal from './ChatModal';
 import WalletModal from './WalletModal';
 import ApplyTeacherModal from './ApplyTeacherModal';
+import TransactionReportModal from './TransactionReportModal';
 import './Home.css';
 
 const Home = ({ user, onLogout }) => {
@@ -17,6 +18,7 @@ const Home = ({ user, onLogout }) => {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
   const [applyModalPost, setApplyModalPost] = useState(null);
+  const [txDisputeModalPost, setTxDisputeModalPost] = useState(null);
   const [appliedPostIds, setAppliedPostIds] = useState(new Set());
   const [postApplicantCounts, setPostApplicantCounts] = useState({});
   const [detailModalPost, setDetailModalPost] = useState(null);
@@ -335,10 +337,15 @@ const Home = ({ user, onLogout }) => {
                   <div className="card-header">
                     <span className={`badge ${statusBadge.class}`}>{statusBadge.text}</span>
                     <span className="course-code">{post.course_code.split(' ')[0]}</span>
-                    <span className="report-btn" title="Report" onClick={() => openReportModal(post)}>
+                    <span className="report-btn" title="Report Content" onClick={() => openReportModal(post)}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
                         <line x1="4" y1="22" x2="4" y2="15"/>
+                      </svg>
+                    </span>
+                    <span className="report-btn tx-dispute-btn" title="Report Transaction / Escrow Issue" onClick={(e) => { e.stopPropagation(); if (!user) { navigate('/login'); return; } setTxDisputeModalPost(post); }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                       </svg>
                     </span>
                   </div>
@@ -521,6 +528,17 @@ const Home = ({ user, onLogout }) => {
       {/* Chat Modal */}
       {chatOpen && user && (
         <ChatModal user={user} onClose={() => { setChatOpen(false); setChatStartUser(null); }} startWithUserId={chatStartUser} />
+      )}
+
+      {/* Transaction Dispute / Report Modal */}
+      {txDisputeModalPost && (
+        <TransactionReportModal
+          post={txDisputeModalPost}
+          user={user}
+          isOpen={!!txDisputeModalPost}
+          onClose={() => setTxDisputeModalPost(null)}
+          onSuccess={() => setTxDisputeModalPost(null)}
+        />
       )}
 
       {/* Apply Teacher Modal */}

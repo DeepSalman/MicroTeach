@@ -857,3 +857,210 @@
     flex-wrap: wrap;
   }
 }
+
+/* ── Dynamic Dispute Escrow additions ── */
+.de-feedback-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.de-feedback-alert.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.de-feedback-alert.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+.de-alert-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+}
+.de-alert-close:hover { opacity: 1; }
+
+.de-evidence-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+.de-evidence-link {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+.de-evidence-link:hover {
+  color: #1d4ed8;
+}
+
+.de-narrative-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.de-reason-pill {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.de-remedy-requested {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #9a3412;
+}
+.de-remedy-tag {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: #c2410c;
+}
+
+.de-admin-split-slider {
+  margin-top: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.de-slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #334155;
+}
+.de-slider-input {
+  width: 100%;
+  accent-color: #6366f1;
+  cursor: pointer;
+}
+
+.de-notes-box {
+  margin-top: 10px;
+}
+.de-notes-input {
+  width: 100%;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+.de-notes-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.de-resolved-view {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.de-resolved-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  color: #166534;
+}
+.de-resolved-type {
+  background: #dcfce7;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.de-resolved-notes {
+  font-size: 12px;
+  color: #14532d;
+  font-style: italic;
+}
+.de-resolved-time {
+  font-size: 11px;
+  color: #15803d;
+}
+
+.de-card--resolved {
+  opacity: 0.92;
+  border-color: #bbf7d0;
+}
+.de-card--dismissed {
+  opacity: 0.75;
+  border-color: #e2e8f0;
+}
+.de-status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+.de-status-badge.under_review {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.de-status-badge.resolved {
+  background: #dcfce7;
+  color: #166534;
+}
+.de-status-badge.dismissed {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.de-empty {
+  padding: 48px 24px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px dashed #cbd5e1;
+}
+.de-empty-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+.de-empty h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  color: #1e293b;
+}
+.de-empty p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}

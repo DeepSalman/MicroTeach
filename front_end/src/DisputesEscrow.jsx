@@ -1,412 +1,565 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchTransactionDisputes, resolveTransactionDispute, updateTransactionDisputeStatus } from './api';
 import './DisputesEscrow.css';
 
 const DisputesEscrow = ({ user }) => {
+  const [disputes, setDisputes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [severityFilter, setSeverityFilter] = useState('all');
-  const [sortOption, setSortOption] = useState('sla');
+  const [selectedResolutions, setSelectedResolutions] = useState({}); // { [dispute_id]: { type, splitPct, notes } }
+  const [actionLoading, setActionLoading] = useState(null);
+  const [feedback, setFeedback] = useState(null); // { type, message }
 
-  const disputes = [
-    {
-      id: 'DISP-9402',
-      course: 'CSE 221: Algorithms',
-      session: 'SES-9844',
-      priority: 'HIGH PRIORITY',
-      sla: '12m SLA',
-      elapsed: '33m 00s',
-      maxSla: '45m 00s',
-      student: {
-        name: 'Tanvir Ahmed',
-        id: '#21101428',
-        dept: 'CSE 6th Sem',
-        strikes: '0 previous strikes',
-      },
-      tutor: {
-        name: 'Fahim Kabir',
-        id: '#19301054',
-        rating: '4.98',
-        sessions: '118 sessions',
-      },
-      narrative: 'Tutor promised full dynamic programming algorithm walkthrough before 11:30 PM homework cutoff. Only provided incomplete pseudo-code that threw index out of bounds errors. Missed assignment submission window entirely.',
-      evidence: [
-        { type: 'audio', name: 'webrtc_session_42m.wav' },
-        { type: 'code', name: 'dijkstra_dp_memo.cpp' },
-      ],
-      telemetry: '42m WebRTC duration, 14 commits. Flagged timestamp at 08:22.',
-      escrow: { amount: 750, status: 'Locked' },
-      verdict: {
-        recommended: '60/40 Split',
-        options: [
-          { label: 'Full Student Refund', amount: '৳ 750', note: '0 strike applied', selected: false },
-          { label: 'Compromise Split', amount: '৳ 450 / ৳ 300', note: '60% student, 40% tutor', selected: true },
-          { label: 'Full Tutor Payout', amount: '৳ 750', note: 'Student claim dismissed', selected: false },
-        ],
-      },
-      actions: [
-        { label: 'Execute Settlement', primary: true },
-        { label: 'Request Evidence (12h)', primary: false },
-        { label: 'Escalate to Chair', primary: false },
-        { label: 'Dismiss Case', primary: false, ghost: true },
-      ],
-    },
-    {
-      id: 'DISP-9388',
-      course: 'MAT 120: Calculus',
-      session: 'SES-9812',
-      priority: 'MEDIUM',
-      sla: '38m ago',
-      narrative: 'Audio degradation and dropped call after 8 mins. WebRTC diagnostic logs confirmed packet loss > 42% on tutor uplink.',
-      escrow: { amount: 350, status: 'Locked' },
-      actions: [
-        { label: 'Instant Refund (৳ 350)', primary: true },
-        { label: 'Review Telemetry', primary: false },
-      ],
-    },
-    {
-      id: 'DISP-9375',
-      course: 'PHY 112: Electricity & Magnetism',
-      session: 'SES-9760',
-      priority: 'HIGH PRIORITY',
-      sla: '1h 05m ago',
-      narrative: 'Tutor sent external Nagad payment number in live whiteboard chat before sharing circuit derivation formulas.',
-      escrow: { amount: 500, status: 'Locked' },
-      actions: [
-        { label: 'Sanction & Suspend', primary: true },
-        { label: 'Escalate to Proctor', primary: false },
-      ],
-    },
-  ];
+  useEffect(() => {
+    loadDisputes();
+  }, []);
 
+  const loadDisputes = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchTransactionDisputes();
+      setDisputes(res.data);
+      // Initialize default resolution options for each dispute based on reporter's request
+      const initRes = {};
+      res.data.forEach(d => {
+        initRes[d.dispute_id] = {
+          type: d.dispute_type || 'full_refund',
+          splitPct: d.split_percentage || 50,
+          notes: ''
+        };
+      });
+      setSelectedResolutions(initRes);
+    } catch (err) {
+      console.error('Failed to load transaction disputes:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResolutionChange = (disputeId, field, value) => {
+    setSelectedResolutions(prev => ({
+      ...prev,
+      [disputeId]: {
+        ...(prev[disputeId] || {}),
+        [field]: value
+      }
+    }));
+  };
+
+  const handleExecuteSettlement = async (disputeId) => {
+    const config = selectedResolutions[disputeId] || { type: 'full_refund', splitPct: 50, notes: '' };
+    setActionLoading(disputeId);
+    setFeedback(null);
+    try {
+      const payload = {
+        resolution_type: config.type,
+        split_percentage: config.splitPct,
+        resolution_notes: config.notes,
+        admin_id: user?.user_id
+      };
+      const res = await resolveTransactionDispute(disputeId, payload);
+      setFeedback({ type: 'success', message: res.data.message });
+      // Update dispute in state
+      setDisputes(prev => prev.map(d => {
+        if (d.dispute_id === disputeId) {
+          return {
+            ...d,
+            status: config.type === 'dismissed' ? 'dismissed' : 'resolved',
+            resolution_type: config.type,
+            resolution_notes: config.notes,
+            resolved_at: new Date().toISOString()
+          };
+        }
+        return d;
+      }));
+    } catch (err) {
+      console.error('Settlement execution failed:', err);
+      setFeedback({ type: 'error', message: err.response?.data?.message || 'Failed to execute settlement.' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Metrics calculation
+  const pendingDisputes = disputes.filter(d => d.status === 'pending' || d.status === 'under_review');
+  const resolvedDisputes = disputes.filter(d => d.status === 'resolved');
+  const dismissedDisputes = disputes.filter(d => d.status === 'dismissed');
+
+  const totalEscrowInDispute = pendingDisputes.reduce((acc, d) => acc + (parseFloat(d.bounty) || 0), 0);
+
+  // Filter tabs
   const tabs = [
-    { key: 'all', label: 'All Disputes', count: 3 },
-    { key: 'code', label: 'Code / Delivery', count: 1 },
-    { key: 'noshow', label: 'No-Show', count: 1 },
-    { key: 'scope', label: 'Scope Creep', count: 1 },
+    { key: 'all', label: 'All Disputes', count: disputes.length },
+    { key: 'pending', label: 'Pending Review', count: pendingDisputes.length },
+    { key: 'full_refund', label: 'Full Refund Claims', count: disputes.filter(d => d.dispute_type === 'full_refund').length },
+    { key: 'split', label: 'Split Claims', count: disputes.filter(d => d.dispute_type === 'split').length },
+    { key: 'full_payment', label: 'Full Payout Claims', count: disputes.filter(d => d.dispute_type === 'full_payment').length },
+    { key: 'resolved', label: 'Resolved / Settled', count: resolvedDisputes.length }
   ];
 
-  const filteredDisputes = disputes.filter((item) => {
-    if (activeTab !== 'all') return false;
-    if (searchQuery && !item.id.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !item.course.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+  const filteredDisputes = disputes.filter(d => {
+    if (activeTab === 'pending' && d.status !== 'pending' && d.status !== 'under_review') return false;
+    if (activeTab === 'resolved' && d.status !== 'resolved') return false;
+    if (['full_refund', 'split', 'full_payment'].includes(activeTab) && d.dispute_type !== activeTab) return false;
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const caseId = `tx-disp-${String(d.dispute_id).padStart(4, '0')}`;
+      const title = (d.post_title || '').toLowerCase();
+      const code = (d.course_code || '').toLowerCase();
+      const reporter = (d.reporter_name || '').toLowerCase();
+      const respondent = (d.respondent_name || '').toLowerCase();
+      if (!caseId.includes(q) && !title.includes(q) && !code.includes(q) && !reporter.includes(q) && !respondent.includes(q)) {
+        return false;
+      }
+    }
     return true;
   });
 
-  const isExpanded = (id) => id === 'DISP-9402';
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getDisputeTypeLabel = (type) => {
+    if (type === 'full_refund') return '🔄 Full Refund';
+    if (type === 'split') return '⚖️ Compromise Split';
+    if (type === 'full_payment') return '💰 Full Tutor Payout';
+    return type;
+  };
 
   return (
     <div className="admin-content">
       {/* Header */}
-          <div className="page-header">
-            <div className="page-header-left">
-              <div className="breadcrumb">
-                <span>Governance</span>
-                <span className="breadcrumb-sep">›</span>
-                <span>Integrity Council</span>
-                <span className="breadcrumb-sep">›</span>
-                <span className="breadcrumb-active">Disputes & Escrow</span>
-              </div>
-              <h1 className="page-title">Disputes & Escrow Arbitration</h1>
-            </div>
-            <div className="page-header-actions">
-              <button className="btn-outline">
-                <span className="btn-icon">↓</span>
-                Export Ledger
-              </button>
-              <button className="btn-primary">
-                <span className="btn-icon">⚙</span>
-                Configure Safeguards
-              </button>
-            </div>
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="breadcrumb">
+            <span>Governance</span>
+            <span className="breadcrumb-sep">›</span>
+            <span>Integrity Council</span>
+            <span className="breadcrumb-sep">›</span>
+            <span className="breadcrumb-active">Disputes &amp; Escrow</span>
           </div>
+          <h1 className="page-title">Disputes &amp; Escrow Arbitration</h1>
+        </div>
+        <div className="page-header-actions">
+          <button className="btn-outline" onClick={loadDisputes}>
+            <span className="btn-icon">🔄</span> Refresh Queue
+          </button>
+        </div>
+      </div>
 
-          {/* Stat Cards */}
-          <div className="de-stats">
-            <div className="de-stat-card">
-              <span className="de-stat-label">Total in Dispute</span>
-              <div className="de-stat-row">
-                <span className="de-stat-icon">৳</span>
-                <span className="de-stat-value">24,650</span>
-                <span className="de-stat-sub">3 Active Cases</span>
-              </div>
-            </div>
-            <div className="de-stat-card">
-              <span className="de-stat-label">Median Resolution SLA</span>
-              <div className="de-stat-row">
-                <span className="de-stat-value">26.4</span>
-                <span className="de-stat-unit">min</span>
-                <span className="de-stat-sub">Target: &lt; 45m</span>
-              </div>
-            </div>
-            <div className="de-stat-card">
-              <span className="de-stat-label">Adjudication Ratio</span>
-              <div className="de-stat-row">
-                <span className="de-stat-value">58% / 34%</span>
-                <span className="de-stat-sub">Refund vs Tutor</span>
-              </div>
-            </div>
-            <div className="de-stat-card">
-              <span className="de-stat-label">Protection Reserve</span>
-              <div className="de-stat-row">
-                <span className="de-stat-icon">৳</span>
-                <span className="de-stat-value">180,000</span>
-                <span className="de-stat-sub">0 Defaults (90d)</span>
-              </div>
-            </div>
+      {feedback && (
+        <div className={`de-feedback-alert ${feedback.type}`}>
+          <span>{feedback.type === 'success' ? '✅' : '⚠️'}</span>
+          <span>{feedback.message}</span>
+          <button className="de-alert-close" onClick={() => setFeedback(null)}>×</button>
+        </div>
+      )}
+
+      {/* Stat Cards */}
+      <div className="de-stats">
+        <div className="de-stat-card">
+          <span className="de-stat-label">Active Escrow in Dispute</span>
+          <div className="de-stat-row">
+            <span className="de-stat-icon">৳</span>
+            <span className="de-stat-value">{totalEscrowInDispute.toLocaleString()}</span>
+            <span className="de-stat-sub">{pendingDisputes.length} Active Case{pendingDisputes.length !== 1 ? 's' : ''}</span>
           </div>
-
-          {/* Filter Bar */}
-          <div className="filter-bar">
-            <div className="filter-tabs">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  className={`filter-tab ${activeTab === tab.key ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.key)}
-                >
-                  {tab.label}
-                  <span className="tab-count">{tab.count}</span>
-                </button>
-              ))}
-            </div>
-            <div className="filter-controls">
-              <div className="search-box">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input
-                  type="text"
-                  placeholder="Filter by ID, session..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <select
-                className="filter-select"
-                value={severityFilter}
-                onChange={(e) => setSeverityFilter(e.target.value)}
-              >
-                <option value="all">All Severities</option>
-                <option value="high">High Priority</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-              <select
-                className="filter-select"
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-              >
-                <option value="sla">Expiring SLA First</option>
-                <option value="newest">Newest First</option>
-                <option value="amount">Highest Amount</option>
-              </select>
-            </div>
+        </div>
+        <div className="de-stat-card">
+          <span className="de-stat-label">Pending Arbitration</span>
+          <div className="de-stat-row">
+            <span className="de-stat-value">{pendingDisputes.length}</span>
+            <span className="de-stat-unit">cases</span>
+            <span className="de-stat-sub">Requires Settlement</span>
           </div>
+        </div>
+        <div className="de-stat-card">
+          <span className="de-stat-label">Total Resolved</span>
+          <div className="de-stat-row">
+            <span className="de-stat-value">{resolvedDisputes.length}</span>
+            <span className="de-stat-unit">settled</span>
+            <span className="de-stat-sub">{dismissedDisputes.length} Dismissed</span>
+          </div>
+        </div>
+        <div className="de-stat-card">
+          <span className="de-stat-label">Platform Integrity Rate</span>
+          <div className="de-stat-row">
+            <span className="de-stat-value">99.2%</span>
+            <span className="de-stat-sub">Zero Escrow Loss</span>
+          </div>
+        </div>
+      </div>
 
-          {/* Main Grid */}
-          <div className="de-grid">
-            {/* Queue */}
-            <div className="de-queue">
-              {filteredDisputes.map((item) => (
-                <div key={item.id} className={`de-card ${isExpanded(item.id) ? 'expanded' : ''}`}>
+      {/* Filter Tabs & Search */}
+      <div className="filter-bar">
+        <div className="filter-tabs">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              className={`filter-tab ${activeTab === t.key ? 'active' : ''}`}
+              onClick={() => setActiveTab(t.key)}
+            >
+              {t.label}
+              <span className="tab-count">{t.count}</span>
+            </button>
+          ))}
+        </div>
+        <div className="filter-controls">
+          <div className="search-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search case ID, course, student..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="de-layout">
+        {/* Dispute List / Queue */}
+        <div className="de-main">
+          {loading ? (
+            <div className="de-loading">Loading transaction disputes from ledger...</div>
+          ) : filteredDisputes.length === 0 ? (
+            <div className="de-empty">
+              <div className="de-empty-icon">🛡️</div>
+              <h3>No transaction disputes found</h3>
+              <p>There are no disputes matching the current filter criteria.</p>
+            </div>
+          ) : (
+            filteredDisputes.map(item => {
+              const caseId = `TX-DISP-${String(item.dispute_id).padStart(4, '0')}`;
+              const bounty = parseFloat(item.bounty) || 0;
+              const isResolved = item.status === 'resolved';
+              const isDismissed = item.status === 'dismissed';
+              const isPending = !isResolved && !isDismissed;
+
+              const resState = selectedResolutions[item.dispute_id] || {
+                type: item.dispute_type || 'full_refund',
+                splitPct: item.split_percentage || 50,
+                notes: ''
+              };
+
+              const studentShare = ((bounty * resState.splitPct) / 100).toFixed(2);
+              const tutorShare = (bounty - parseFloat(studentShare)).toFixed(2);
+
+              return (
+                <div key={item.dispute_id} className={`de-card ${isResolved ? 'de-card--resolved' : ''} ${isDismissed ? 'de-card--dismissed' : ''}`}>
                   {/* Card Header */}
                   <div className="de-card-header">
-                    <div className="de-card-left">
-                      <span className="de-id">#{item.id}</span>
+                    <div className="de-card-header-left">
+                      <span className="de-id">{caseId}</span>
                       <span className="de-dot">•</span>
-                      <span className="de-course">{item.course}</span>
-                      <span className="de-dot">•</span>
-                      <span className="de-session">Session #{item.session}</span>
+                      <span className="de-course">{item.course_code}: {item.post_title}</span>
+                      <span className="de-priority-badge">{getDisputeTypeLabel(item.dispute_type)}</span>
                     </div>
-                    <div className="de-card-right">
-                      <span className={`de-priority-badge ${item.priority === 'HIGH PRIORITY' ? 'high' : 'medium'}`}>
-                        {item.priority}
+                    <div className="de-card-header-right">
+                      <span className={`de-status-badge ${item.status}`}>
+                        {item.status.toUpperCase()}
                       </span>
-                      <span className="de-sla-text">{item.sla}</span>
+                      <span className="de-sla-timer">{formatDate(item.created_at)}</span>
                     </div>
                   </div>
 
                   {/* Card Body */}
                   <div className="de-card-body">
-                    {/* Participants (expanded only) */}
-                    {isExpanded(item.id) && (
-                      <div className="de-participants">
-                        <div className="de-participant">
-                          <span className="de-participant-label">STUDENT (COMPLAINANT)</span>
-                          <span className="de-participant-name">
-                            {item.student.name}
-                            <span className="de-participant-id"> ({item.student.id})</span>
+                    {/* Parties Grid */}
+                    <div className="de-parties">
+                      {/* Reporter */}
+                      <div className="de-party">
+                        <div className="de-party-header">
+                          <span className="de-party-role">
+                            REPORTER ({item.reporter_role === 'student' ? 'Student' : 'Tutor'})
                           </span>
-                          <span className="de-participant-meta">{item.student.dept} • {item.student.strikes}</span>
+                          <span className="de-party-dept">{item.reporter_department || 'Student Dept'}</span>
                         </div>
-                        <div className="de-participant">
-                          <span className="de-participant-label">ACCUSED TUTOR</span>
-                          <span className="de-participant-name">
-                            {item.tutor.name}
-                            <span className="de-participant-id"> ({item.tutor.id})</span>
-                          </span>
-                          <span className="de-participant-meta">Rating: {item.tutor.rating} ★ • {item.tutor.sessions}</span>
+                        <div className="de-party-name">
+                          {item.reporter_name}
+                          {item.reporter_student_id && <span className="de-party-id"> #{item.reporter_student_id}</span>}
                         </div>
+                        <div className="de-party-meta">{item.reporter_email}</div>
                       </div>
-                    )}
 
-                    {/* Narrative */}
-                    <div className="de-narrative">
-                      <span className="de-narrative-label">Dispute Narrative & Claim Statement</span>
-                      <p className="de-narrative-text">"{item.narrative}"</p>
+                      {/* Respondent */}
+                      <div className="de-party">
+                        <div className="de-party-header">
+                          <span className="de-party-role">
+                            RESPONDENT ({item.reporter_role === 'student' ? 'Tutor' : 'Student'})
+                          </span>
+                          <span className="de-party-dept">{item.respondent_department || 'Respondent Dept'}</span>
+                        </div>
+                        <div className="de-party-name">
+                          {item.respondent_name || 'Accepted Tutor / Counterparty'}
+                          {item.respondent_student_id && <span className="de-party-id"> #{item.respondent_student_id}</span>}
+                        </div>
+                        <div className="de-party-meta">{item.respondent_email || 'Verified Campus Account'}</div>
+                      </div>
                     </div>
 
-                    {/* Evidence (expanded only) */}
-                    {isExpanded(item.id) && item.evidence && (
-                      <div className="de-evidence">
-                        {item.evidence.map((ev, idx) => (
-                          <span key={idx} className="de-evidence-file">
-                            <span className="de-evidence-icon">{ev.type === 'audio' ? '🔊' : '📄'}</span>
-                            {ev.name}
-                          </span>
-                        ))}
-                        <div className="de-escrow-badge">
-                          Contested Escrow: <strong>৳ {item.escrow.amount} BDT</strong>
-                          <span className="de-escrow-status">({item.escrow.status})</span>
-                        </div>
+                    {/* Dispute Reason & Narrative */}
+                    <div className="de-narrative">
+                      <div className="de-narrative-header">
+                        <span className="de-narrative-label">Primary Issue:</span>
+                        <span className="de-reason-pill">{item.reason}</span>
                       </div>
-                    )}
+                      <p className="de-narrative-text">"{item.description}"</p>
+                    </div>
 
-                    {/* Telemetry (expanded only) */}
-                    {isExpanded(item.id) && item.telemetry && (
-                      <div className="de-telemetry">
-                        <span className="de-telemetry-icon">⏱</span>
-                        <span className="de-telemetry-text">Automated Telemetry: {item.telemetry}</span>
-                        <span className="de-telemetry-badge">Log Verified</span>
+                    {/* Evidence & Escrow Badge */}
+                    <div className="de-evidence-row">
+                      <div className="de-escrow-badge">
+                        Contested Escrow: <strong>৳ {bounty} BDT</strong>
+                        <span className="de-escrow-status">({isResolved ? 'Released' : 'Locked in Escrow'})</span>
                       </div>
-                    )}
+                      {item.evidence_url && (
+                        <a
+                          href={item.evidence_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="de-evidence-link"
+                        >
+                          🔗 Open Evidence / Verification Link
+                        </a>
+                      )}
+                    </div>
 
-                    {/* Verdict (expanded only) */}
-                    {isExpanded(item.id) && item.verdict && (
+                    {/* Remedy Requested by Reporter */}
+                    <div className="de-remedy-requested">
+                      <span className="de-remedy-tag">Claimant Requested:</span>
+                      <strong>
+                        {item.dispute_type === 'full_refund' && `100% Full Refund (৳${bounty}) to Student`}
+                        {item.dispute_type === 'split' && `Split Settlement (Student: ৳${item.proposed_refund_amount} / Tutor: ৳${item.proposed_payout_amount})`}
+                        {item.dispute_type === 'full_payment' && `100% Full Payout (৳${bounty}) to Tutor`}
+                      </strong>
+                    </div>
+
+                    {/* Adjudication Verdict & Execution (Active for Pending Cases) */}
+                    {isPending && (
                       <div className="de-verdict">
                         <div className="de-verdict-header">
-                          <span className="de-verdict-title">Arbitration Verdict & Remedy Allocation</span>
-                          <span className="de-verdict-rec">Recommended: {item.verdict.recommended}</span>
+                          <span className="de-verdict-title">Arbitration Verdict &amp; Fund Allocation</span>
+                          <span className="de-verdict-rec">Select Settlement Action:</span>
                         </div>
+
                         <div className="de-verdict-options">
-                          {item.verdict.options.map((opt, idx) => (
-                            <label key={idx} className={`de-verdict-option ${opt.selected ? 'selected' : ''}`}>
-                              <input type="radio" name="verdict" defaultChecked={opt.selected} />
-                              <div className="de-option-content">
-                                <span className="de-option-label">{opt.label}</span>
-                                <span className="de-option-amount">{opt.amount}</span>
-                                <span className="de-option-note">{opt.note}</span>
-                              </div>
-                            </label>
-                          ))}
+                          {/* Option 1: Full Refund */}
+                          <label
+                            className={`de-verdict-option ${resState.type === 'full_refund' ? 'selected' : ''}`}
+                            onClick={() => handleResolutionChange(item.dispute_id, 'type', 'full_refund')}
+                          >
+                            <input
+                              type="radio"
+                              name={`verdict_${item.dispute_id}`}
+                              checked={resState.type === 'full_refund'}
+                              onChange={() => handleResolutionChange(item.dispute_id, 'type', 'full_refund')}
+                            />
+                            <div className="de-option-content">
+                              <span className="de-option-label">🔄 Full Student Refund</span>
+                              <span className="de-option-amount">৳ {bounty} to Student</span>
+                              <span className="de-option-note">100% return to poster wallet; tutor dismissed</span>
+                            </div>
+                          </label>
+
+                          {/* Option 2: Split Settlement */}
+                          <label
+                            className={`de-verdict-option ${resState.type === 'split' ? 'selected' : ''}`}
+                            onClick={() => handleResolutionChange(item.dispute_id, 'type', 'split')}
+                          >
+                            <input
+                              type="radio"
+                              name={`verdict_${item.dispute_id}`}
+                              checked={resState.type === 'split'}
+                              onChange={() => handleResolutionChange(item.dispute_id, 'type', 'split')}
+                            />
+                            <div className="de-option-content">
+                              <span className="de-option-label">⚖️ Compromise Split</span>
+                              <span className="de-option-amount">৳ {studentShare} / ৳ {tutorShare}</span>
+                              <span className="de-option-note">{resState.splitPct}% Student, {100 - resState.splitPct}% Tutor</span>
+                            </div>
+                          </label>
+
+                          {/* Option 3: Full Payout */}
+                          <label
+                            className={`de-verdict-option ${resState.type === 'full_payment' ? 'selected' : ''}`}
+                            onClick={() => handleResolutionChange(item.dispute_id, 'type', 'full_payment')}
+                          >
+                            <input
+                              type="radio"
+                              name={`verdict_${item.dispute_id}`}
+                              checked={resState.type === 'full_payment'}
+                              onChange={() => handleResolutionChange(item.dispute_id, 'type', 'full_payment')}
+                            />
+                            <div className="de-option-content">
+                              <span className="de-option-label">💰 Full Tutor Payout</span>
+                              <span className="de-option-amount">৳ {bounty} to Tutor</span>
+                              <span className="de-option-note">100% release to tutor wallet; post marked complete</span>
+                            </div>
+                          </label>
+
+                          {/* Option 4: Dismiss */}
+                          <label
+                            className={`de-verdict-option ${resState.type === 'dismissed' ? 'selected' : ''}`}
+                            onClick={() => handleResolutionChange(item.dispute_id, 'type', 'dismissed')}
+                          >
+                            <input
+                              type="radio"
+                              name={`verdict_${item.dispute_id}`}
+                              checked={resState.type === 'dismissed'}
+                              onChange={() => handleResolutionChange(item.dispute_id, 'type', 'dismissed')}
+                            />
+                            <div className="de-option-content">
+                              <span className="de-option-label">🚫 Dismiss Dispute</span>
+                              <span className="de-option-amount">No Funds Moved</span>
+                              <span className="de-option-note">Claim deemed invalid or outside jurisdiction</span>
+                            </div>
+                          </label>
+                        </div>
+
+                        {/* Split Slider when Split selected */}
+                        {resState.type === 'split' && (
+                          <div className="de-admin-split-slider">
+                            <div className="de-slider-header">
+                              <span>Student Share: <strong>{resState.splitPct}% (৳{studentShare})</strong></span>
+                              <span>Tutor Share: <strong>{100 - resState.splitPct}% (৳{tutorShare})</strong></span>
+                            </div>
+                            <input
+                              type="range"
+                              min="10"
+                              max="90"
+                              step="5"
+                              value={resState.splitPct}
+                              onChange={(e) => handleResolutionChange(item.dispute_id, 'splitPct', Number(e.target.value))}
+                              className="de-slider-input"
+                            />
+                          </div>
+                        )}
+
+                        {/* Arbitrator Notes */}
+                        <div className="de-notes-box">
+                          <input
+                            type="text"
+                            placeholder="Arbitrator settlement notes (optional, entered into ledger)..."
+                            value={resState.notes}
+                            onChange={(e) => handleResolutionChange(item.dispute_id, 'notes', e.target.value)}
+                            className="de-notes-input"
+                          />
                         </div>
                       </div>
                     )}
 
-                    {/* Simple escrow (non-expanded) */}
-                    {!isExpanded(item.id) && (
-                      <div className="de-escrow-row">
-                        <span className="de-escrow-label">Escrow: <strong>৳ {item.escrow.amount} BDT</strong></span>
+                    {/* Resolved View */}
+                    {(isResolved || isDismissed) && (
+                      <div className="de-resolved-view">
+                        <div className="de-resolved-badge">
+                          <span>{isResolved ? '✅ Case Resolved & Settled' : '🚫 Case Dismissed'}</span>
+                          <span className="de-resolved-type">Verdict: {item.resolution_type?.toUpperCase()}</span>
+                        </div>
+                        {item.resolution_notes && (
+                          <div className="de-resolved-notes">
+                            Notes: "{item.resolution_notes}"
+                          </div>
+                        )}
+                        <div className="de-resolved-time">
+                          Settled on {formatDate(item.resolved_at)}
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Card Actions */}
-                  <div className="de-card-footer">
-                    {item.actions.map((action, idx) => (
-                      <button key={idx} className={`de-action ${action.primary ? 'primary' : ''} ${action.ghost ? 'ghost' : ''}`}>
-                        {action.label}
+                  {/* Card Footer Actions */}
+                  {isPending && (
+                    <div className="de-card-footer">
+                      <button
+                        className="de-action primary"
+                        disabled={actionLoading === item.dispute_id}
+                        onClick={() => handleExecuteSettlement(item.dispute_id)}
+                      >
+                        {actionLoading === item.dispute_id ? 'Executing Settlement...' : 'Execute Settlement'}
                       </button>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+              );
+            })
+          )}
+        </div>
+
+        {/* Sidebar Status & Health */}
+        <div className="de-sidebar">
+          {/* Dispute SLA Watch */}
+          <div className="de-sidebar-panel">
+            <div className="de-panel-header">
+              <h3 className="de-panel-title">Arbitration SLA Watch</h3>
+              <span className="de-panel-sub">Target: &lt; 24h</span>
             </div>
-
-            {/* Sidebar */}
-            <div className="de-sidebar">
-              {/* Dispute SLA Watch */}
-              <div className="de-sidebar-panel">
-                <div className="de-panel-header">
-                  <h3 className="de-panel-title">Dispute SLA Watch</h3>
-                  <span className="de-panel-sub">Target: 45m</span>
-                </div>
-                <div className="de-panel-body">
-                  <div className="de-sla-breach">
-                    <span className="de-sla-label">Next Breach In:</span>
-                    <span className="de-sla-time">12m 00s</span>
-                    <span className="de-sla-id">(#DISP-9402)</span>
-                  </div>
-                  <div className="de-sla-bar">
-                    <div className="de-sla-bar-fill" style={{width: '73%'}}></div>
-                  </div>
-                  <div className="de-sla-meta">
-                    <span>Elapsed: 33m 00s</span>
-                    <span>Max: 45m 00s</span>
-                  </div>
-
-                  <div className="de-severity-breakdown">
-                    <span className="de-severity-title">SEVERITY BREAKDOWN</span>
-                    <div className="de-severity-row">
-                      <span className="de-severity-label">High Severity (&lt; 15 min SLA)</span>
-                      <span className="de-severity-count">2 cases</span>
-                    </div>
-                    <div className="de-severity-row">
-                      <span className="de-severity-label">Medium Severity (&lt; 1h SLA)</span>
-                      <span className="de-severity-count">1 case</span>
-                    </div>
-                  </div>
-                </div>
+            <div className="de-panel-body">
+              <div className="de-sla-breach">
+                <span className="de-sla-label">Pending Adjudication:</span>
+                <span className="de-sla-time">{pendingDisputes.length} active</span>
               </div>
-
-              {/* Gateway Health */}
-              <div className="de-sidebar-panel">
-                <div className="de-panel-header">
-                  <h3 className="de-panel-title">Gateway Health</h3>
-                  <span className="de-panel-status synced">Synced</span>
-                </div>
-                <div className="de-panel-body">
-                  <div className="de-gateway-row">
-                    <span className="de-gateway-label">bKash Escrow Vault:</span>
-                    <span className="de-gateway-value connected">Connected</span>
-                  </div>
-                  <div className="de-gateway-row">
-                    <span className="de-gateway-label">Nagad Liquidity Pool:</span>
-                    <span className="de-gateway-value ready">100% Ready</span>
-                  </div>
-                  <div className="de-gateway-row">
-                    <span className="de-gateway-label">Bank Wire Settlement:</span>
-                    <span className="de-gateway-value">Scheduled</span>
-                  </div>
-
-                  <div className="de-hold-section">
-                    <div className="de-hold-header">
-                      <span className="de-hold-title">Hold Tutor Dispersals</span>
-                      <button className="de-hold-btn">Configure</button>
-                    </div>
-                    <span className="de-hold-sub">Freeze automated releases</span>
-                  </div>
-                </div>
+              <div className="de-sla-bar">
+                <div
+                  className="de-sla-bar-fill"
+                  style={{ width: `${Math.min(100, pendingDisputes.length * 25)}%` }}
+                />
               </div>
-
-              {/* Duty Arbitrator */}
-              <div className="de-sidebar-panel">
-                <div className="de-panel-header">
-                  <h3 className="de-panel-title">Duty Arbitrator</h3>
-                  <span className="de-panel-sub">Active Shift</span>
+              <div className="de-severity-breakdown">
+                <span className="de-severity-title">TOPIC BREAKDOWN</span>
+                <div className="de-severity-row">
+                  <span className="de-severity-label">Full Refund Claims</span>
+                  <span className="de-severity-count">
+                    {disputes.filter(d => d.dispute_type === 'full_refund').length}
+                  </span>
                 </div>
-                <div className="de-panel-body">
-                  <div className="de-arbitrator">
-                    <div className="de-arbitrator-avatar">EV</div>
-                    <div className="de-arbitrator-info">
-                      <span className="de-arbitrator-name">Dr. E. Vance</span>
-                      <span className="de-arbitrator-role">Chief Arbitrator</span>
-                    </div>
-                    <span className="de-arbitrator-active">3 active</span>
-                  </div>
-                      <button className="de-next-btn">Arbitrate Next in Queue</button>
+                <div className="de-severity-row">
+                  <span className="de-severity-label">Compromise Split</span>
+                  <span className="de-severity-count">
+                    {disputes.filter(d => d.dispute_type === 'split').length}
+                  </span>
+                </div>
+                <div className="de-severity-row">
+                  <span className="de-severity-label">Full Payout Claims</span>
+                  <span className="de-severity-count">
+                    {disputes.filter(d => d.dispute_type === 'full_payment').length}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Gateway Health */}
+          <div className="de-sidebar-panel">
+            <div className="de-panel-header">
+              <h3 className="de-panel-title">Escrow Vault Safeguards</h3>
+              <span className="de-panel-status synced">Active</span>
+            </div>
+            <div className="de-panel-body">
+              <div className="de-gateway-row">
+                <span className="de-gateway-label">Internal Campus Escrow:</span>
+                <span className="de-gateway-value connected">100% Liquid</span>
+              </div>
+              <div className="de-gateway-row">
+                <span className="de-gateway-label">Double-Spend Protection:</span>
+                <span className="de-gateway-value ready">Enabled</span>
+              </div>
+              <div className="de-gateway-row">
+                <span className="de-gateway-label">Atomic Settlement:</span>
+                <span className="de-gateway-value ready">Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

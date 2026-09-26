@@ -14,6 +14,7 @@ const postApplicationRoutes = require('./routes/postApplicationRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const walletRoutes = require('./routes/walletRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const transactionDisputeRoutes = require('./routes/transactionDisputeRoutes');
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api/post-applications', postApplicationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/transaction-disputes', transactionDisputeRoutes);
 
 // Root Test Route
 app.get('/', (req, res) => {

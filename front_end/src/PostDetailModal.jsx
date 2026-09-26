@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchPostApplications, updateApplicationStatus, closePost, checkReviewExists } from './api';
 import ConfirmModal from './ConfirmModal';
 import ReviewModal from './ReviewModal';
+import TransactionReportModal from './TransactionReportModal';
 import './PostDetailModal.css';
 
 const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
@@ -11,6 +12,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', type: 'info', onConfirm: () => {} });
   const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'info' });
   const [reviewModal, setReviewModal] = useState({ open: false, revieweeId: null, revieweeName: '' });
+  const [txDisputeOpen, setTxDisputeOpen] = useState(false);
   const [reviewedApps, setReviewedApps] = useState(new Set());
 
   useEffect(() => {
@@ -213,6 +215,13 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                               disabled={actionLoading === app.application_id}
                             >
                               {actionLoading === app.application_id ? '...' : 'Request Cancellation'}
+                            </button>
+                            <button
+                              className="pd-dispute-btn"
+                              onClick={() => setTxDisputeOpen(true)}
+                              title="Report Transaction / Escrow Issue"
+                            >
+                              ⚖️ Dispute Escrow
                             </button>
                           </div>
                         )}

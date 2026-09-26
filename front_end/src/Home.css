@@ -1023,3 +1023,13 @@
   opacity: 0.88;
   transform: translateY(-1px);
 }
+
+/* ── Transaction Dispute button on card ── */
+.tx-dispute-btn {
+  color: #ef4444 !important;
+  margin-left: 2px;
+}
+.tx-dispute-btn:hover {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+}

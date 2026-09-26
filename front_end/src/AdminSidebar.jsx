@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { fetchTeacherApplications } from './api';
+import { fetchTeacherApplications, fetchTransactionDisputes } from './api';
 
 const AdminSidebar = ({ user, userCount, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [appCount, setAppCount] = useState(0);
+  const [disputeCount, setDisputeCount] = useState(0);
 
   useEffect(() => {
     loadAppCount();
@@ -16,8 +17,11 @@ const AdminSidebar = ({ user, userCount, onLogout }) => {
     try {
       const response = await fetchTeacherApplications();
       setAppCount(response.data.length);
+      const dispRes = await fetchTransactionDisputes();
+      const pendingDisp = dispRes.data.filter(d => d.status === 'pending' || d.status === 'under_review');
+      setDisputeCount(pendingDisp.length);
     } catch (err) {
-      console.error('Failed to load application count:', err);
+      console.error('Failed to load counts:', err);
     }
   };
 
@@ -70,6 +74,7 @@ const AdminSidebar = ({ user, userCount, onLogout }) => {
           <button className={`nav-item ${isActive('/admin/disputes') ? 'active' : ''}`} onClick={() => navigate('/admin/disputes')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round" strokeLinejoin="round"/></svg>
             Disputes &amp; Escrow
+            {disputeCount > 0 && <span className="nav-badge" style={{ background: '#ef4444' }}>{disputeCount}</span>}
           </button>
           <button className={`nav-item ${isActive('/admin/teacher-applications') ? 'active' : ''}`} onClick={() => navigate('/admin/teacher-applications')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="9" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round"/><path d="M23 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round"/></svg>

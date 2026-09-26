@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUsers, fetchPosts, fetchSessions } from './api';
+import { fetchUsers, fetchPosts, fetchSessions, fetchTransactionDisputes } from './api';
 import './AdminPanel.css';
 
 const AdminPanel = ({ user }) => {
@@ -8,6 +8,7 @@ const AdminPanel = ({ user }) => {
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [disputes, setDisputes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,14 +22,16 @@ const AdminPanel = ({ user }) => {
 
   const loadData = async () => {
     try {
-      const [usersRes, postsRes, sessionsRes] = await Promise.all([
+      const [usersRes, postsRes, sessionsRes, disputesRes] = await Promise.all([
         fetchUsers(),
         fetchPosts(),
-        fetchSessions()
+        fetchSessions(),
+        fetchTransactionDisputes().catch(() => ({ data: [] }))
       ]);
       setUsers(usersRes.data);
       setPosts(postsRes.data);
       setSessions(sessionsRes.data);
+      setDisputes(disputesRes.data || []);
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -205,18 +208,18 @@ const AdminPanel = ({ user }) => {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => navigate('/admin/disputes')}>
             <div className="stat-card-header">
-              <span className="stat-label">DISCIPLINARY STRIKES</span>
+              <span className="stat-label">TRANSACTION DISPUTES</span>
               <svg className="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="12" y1="9" x2="12" y2="13" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="12" y1="17" x2="12.01" y2="17" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <div className="stat-value">0</div>
+            <div className="stat-value">{disputes.filter(d => d.status === 'pending' || d.status === 'under_review').length}</div>
             <div className="stat-footer">
-              <span className="stat-pending">0 pending review</span>
+              <span className="stat-pending">{disputes.filter(d => d.status === 'pending' || d.status === 'under_review').length} pending arbitration</span>
             </div>
           </div>
 

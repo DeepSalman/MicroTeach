@@ -55,3 +55,9 @@ export const submitReview = (data) => API.post('/reviews', data);
 export const fetchUserReviews = (userId) => API.get(`/reviews/user/${userId}`);
 export const checkReviewExists = (postId, reviewerId) => API.get(`/reviews/check/${postId}/${reviewerId}`);
 export const fetchUserRating = (userId) => API.get(`/reviews/rating/${userId}`);
+// Transaction Disputes & Escrow
+export const fetchTransactionDisputes = () => API.get("/transaction-disputes");
+export const checkTransactionDispute = (postId, userId) => API.get(`/transaction-disputes/check/${postId}/${userId}`);
+export const submitTransactionDispute = (data) => API.post("/transaction-disputes", data);
+export const resolveTransactionDispute = (id, data) => API.post(`/transaction-disputes/${id}/resolve`, data);
+export const updateTransactionDisputeStatus = (id, status) => API.patch(`/transaction-disputes/${id}/status`, { status });
