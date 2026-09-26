@@ -338,3 +338,97 @@
     font-size: 26px;
   }
 }
+
+/* ── Butterfly Design Switcher Pill ── */
+.butterfly-switcher-bar {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 6px 10px;
+  border-radius: 30px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+.switcher-label {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding-left: 6px;
+}
+
+.switcher-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.switcher-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  padding: 6px 13px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.switcher-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.switcher-btn.active {
+  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 100%);
+  color: #020617;
+  border-color: #00f0ff;
+  font-weight: 700;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
+}
+
+.switcher-btn:nth-child(1).active {
+  background: linear-gradient(135deg, #ff2d78 0%, #ff6b1a 100%);
+  color: #ffffff;
+  border-color: #ff2d78;
+  box-shadow: 0 0 16px rgba(255, 45, 120, 0.5);
+}
+
+.switcher-btn:nth-child(3).active {
+  background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
+  color: #1e1b4b;
+  border-color: #fbbf24;
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.5);
+}
+
+@media (max-width: 900px) {
+  .butterfly-switcher-bar {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    justify-content: center;
+    padding: 6px 8px;
+  }
+  .switcher-label {
+    display: none;
+  }
+  .switcher-btn {
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserProfile, fetchUserApplications, submitTeacherApplication, fetchUserPostApplications, fetchPostApplicationCount, updateApplicationStatus, closePost, checkReviewExists, fetchUserReviews, fetchUserRating } from './api';
 import PostDetailModal from './PostDetailModal';
@@ -12,6 +12,8 @@ import './Profile.css';
 
 const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const navigate = useNavigate();
+  const dropdownRef = useRef(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +46,22 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
       loadReviews();
     }
   }, [user]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    setDropdownOpen(false);
+    if (onLogout) onLogout();
+    navigate('/');
+  };
 
   const loadReviews = async () => {
     try {
@@ -262,9 +280,51 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           </button>
-          <button className="icon-btn" onClick={() => navigate('/')}>Home</button>
-          <div className="avatar">
-            {displayName.charAt(0).toUpperCase()}
+          <div className="avatar-wrapper" ref={dropdownRef}>
+            <div
+              className="avatar"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              title={displayName}
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+
+            {dropdownOpen && (
+              <div className="avatar-dropdown">
+                <div className="dropdown-user-info">
+                  <div className="dropdown-user-name">{displayName}</div>
+                  <div className="dropdown-user-email">{user?.email}</div>
+                </div>
+                <div className="dropdown-divider"></div>
+
+                <button className="dropdown-item" onClick={() => { setDropdownOpen(false); navigate('/'); }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                  </svg>
+                  Home page
+                </button>
+
+                {user?.is_admin === 1 && (
+                  <button className="dropdown-item" onClick={() => { setDropdownOpen(false); navigate('/admin'); }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 15a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    Admin Panel
+                  </button>
+                )}
+
+                <button className="dropdown-item logout" onClick={handleLogout}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                  Log out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
