@@ -89,20 +89,24 @@ router.get('/profile/:userId', async (req, res) => {
 
     const postsQuery = `
       SELECT
-        post_id,
-        category,
-        course_code,
-        title,
-        description,
-        delivery_format,
-        bounty,
-        deadline,
-        is_urgent,
-        status,
-        created_at
-      FROM Posts
-      WHERE user_id = ? AND status != 'closed'
-      ORDER BY created_at DESC
+        p.post_id,
+        p.category,
+        p.course_code,
+        p.title,
+        p.description,
+        p.delivery_format,
+        p.bounty,
+        p.deadline,
+        p.is_urgent,
+        p.status,
+        p.created_at,
+        EXISTS(
+          SELECT 1 FROM Post_Applications pa 
+          WHERE pa.post_id = p.post_id AND pa.status = 'completed'
+        ) AS is_completed
+      FROM Posts p
+      WHERE p.user_id = ? AND p.status != 'closed'
+      ORDER BY p.created_at DESC
     `;
     const [posts] = await db.query(postsQuery, [req.params.userId]);
 

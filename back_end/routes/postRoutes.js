@@ -52,7 +52,11 @@ router.get('/user/:userId', async (req, res) => {
         p.deadline,
         p.is_urgent,
         p.status,
-        p.created_at
+        p.created_at,
+        EXISTS(
+          SELECT 1 FROM Post_Applications pa
+          WHERE pa.post_id = p.post_id AND pa.status = 'completed'
+        ) AS is_completed
       FROM Posts p
       WHERE p.user_id = ? AND p.status != 'closed'
       ORDER BY p.created_at DESC

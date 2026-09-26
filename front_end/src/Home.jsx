@@ -159,12 +159,16 @@ const Home = ({ user, onLogout }) => {
     return labels[format] || '📹 Google Meet (30m)';
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, isCompleted) => {
+    if (isCompleted || status === 'completed') {
+      return { class: 'not-selected', text: '✓ Completed' };
+    }
     const badges = {
       'active': { class: 'active', text: '● Active Session' },
       'pending': { class: 'pending', text: '● Pending Review' },
       'resolved': { class: 'not-selected', text: 'Resolved' },
-      'closed': { class: 'not-selected', text: 'Closed' }
+      'closed': { class: 'not-selected', text: 'Closed' },
+      'completed': { class: 'not-selected', text: '✓ Completed' }
     };
     return badges[status] || badges['active'];
   };
@@ -354,7 +358,7 @@ const Home = ({ user, onLogout }) => {
             <div className="empty-message">No posts yet. Create the first one!</div>
           ) : (
             posts.map((post) => {
-              const statusBadge = getStatusBadge(post.status);
+              const statusBadge = getStatusBadge(post.status, post.is_completed);
               const isOwnPost = user && String(post.user_id) === String(user.user_id);
               return (
                 <div key={post.post_id} className="card">
@@ -367,11 +371,13 @@ const Home = ({ user, onLogout }) => {
                         <line x1="4" y1="22" x2="4" y2="15"/>
                       </svg>
                     </span>
-                    <span className="report-btn tx-dispute-btn" title="Report Transaction / Escrow Issue" onClick={(e) => { e.stopPropagation(); if (!user) { navigate('/login'); return; } setTxDisputeModalPost(post); }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                      </svg>
-                    </span>
+                    {post.status !== 'closed' && post.status !== 'resolved' && post.status !== 'completed' && !post.is_completed && (
+                      <span className="report-btn tx-dispute-btn" title="Report Transaction / Escrow Issue" onClick={(e) => { e.stopPropagation(); if (!user) { navigate('/login'); return; } setTxDisputeModalPost(post); }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                      </span>
+                    )}
                   </div>
                   <div className="card-subject">{post.category}</div>
                   <div className="card-title">{post.title}</div>

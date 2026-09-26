@@ -56,7 +56,11 @@ router.get('/user/:userId', async (req, res) => {
         p.deadline,
         p.status AS post_status,
         p.user_id AS post_author_id,
-        u.full_name AS post_author
+        u.full_name AS post_author,
+        EXISTS(
+          SELECT 1 FROM Post_Applications pa2
+          WHERE pa2.post_id = p.post_id AND pa2.status = 'completed'
+        ) AS is_completed
       FROM Post_Applications pa
       JOIN Posts p ON pa.post_id = p.post_id
       JOIN Users u ON p.user_id = u.user_id
@@ -160,6 +164,9 @@ router.patch('/:id/status', async (req, res) => {
 
         // Mark application as completed
         await conn.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
+
+        // Mark the post as completed in Posts table
+        await conn.query("UPDATE Posts SET status = 'completed' WHERE post_id = ?", [app[0].post_id]);
 
         // Get post bounty and user IDs
         const [post] = await conn.query(

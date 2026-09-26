@@ -204,12 +204,16 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
     return labels[format] || 'Live Micro-Call';
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, isCompleted) => {
+    if (isCompleted || status === 'completed') {
+      return { class: 'resolved', text: 'Completed' };
+    }
     const badges = {
       'active': { class: 'active', text: 'Active' },
       'pending': { class: 'pending', text: 'Pending' },
       'resolved': { class: 'resolved', text: 'Resolved' },
-      'closed': { class: 'closed', text: 'Closed' }
+      'closed': { class: 'closed', text: 'Closed' },
+      'completed': { class: 'resolved', text: 'Completed' }
     };
     return badges[status] || badges['active'];
   };
@@ -480,7 +484,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
           <div className="posts-grid">
             {posts && posts.length > 0 ? (
               posts.map((post) => {
-                const statusBadge = getStatusBadge(post.status);
+                const statusBadge = getStatusBadge(post.status, post.is_completed);
                 const applicantCount = postApplicantCounts[post.post_id] || 0;
                 return (
                   <div key={post.post_id} className="post-card">
@@ -512,8 +516,14 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                           <button className="btn-secondary-sm" onClick={() => setDetailModalPost(post)}>View Details</button>
                           {post.status !== 'closed' && (
                             <>
-                              <button className="btn-outline-sm" onClick={() => handleClosePost(post.post_id)}>Close Post</button>
-                              <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost(post)}>⚖️ Dispute Gig</button>
+                              {!post.is_completed && post.status !== 'resolved' && post.status !== 'completed' ? (
+                                <>
+                                  <button className="btn-outline-sm" onClick={() => handleClosePost(post.post_id)}>Close Post</button>
+                                  <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost(post)}>⚖️ Dispute Gig</button>
+                                </>
+                              ) : (
+                                <span className="completed-tag">✓ Gig Completed &amp; Settled</span>
+                              )}
                             </>
                           )}
                         </div>
@@ -552,13 +562,13 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
           {postApplications.length > 0 ? (
             <div className="posts-grid">
               {postApplications.map((app) => {
-                const isAccepted = app.status === 'accepted';
+                const isCompleted = app.status === 'completed' || app.post_status === 'completed' || Boolean(app.is_completed);
+                const isAccepted = !isCompleted && app.status === 'accepted';
                 const isRejected = app.status === 'rejected';
                 const isPending = app.status === 'pending';
-                const isCancelRequested = app.status === 'cancellation_requested';
+                const isCancelRequested = !isCompleted && app.status === 'cancellation_requested';
                 const isCancelled = app.status === 'cancelled';
-                const isCompletionRequested = app.status === 'completion_requested';
-                const isCompleted = app.status === 'completed';
+                const isCompletionRequested = !isCompleted && app.status === 'completion_requested';
                 return (
                   <div key={app.application_id} className={`post-card ${isAccepted ? 'post-card--accepted' : ''} ${isCancelRequested ? 'post-card--cancel-requested' : ''} ${isCancelled ? 'post-card--cancelled' : ''} ${isCompleted ? 'post-card--completed' : ''}`}>
                     <div className="post-card-header">
@@ -602,6 +612,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                       {isCompleted && (
                         <div className="post-card-footer-bottom">
                           <div className="post-card-actions">
+                            <span className="completed-tag">✓ Gig Completed &amp; Settled</span>
                             {!reviewedPosts.has(app.post_id) && (
                               <button className="btn-review-sm" onClick={() => setReviewModal({ open: true, revieweeId: app.post_author_id, revieweeName: app.post_author, postId: app.post_id })}>
                                 Leave Review
@@ -628,8 +639,8 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                             }}>
                               <span className="meta-icon">chat</span> Message
                             </button>
-                            <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id })}>
-                              ⚖️ Dispute
+                            <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id, post_author_id: app.post_author_id, is_completed: false, status: app.post_status })}>
+                              ⚖️ Dispute Gig
                             </button>
                           </div>
                         </div>
@@ -649,13 +660,31 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                             }}>
                               Not Yet
                             </button>
+                            <button className="btn-message-sm" onClick={() => {
+                              setChatStartUser(app.post_author_id);
+                              setChatOpen(true);
+                            }}>
+                              <span className="meta-icon">chat</span> Message
+                            </button>
+                            <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id, post_author_id: app.post_author_id, is_completed: false, status: app.post_status })}>
+                              ⚖️ Dispute Gig
+                            </button>
                           </div>
                         </div>
                       )}
                       {isCompletionRequested && String(app.completion_requested_by) === String(user.user_id) && (
                         <div className="post-card-footer-bottom">
                           <div className="post-card-actions">
-                            <span className="waiting-tag">Waiting for post owner...</span>
+                            <span className="waiting-tag">Waiting for student...</span>
+                            <button className="btn-message-sm" onClick={() => {
+                              setChatStartUser(app.post_author_id);
+                              setChatOpen(true);
+                            }}>
+                              <span className="meta-icon">chat</span> Message
+                            </button>
+                            <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id, post_author_id: app.post_author_id, is_completed: false, status: app.post_status })}>
+                              ⚖️ Dispute Gig
+                            </button>
                           </div>
                         </div>
                       )}
@@ -673,6 +702,15 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                               loadPostApplications();
                             }}>
                               Keep Tutoring
+                            </button>
+                            <button className="btn-message-sm" onClick={() => {
+                              setChatStartUser(app.post_author_id);
+                              setChatOpen(true);
+                            }}>
+                              <span className="meta-icon">chat</span> Message
+                            </button>
+                            <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id, post_author_id: app.post_author_id, is_completed: false, status: app.post_status })}>
+                              ⚖️ Dispute Gig
                             </button>
                           </div>
                         </div>

@@ -107,6 +107,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
+  const isPostSettled = post.status === 'completed' || post.status === 'resolved' || Boolean(post.is_completed) || applications.some(a => a.status === 'completed');
   const hasAcceptedApplicant = applications.some(a => a.status === 'accepted' || a.status === 'cancellation_requested' || a.status === 'completion_requested' || a.status === 'completed');
 
   const getStatusBadge = (status) => {
@@ -128,8 +129,11 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
         <div className="pd-header">
           <h3>Post Details</h3>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {post.status !== 'closed' && (
+            {post.status !== 'closed' && !isPostSettled && (
               <button className="pd-close-post" onClick={handleClosePost}>Close Post</button>
+            )}
+            {isPostSettled && (
+              <span className="pd-completed-badge">✓ Settled</span>
             )}
             <button className="pd-close" onClick={onClose}>&times;</button>
           </div>
@@ -199,7 +203,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                           {reviewCount > 0 && <span className="pd-review-count">({reviewCount})</span>}
                         </div>
                         <span className="pd-view-profile">View Profile</span>
-                        {isAccepted && (
+                        {isAccepted && !isPostSettled && (
                           <div className="pd-accepted-actions">
                             <span className="pd-chat-icon" onClick={() => onChat && onChat(app.user_id)}>chat</span>
                             <button
@@ -225,7 +229,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                             </button>
                           </div>
                         )}
-                        {isCompletionRequested && String(app.completion_requested_by) !== String(post.user_id) && (
+                        {isCompletionRequested && !isPostSettled && String(app.completion_requested_by) !== String(post.user_id) && (
                           <div className="pd-accepted-actions">
                             <button
                               className="pd-complete-btn"
@@ -241,11 +245,25 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                             >
                               {actionLoading === app.application_id ? '...' : 'Not Yet'}
                             </button>
+                            <button
+                              className="pd-dispute-btn"
+                              onClick={() => setTxDisputeOpen(true)}
+                              title="Report Transaction / Escrow Issue"
+                            >
+                              ⚖️ Dispute Escrow
+                            </button>
                           </div>
                         )}
-                        {isCompletionRequested && String(app.completion_requested_by) === String(post.user_id) && (
+                        {isCompletionRequested && !isPostSettled && String(app.completion_requested_by) === String(post.user_id) && (
                           <div className="pd-accepted-actions">
                             <span className="pd-waiting-badge">Waiting for tutor...</span>
+                            <button
+                              className="pd-dispute-btn"
+                              onClick={() => setTxDisputeOpen(true)}
+                              title="Report Transaction / Escrow Issue"
+                            >
+                              ⚖️ Dispute Escrow
+                            </button>
                           </div>
                         )}
                         {isCompleted && (
@@ -264,7 +282,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                             )}
                           </div>
                         )}
-                        {isCancelRequested && (
+                        {isCancelRequested && !isPostSettled && (
                           <div className="pd-accepted-actions">
                             <button
                               className="pd-cancel-btn"
@@ -279,6 +297,13 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                               disabled={actionLoading === app.application_id}
                             >
                               {actionLoading === app.application_id ? '...' : 'Keep Tutor'}
+                            </button>
+                            <button
+                              className="pd-dispute-btn"
+                              onClick={() => setTxDisputeOpen(true)}
+                              title="Report Transaction / Escrow Issue"
+                            >
+                              ⚖️ Dispute Escrow
                             </button>
                           </div>
                         )}
@@ -346,6 +371,24 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
         revieweeName={reviewModal.revieweeName}
         onReviewSubmitted={loadApplications}
       />
+
+      {/* Transaction Dispute / Escrow Report Modal */}
+      {txDisputeOpen && (
+        <TransactionReportModal
+          post={{
+            ...post,
+            is_completed: isPostSettled
+          }}
+          user={user}
+          isOpen={txDisputeOpen}
+          onClose={() => setTxDisputeOpen(false)}
+          onSuccess={() => {
+            setTxDisputeOpen(false);
+            loadApplications();
+            if (onStatusChange) onStatusChange();
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { submitTransactionDispute } from './api';
 import './TransactionReportModal.css';
 
@@ -23,11 +23,24 @@ const TransactionReportModal = ({ post, user, isOpen, onClose, onSuccess }) => {
   const [error, setError] = useState('');
   const [submittedCase, setSubmittedCase] = useState(null);
 
+  const isPoster = user && post && String(post.user_id || post.post_author_id) === String(user.user_id);
+  const userRole = isPoster ? 'Student (Post Owner)' : 'Teacher (Tutor)';
+
+  useEffect(() => {
+    if (isOpen && post && user) {
+      const poster = String(post.user_id || post.post_author_id) === String(user.user_id);
+      setDisputeType(poster ? 'full_refund' : 'full_payment');
+      setError('');
+      setDescription('');
+      setEvidenceUrl('');
+      setSubmittedCase(null);
+    }
+  }, [isOpen, post?.post_id, user?.user_id]);
+
   if (!isOpen || !post) return null;
 
   const bounty = parseFloat(post.bounty) || 0;
-  const isPoster = user && String(post.user_id) === String(user.user_id);
-  const userRole = isPoster ? 'Student (Post Owner)' : 'Teacher (Tutor)';
+  const isCompleted = Boolean(post.is_completed || post.status === 'completed' || post.status === 'resolved' || post.status === 'closed' || post.post_status === 'completed');
 
   // Calculate live breakdown for split
   const studentSplitAmount = ((bounty * splitPercentage) / 100).toFixed(2);
@@ -86,14 +99,29 @@ const TransactionReportModal = ({ post, user, isOpen, onClose, onSuccess }) => {
             <h2 className="trm-title">Report Transaction Issue</h2>
             <div className="trm-post-ref">
               <span className="trm-course-tag">{post.course_code}</span>
-              <span className="trm-post-title-text">{post.title}</span>
+              <span className="trm-post-title-text">{post.title || post.post_title}</span>
             </div>
           </div>
           <button className="trm-close-btn" onClick={handleClose} aria-label="Close modal">×</button>
         </div>
 
-        {/* Success View */}
-        {submittedCase ? (
+        {/* Completed Gig Warning View (Prevents Money Glitch) */}
+        {isCompleted ? (
+          <div className="trm-success-view">
+            <div className="trm-success-badge" style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#dc2626' }}>
+              ⚠️
+            </div>
+            <h3 className="trm-success-heading">Cannot Dispute Completed Gig</h3>
+            <div className="trm-case-pill" style={{ color: '#991b1b', background: '#fee2e2' }}>Settlement Finalized</div>
+            <p className="trm-success-desc">
+              The escrow payment for this gig has already been finalized and released. 
+              Disputes cannot be filed on completed gigs to prevent duplicate payouts.
+            </p>
+            <div className="trm-success-actions">
+              <button className="trm-btn-secondary" onClick={handleClose}>Close</button>
+            </div>
+          </div>
+        ) : submittedCase ? (
           <div className="trm-success-view">
             <div className="trm-success-badge">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -137,6 +137,28 @@ router.post('/', async (req, res) => {
     const post = posts[0];
     const bounty = parseFloat(post.bounty) || 0;
 
+    // PREVENT MONEY GLITCH: Cannot dispute a completed gig once escrow has been released
+    const [completedApps] = await db.query(
+      "SELECT application_id FROM Post_Applications WHERE post_id = ? AND status = 'completed'",
+      [post_id]
+    );
+    if (completedApps.length > 0 || post.status === 'closed' || post.status === 'resolved') {
+      return res.status(400).json({
+        message: 'Cannot dispute a completed gig. The escrow payment has already been released to the tutor.'
+      });
+    }
+
+    // Verify no payout or refund has already occurred for this post
+    const [payouts] = await db.query(
+      "SELECT transaction_id FROM Transactions WHERE reference_id = ? AND type IN ('bounty_received', 'refund')",
+      [post_id]
+    );
+    if (payouts.length > 0) {
+      return res.status(400).json({
+        message: 'Cannot dispute this gig. Escrow funds have already been settled and disbursed.'
+      });
+    }
+
     // 2. Determine reporter role & respondent
     const isPoster = String(post.user_id) === String(reporter_id);
     let reporter_role = isPoster ? 'student' : 'tutor';
@@ -275,6 +297,18 @@ router.post('/:id/resolve', async (req, res) => {
     const bounty = parseFloat(dispute.bounty) || 0;
     const posterId = dispute.poster_id;
     let tutorId = dispute.reporter_role === 'tutor' ? dispute.reporter_id : dispute.respondent_id;
+
+    // PREVENT MONEY GLITCH: Ensure escrow funds have not already been disbursed
+    const [existingPayouts] = await conn.query(
+      "SELECT transaction_id, type FROM Transactions WHERE reference_id = ? AND type IN ('bounty_received', 'refund')",
+      [dispute.post_id]
+    );
+    if (existingPayouts.length > 0 && resolution_type !== 'dismissed') {
+      await conn.rollback();
+      return res.status(400).json({
+        message: 'Escrow funds for this post have already been released or refunded. Settlement blocked to prevent double-spending.'
+      });
+    }
 
     // If tutorId is still null, look in Post_Applications
     if (!tutorId) {
