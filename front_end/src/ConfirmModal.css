@@ -35,15 +35,15 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--color-ink);
 }
 
 .cm-header.cm-danger h3 {
-  color: #991b1b;
+  color: var(--color-danger);
 }
 
 .cm-header.cm-success h3 {
-  color: #065f46;
+  color: var(--color-secondary-ink);
 }
 
 .cm-icon {
@@ -57,7 +57,7 @@
 .cm-body p {
   margin: 0;
   font-size: 0.95rem;
-  color: #4b5563;
+  color: var(--color-ink-muted);
   line-height: 1.6;
 }
 
@@ -79,37 +79,37 @@
 }
 
 .cm-btn-cancel {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-surface-alt);
+  color: var(--color-ink-muted);
 }
 
 .cm-btn-cancel:hover {
-  background: #e5e7eb;
+  background: var(--color-surface-alt);
 }
 
 .cm-btn-confirm {
-  background: #2563eb;
+  background: var(--color-primary);
   color: #fff;
 }
 
 .cm-btn-confirm:hover {
-  background: #1d4ed8;
+  background: var(--color-primary-dark);
 }
 
 .cm-btn-danger {
-  background: #dc2626;
+  background: var(--color-danger);
   color: #fff;
 }
 
 .cm-btn-danger:hover {
-  background: #b91c1c;
+  background: var(--color-danger);
 }
 
 .cm-btn-success {
-  background: #059669;
-  color: #fff;
+  background: var(--color-secondary);
+  color: var(--color-ink);
 }
 
 .cm-btn-success:hover {
-  background: #047857;
+  background: var(--color-secondary);
 }

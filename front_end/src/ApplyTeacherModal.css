@@ -28,7 +28,7 @@
   align-items: flex-start;
   gap: 14px;
   padding: 24px 24px 20px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   background: #fff;
@@ -40,26 +40,26 @@
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: #111827;
+  color: var(--color-ink);
 }
 .atm-subtitle {
   margin: 2px 0 0;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-ink-muted);
 }
 .atm-close-btn {
   margin-left: auto;
   background: none;
   border: none;
   font-size: 24px;
-  color: #9ca3af;
+  color: var(--color-ink-faint);
   cursor: pointer;
   line-height: 1;
   padding: 0 4px;
   border-radius: 6px;
   transition: color 0.2s;
 }
-.atm-close-btn:hover { color: #111827; }
+.atm-close-btn:hover { color: var(--color-ink); }
 
 /* ── Form ── */
 .atm-form {
@@ -77,19 +77,19 @@
 .atm-field-label {
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-ink);
 }
-.atm-req { color: #ef4444; }
+.atm-req { color: var(--color-danger); }
 
 .atm-textarea,
 .atm-input {
   width: 100%;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--color-border);
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 14px;
-  color: #111827;
-  background: #f9fafb;
+  color: var(--color-ink);
+  background: var(--color-bg);
   resize: vertical;
   transition: border-color 0.2s, background 0.2s;
   box-sizing: border-box;
@@ -98,21 +98,21 @@
 .atm-textarea:focus,
 .atm-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--color-primary);
   background: #fff;
 }
 .atm-char-hint,
 .atm-field-hint {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-ink-faint);
   text-align: right;
 }
 .atm-field-hint { text-align: left; }
 
 /* ── Documents section ── */
 .atm-docs-section {
-  background: #f8faff;
-  border: 1.5px solid #e0e7ff;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-primary-soft);
   border-radius: 14px;
   padding: 20px;
   display: flex;
@@ -125,13 +125,13 @@
   gap: 8px;
   font-size: 15px;
   font-weight: 700;
-  color: #1e40af;
+  color: var(--color-primary-dark);
 }
 .atm-docs-icon { font-size: 18px; }
 .atm-docs-desc {
   margin: 0;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-ink-muted);
 }
 .atm-docs-grid {
   display: grid;
@@ -148,11 +148,11 @@
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--color-danger-soft);
+  border: 1px solid var(--color-danger-soft);
   border-radius: 10px;
   font-size: 13px;
-  color: #dc2626;
+  color: var(--color-danger);
   font-weight: 500;
 }
 
@@ -164,8 +164,8 @@
   padding-top: 4px;
 }
 .atm-cancel-btn {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-surface-alt);
+  color: var(--color-ink);
   border: none;
   border-radius: 10px;
   padding: 11px 22px;
@@ -174,9 +174,9 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-.atm-cancel-btn:hover:not(:disabled) { background: #e5e7eb; }
+.atm-cancel-btn:hover:not(:disabled) { background: var(--color-surface-alt); }
 .atm-submit-btn {
-  background: #6366f1;
+  background: var(--color-primary);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -189,7 +189,7 @@
   gap: 8px;
   transition: background 0.2s;
 }
-.atm-submit-btn:hover:not(:disabled) { background: #4f46e5; }
+.atm-submit-btn:hover:not(:disabled) { background: var(--color-primary-dark); }
 .atm-submit-btn:disabled,
 .atm-cancel-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -218,17 +218,17 @@
   margin: 0;
   font-size: 22px;
   font-weight: 700;
-  color: #111827;
+  color: var(--color-ink);
 }
 .atm-success p {
   margin: 0;
-  color: #6b7280;
+  color: var(--color-ink-muted);
   font-size: 14px;
   max-width: 380px;
 }
 .atm-done-btn {
-  background: #10b981;
-  color: #fff;
+  background: var(--color-secondary);
+  color: var(--color-ink);
   border: none;
   border-radius: 10px;
   padding: 12px 32px;
@@ -237,4 +237,4 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-.atm-done-btn:hover { background: #059669; }
+.atm-done-btn:hover { background: var(--color-secondary); }

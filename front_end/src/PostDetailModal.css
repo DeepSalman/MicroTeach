@@ -25,23 +25,23 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .pd-header h3 {
   font-size: 16px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .pd-close {
   width: 30px;
   height: 30px;
   border: none;
-  background: #f3f4f6;
+  background: var(--color-surface-alt);
   border-radius: 8px;
   font-size: 20px;
-  color: #666;
+  color: var(--color-ink-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -50,24 +50,24 @@
 }
 
 .pd-close:hover {
-  background: #e5e7eb;
-  color: #1a1a2e;
+  background: var(--color-surface-alt);
+  color: var(--color-ink);
 }
 
 .pd-close-post {
   padding: 6px 14px;
-  border: 1.5px solid #dc2626;
+  border: 1.5px solid var(--color-danger);
   background: #fff;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #dc2626;
+  color: var(--color-danger);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .pd-close-post:hover {
-  background: #fef2f2;
+  background: var(--color-danger-soft);
 }
 
 .pd-body {
@@ -92,8 +92,8 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  background: #eaedff;
-  color: #1f3864;
+  background: var(--color-primary-soft);
+  color: var(--color-ink);
   font-family: var(--font-mono);
 }
 
@@ -102,21 +102,21 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  background: #f3f4f6;
-  color: #555;
+  background: var(--color-surface-alt);
+  color: var(--color-ink-muted);
 }
 
 .pd-post-title {
   font-size: 17px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-ink);
   line-height: 1.4;
   margin-bottom: 8px;
 }
 
 .pd-post-desc {
   font-size: 13px;
-  color: #666;
+  color: var(--color-ink-muted);
   line-height: 1.6;
   margin-bottom: 12px;
 }
@@ -131,7 +131,7 @@
 .pd-bounty {
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .pd-delivery {
@@ -139,13 +139,13 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  background: #e8f4f0;
-  color: #1a7a4c;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
 }
 
 .pd-deadline {
   font-size: 12px;
-  color: #e74c8b;
+  color: var(--color-primary);
   font-weight: 500;
 }
 
@@ -164,11 +164,11 @@
 .pd-section-header h4 {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .pd-count {
-  background: #1a1a2e;
+  background: var(--color-primary);
   color: #fff;
   border-radius: 50%;
   width: 22px;
@@ -185,7 +185,7 @@
   text-align: center;
   padding: 24px;
   font-size: 13px;
-  color: #888;
+  color: var(--color-ink-faint);
 }
 
 /* Applicant List */
@@ -201,9 +201,9 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px;
-  background: #f9fafb;
+  background: var(--color-bg);
   border-radius: 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border);
 }
 
 .pd-item-left {
@@ -217,7 +217,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #1a1a2e;
+  background: var(--color-primary);
   color: #fff;
   display: flex;
   align-items: center;
@@ -242,7 +242,7 @@
 .pd-item-name {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .pd-status-badge {
@@ -255,29 +255,29 @@
 }
 
 .pd-status-badge.status-pending {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-surface);
+  color: var(--color-accent-ink);
 }
 
 .pd-status-badge.status-accepted {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
 }
 
 .pd-status-badge.status-rejected {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .pd-item-dept {
   font-size: 11px;
-  color: #888;
+  color: var(--color-ink-faint);
   margin-bottom: 4px;
 }
 
 .pd-item-message {
   font-size: 12px;
-  color: #666;
+  color: var(--color-ink-muted);
   font-style: italic;
   line-height: 1.4;
   margin-bottom: 4px;
@@ -290,7 +290,7 @@
 
 .pd-item-meta {
   font-size: 10px;
-  color: #aaa;
+  color: var(--color-ink-faint);
 }
 
 /* Right side: rating + actions */
@@ -309,7 +309,7 @@
 }
 
 .pd-stars {
-  color: #f59e0b;
+  color: var(--color-accent);
   font-size: 12px;
   letter-spacing: -1px;
 }
@@ -317,18 +317,18 @@
 .pd-rating-num {
   font-size: 12px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .pd-review-count {
   font-size: 10px;
-  color: #999;
+  color: var(--color-ink-faint);
 }
 
 .pd-view-profile {
   font-size: 11px;
   font-weight: 600;
-  color: #1f3864;
+  color: var(--color-ink);
   cursor: pointer;
 }
 
@@ -353,21 +353,21 @@
 }
 
 .pd-accept-btn {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
 }
 
 .pd-accept-btn:hover:not(:disabled) {
-  background: #a7f3d0;
+  background: var(--color-secondary-soft);
 }
 
 .pd-reject-btn {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .pd-reject-btn:hover:not(:disabled) {
-  background: #fecaca;
+  background: var(--color-danger-soft);
 }
 
 .pd-accept-btn:disabled,
@@ -378,8 +378,8 @@
 
 /* Accepted applicant */
 .pd-item--accepted {
-  background: #f0fdf4;
-  border-color: #86efac;
+  background: var(--color-secondary-soft);
+  border-color: var(--color-secondary);
 }
 
 .pd-accepted-actions {
@@ -394,7 +394,7 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: #1a1a2e;
+  background: var(--color-primary);
   color: #fff;
   border-radius: 8px;
   font-size: 14px;
@@ -403,42 +403,42 @@
 }
 
 .pd-chat-icon:hover {
-  background: #2c2c4a;
+  background: var(--color-primary-dark);
 }
 
 /* Cancellation states */
 .pd-item--cancel-requested {
-  background: #fffbeb;
-  border-color: #fbbf24;
+  background: var(--color-surface-soft);
+  border-color: var(--color-accent);
 }
 
 .pd-item--cancelled {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: var(--color-bg);
+  border-color: var(--color-border);
   opacity: 0.7;
 }
 
 .pd-item--completed {
-  background: #f0fdf4;
-  border-color: #86efac;
+  background: var(--color-secondary-soft);
+  border-color: var(--color-secondary);
 }
 
 .pd-cancel-btn {
   padding: 5px 10px;
   background: #fff;
-  border: 1px solid #f59e0b;
+  border: 1px solid var(--color-accent);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: #b45309;
+  color: var(--color-accent-ink);
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
 }
 
 .pd-cancel-btn:hover:not(:disabled) {
-  background: #fffbeb;
-  border-color: #d97706;
+  background: var(--color-surface-soft);
+  border-color: var(--color-accent-dark);
 }
 
 .pd-cancel-btn:disabled {
@@ -454,19 +454,19 @@
 
 .pd-complete-btn {
   padding: 5px 10px;
-  background: #10b981;
+  background: var(--color-secondary);
   border: none;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-ink);
   cursor: pointer;
   transition: background 0.2s;
   white-space: nowrap;
 }
 
 .pd-complete-btn:hover:not(:disabled) {
-  background: #059669;
+  background: var(--color-secondary);
 }
 
 .pd-complete-btn:disabled {
@@ -476,8 +476,8 @@
 
 .pd-completed-badge {
   padding: 5px 10px;
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
@@ -485,8 +485,8 @@
 
 .pd-waiting-badge {
   padding: 5px 10px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-surface);
+  color: var(--color-accent-ink);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
@@ -498,28 +498,28 @@
   align-items: center;
   justify-content: flex-end;
   padding: 16px 24px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-border);
 }
 
 .pd-close-btn {
   padding: 8px 16px;
   background: #fff;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-ink);
   cursor: pointer;
 }
 
 .pd-close-btn:hover {
-  background: #f9fafb;
+  background: var(--color-bg);
 }
 
 .pd-review-btn {
   padding: 5px 12px;
-  background: #f59e0b;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-ink);
   border: none;
   border-radius: 6px;
   font-size: 11px;
@@ -534,8 +534,8 @@
 
 .pd-reviewed-badge {
   padding: 4px 10px;
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
@@ -543,9 +543,9 @@
 
 /* ── PostDetailModal Dispute Button ── */
 .pd-dispute-btn {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
+  background: var(--color-danger-soft);
+  border: 1px solid var(--color-danger-soft);
+  color: var(--color-danger);
   border-radius: 8px;
   padding: 6px 12px;
   font-size: 12px;
@@ -557,7 +557,7 @@
   transition: all 0.15s ease;
 }
 .pd-dispute-btn:hover {
-  background: #fee2e2;
-  border-color: #fca5a5;
-  color: #b91c1c;
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger-soft);
+  color: var(--color-danger);
 }

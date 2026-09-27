@@ -108,11 +108,11 @@ const TransactionReportModal = ({ post, user, isOpen, onClose, onSuccess }) => {
         {/* Completed Gig Warning View (Prevents Money Glitch) */}
         {isCompleted ? (
           <div className="trm-success-view">
-            <div className="trm-success-badge" style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#dc2626' }}>
+            <div className="trm-success-badge" style={{ background: 'var(--color-danger-soft)', borderColor: 'var(--color-danger-soft)', color: 'var(--color-danger)' }}>
               ⚠️
             </div>
             <h3 className="trm-success-heading">Cannot Dispute Completed Gig</h3>
-            <div className="trm-case-pill" style={{ color: '#991b1b', background: '#fee2e2' }}>Settlement Finalized</div>
+            <div className="trm-case-pill" style={{ color: 'var(--color-danger)', background: 'var(--color-danger-soft)' }}>Settlement Finalized</div>
             <p className="trm-success-desc">
               The escrow payment for this gig has already been finalized and released. 
               Disputes cannot be filed on completed gigs to prevent duplicate payouts.

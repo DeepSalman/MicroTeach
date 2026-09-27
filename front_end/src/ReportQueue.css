@@ -9,25 +9,25 @@
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   background: #fff;
   font-size: 13px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-ink-muted);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .rq-filter-btn:hover {
-  border-color: #d1d5db;
-  color: #374151;
+  border-color: var(--color-border);
+  color: var(--color-ink);
 }
 
 .rq-filter-btn.active {
-  background: #1a1a2e;
+  background: var(--color-primary);
   color: #fff;
-  border-color: #1a1a2e;
+  border-color: var(--color-ink);
 }
 
 .rq-filter-count {
@@ -47,7 +47,7 @@
   text-align: center;
   padding: 48px 20px;
   font-size: 14px;
-  color: #9ca3af;
+  color: var(--color-ink-faint);
 }
 
 .rq-queue {
@@ -58,7 +58,7 @@
 
 .rq-card {
   background: #fff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   overflow: hidden;
   transition: border-color 0.15s;
@@ -77,8 +77,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: #fafbfc;
-  border-bottom: 1px solid #f3f4f6;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .rq-card-left {
@@ -91,20 +91,20 @@
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   font-size: 12px;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
-.rq-dot { color: #d1d5db; font-size: 10px; }
+.rq-dot { color: var(--color-ink-faint); font-size: 10px; }
 
 .rq-course {
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-ink);
 }
 
 .rq-time {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-ink-faint);
 }
 
 .rq-status-badge {
@@ -116,18 +116,18 @@
 }
 
 .rq-status-badge.pending {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-surface);
+  color: var(--color-accent-ink);
 }
 
 .rq-status-badge.reviewed {
-  background: #d4f5e2;
-  color: #1a7a4c;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
 }
 
 .rq-status-badge.dismissed {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-surface-alt);
+  color: var(--color-ink-muted);
 }
 
 .rq-card-body {
@@ -152,7 +152,7 @@
 .rq-label {
   font-size: 11px;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--color-ink-faint);
   text-transform: uppercase;
   letter-spacing: 0.3px;
   width: 110px;
@@ -162,20 +162,20 @@
 .rq-value {
   font-size: 13px;
   font-weight: 500;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .rq-sub {
   font-weight: 400;
-  color: #9ca3af;
+  color: var(--color-ink-faint);
 }
 
 .rq-violation {
   font-size: 11px;
   font-weight: 600;
-  color: #374151;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  color: var(--color-ink);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
   padding: 3px 10px;
   border-radius: 6px;
   white-space: nowrap;
@@ -183,12 +183,12 @@
 
 .rq-content {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-ink-muted);
   line-height: 1.5;
   margin: 0;
   padding: 10px 12px;
-  background: #fafbfc;
-  border: 1px solid #f3f4f6;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
 }
 
@@ -196,7 +196,7 @@
   display: flex;
   gap: 8px;
   padding: 10px 16px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--color-border);
 }
 
 .rq-action-btn {
@@ -210,21 +210,21 @@
 }
 
 .rq-action-btn.review {
-  background: #1a1a2e;
+  background: var(--color-primary);
   color: #fff;
 }
 
 .rq-action-btn.review:hover {
-  background: #2c2c4a;
+  background: var(--color-primary-dark);
 }
 
 .rq-action-btn.dismiss {
   background: #fff;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  color: var(--color-ink-muted);
+  border: 1px solid var(--color-border);
 }
 
 .rq-action-btn.dismiss:hover {
-  background: #f9fafb;
-  color: #374151;
+  background: var(--color-bg);
+  color: var(--color-ink);
 }

@@ -27,14 +27,14 @@ const UserList = ({ refreshSignal }) => {
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
+    <div style={{ padding: '20px', border: '1px solid var(--color-border)', borderRadius: '8px' }}>
       <h2>Registered Users</h2>
       {users.length === 0 ? (
         <p>No users registered yet.</p>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #ddd' }}>
+            <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
               <th style={{ padding: '8px' }}>ID</th>
               <th style={{ padding: '8px' }}>Name</th>
               <th style={{ padding: '8px' }}>Email</th>
@@ -43,7 +43,7 @@ const UserList = ({ refreshSignal }) => {
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.user_id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={user.user_id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <td style={{ padding: '8px' }}>{user.user_id}</td>
                 <td style={{ padding: '8px' }}>{user.full_name}</td>
                 <td style={{ padding: '8px' }}>{user.email}</td>

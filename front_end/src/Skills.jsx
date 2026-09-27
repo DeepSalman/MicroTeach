@@ -41,7 +41,7 @@ const Skills = () => {
   };
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px', marginTop: '20px' }}>
+    <div style={{ padding: '20px', border: '1px solid var(--color-border)', borderRadius: '8px', marginTop: '20px' }}>
       <h2>Skills & Subjects</h2>
 
       {/* Add Skill Form */}
@@ -72,7 +72,7 @@ const Skills = () => {
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #ddd' }}>
+            <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
               <th style={{ padding: '8px' }}>ID</th>
               <th style={{ padding: '8px' }}>Skill Name</th>
               <th style={{ padding: '8px' }}>Category</th>
@@ -80,7 +80,7 @@ const Skills = () => {
           </thead>
           <tbody>
             {skills.map((skill) => (
-              <tr key={skill.skill_id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={skill.skill_id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <td style={{ padding: '8px' }}>{skill.skill_id}</td>
                 <td style={{ padding: '8px' }}>{skill.skill_name}</td>
                 <td style={{ padding: '8px' }}>{skill.category || 'General'}</td>

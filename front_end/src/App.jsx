@@ -20,7 +20,7 @@ import TeacherApplications from './TeacherApplications';
 const Dashboard = ({ user, onLogout }) => {
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #ddd' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid var(--color-border)' }}>
         <h2>Microteach Dashboard</h2>
         <div>
           <span style={{ marginRight: '15px' }}>Logged in as: <strong>{user?.email}</strong></span>

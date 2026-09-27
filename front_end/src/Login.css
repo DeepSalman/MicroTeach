@@ -11,7 +11,7 @@
   width: 100%;
   display: flex;
   font-family: var(--font-primary);
-  color: #131b2e;
+  color: var(--color-ink);
 }
 
 .login-hero-container {
@@ -24,7 +24,7 @@
 /* Left Panel */
 .login-left-panel {
   flex: 1;
-  background: #faf8ff;
+  background: var(--color-bg);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -34,15 +34,15 @@
 
 .eyebrow {
   display: inline-block;
-  border: 1px solid #c4c6d0;
-  background: #eaedff;
+  border: 1px solid var(--color-border);
+  background: var(--color-primary-soft);
   padding: 4px 10px;
   font-size: 10px;
   font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: #1f3864;
+  color: var(--color-ink);
   margin-bottom: 16px;
 }
 
@@ -54,7 +54,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #1f3864;
+  background: var(--color-primary);
   color: #fff;
   padding: 4px 10px;
   font-size: 9px;
@@ -67,7 +67,7 @@
 }
 
 .title-box {
-  border: 2px solid #1f3864;
+  border: 2px solid var(--color-ink);
   background: #fff;
   padding: 28px 32px;
   border-radius: 0 4px 4px 4px;
@@ -78,7 +78,7 @@
   font-size: 36px;
   line-height: 1.15;
   font-weight: 700;
-  color: #131b2e;
+  color: var(--color-ink);
 }
 
 /* Form */
@@ -99,46 +99,46 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  color: #44474f;
+  color: var(--color-ink-muted);
 }
 
 .form-label .required {
-  color: #1f3864;
+  color: var(--color-ink);
   font-weight: 700;
   font-size: 9px;
 }
 
 .form-label .forgot {
   font-size: 11px;
-  color: #44474f;
+  color: var(--color-ink-muted);
   text-decoration: underline;
   cursor: pointer;
   font-family: var(--font-primary);
 }
 
 .form-label .forgot:hover {
-  color: #131b2e;
+  color: var(--color-ink);
 }
 
 .form-input {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid #c4c6d0;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: 13px;
   font-family: var(--font-mono);
   background: #fff;
-  color: #131b2e;
+  color: var(--color-ink);
   outline: none;
   transition: border 0.2s;
 }
 
 .form-input:focus {
-  border-color: #1f3864;
+  border-color: var(--color-ink);
 }
 
 .form-input::placeholder {
-  color: #aaa;
+  color: var(--color-ink-faint);
 }
 
 .password-wrapper {
@@ -153,7 +153,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #888;
+  color: var(--color-ink-faint);
   font-size: 16px;
 }
 
@@ -170,19 +170,19 @@
   gap: 8px;
   cursor: pointer;
   font-size: 11px;
-  color: #44474f;
+  color: var(--color-ink-muted);
 }
 
 .checkbox-row input[type="checkbox"] {
   width: 14px;
   height: 14px;
-  accent-color: #1f3864;
+  accent-color: var(--color-primary);
 }
 
 .checkbox-row .ttl {
   font-size: 9px;
   font-family: var(--font-mono);
-  color: #747780;
+  color: var(--color-ink-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -190,7 +190,7 @@
 .btn-signin {
   width: 100%;
   padding: 14px;
-  background: #03224d;
+  background: var(--color-primary-dark);
   color: #fff;
   border: none;
   font-size: 12px;
@@ -209,7 +209,7 @@
 }
 
 .btn-signin:hover {
-  background: #1f3864;
+  background: var(--color-primary);
 }
 
 .btn-signin .arrow {
@@ -225,11 +225,11 @@
   text-align: center;
   margin-top: 20px;
   font-size: 12px;
-  color: #44474f;
+  color: var(--color-ink-muted);
 }
 
 .register-link a {
-  color: #1f3864;
+  color: var(--color-ink);
   font-weight: 600;
   font-family: var(--font-mono);
   text-decoration: none;
@@ -244,7 +244,7 @@
 /* Right Panel */
 .login-right-panel {
   flex: 1;
-  background: #0E1117;
+  background: var(--color-ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -303,7 +303,7 @@
 
 .center-brand p {
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--color-ink-faint);
   max-width: 260px;
   margin: 0 auto;
   line-height: 1.5;
@@ -313,7 +313,7 @@
 .error-message {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #dc2626;
+  color: var(--color-danger);
   padding: 10px 14px;
   border-radius: 4px;
   font-size: 13px;
@@ -360,7 +360,7 @@
   font-size: 11px;
   font-family: var(--font-mono, monospace);
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--color-ink-faint);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   padding-left: 6px;
@@ -374,7 +374,7 @@
 .switcher-btn {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
+  color: var(--color-ink-faint);
   padding: 6px 13px;
   border-radius: 20px;
   font-size: 12px;
@@ -395,24 +395,24 @@
 }
 
 .switcher-btn.active {
-  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 100%);
-  color: #020617;
+  background: linear-gradient(135deg, #00f0ff 0%, var(--color-primary) 100%);
+  color: var(--color-ink);
   border-color: #00f0ff;
   font-weight: 700;
   box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
 }
 
 .switcher-btn:nth-child(1).active {
-  background: linear-gradient(135deg, #ff2d78 0%, #ff6b1a 100%);
-  color: #ffffff;
-  border-color: #ff2d78;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  color: var(--color-ink);
+  border-color: var(--color-primary);
   box-shadow: 0 0 16px rgba(255, 45, 120, 0.5);
 }
 
 .switcher-btn:nth-child(3).active {
-  background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
-  color: #1e1b4b;
-  border-color: #fbbf24;
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent) 100%);
+  color: var(--color-ink);
+  border-color: var(--color-accent);
   box-shadow: 0 0 16px rgba(251, 191, 36, 0.5);
 }
 

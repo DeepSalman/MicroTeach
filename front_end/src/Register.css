@@ -12,9 +12,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #EEF2F6;
+  background: var(--color-bg);
   font-family: var(--font-primary);
-  color: #0F172A;
+  color: var(--color-ink);
   padding: 32px 16px;
 }
 
@@ -24,7 +24,7 @@
   max-width: 490px;
   border-radius: 24px;
   box-shadow: 0 20px 50px -12px rgba(148, 163, 184, 0.25);
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--color-border);
   padding: 32px 40px;
 }
 
@@ -60,11 +60,11 @@
 .register-logo-text {
   font-weight: 700;
   font-size: 16px;
-  color: #1F3864;
+  color: var(--color-ink);
 }
 
 .register-logo-dot {
-  color: #3b82f6;
+  color: var(--color-primary);
   font-weight: 400;
   margin-left: 2px;
   font-size: 10px;
@@ -74,13 +74,13 @@
 .register-title {
   font-size: 24px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--color-ink);
   letter-spacing: -0.025em;
 }
 
 .register-subtitle {
   font-size: 13.5px;
-  color: #64748b;
+  color: var(--color-ink-muted);
   margin-top: 8px;
   line-height: 1.5;
 }
@@ -93,8 +93,8 @@
 .register-sso-btn {
   width: 100%;
   height: 44px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -102,17 +102,17 @@
   gap: 10px;
   font-size: 13.5px;
   font-weight: 500;
-  color: #334155;
+  color: var(--color-ink);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .register-sso-btn:hover {
-  background: #f1f5f9;
+  background: var(--color-surface-alt);
 }
 
 .register-sso-btn svg {
-  color: #334155;
+  color: var(--color-ink);
 }
 
 /* Divider */
@@ -125,7 +125,7 @@
 
 .register-divider-line {
   flex: 1;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-border);
 }
 
 .register-divider-text {
@@ -134,7 +134,7 @@
   text-transform: uppercase;
   font-weight: 600;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: var(--color-ink-faint);
   background: #fff;
 }
 
@@ -142,7 +142,7 @@
 .register-error-message {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #dc2626;
+  color: var(--color-danger);
   padding: 10px 14px;
   border-radius: 12px;
   font-size: 13px;
@@ -166,7 +166,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #475569;
+  color: var(--color-ink-muted);
   margin-bottom: 6px;
 }
 
@@ -179,7 +179,7 @@
 .register-input-icon {
   position: absolute;
   left: 14px;
-  color: #94a3b8;
+  color: var(--color-ink-faint);
   pointer-events: none;
 }
 
@@ -187,21 +187,21 @@
   width: 100%;
   padding: 10px 14px 10px 40px;
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   font-size: 14px;
-  color: #0f172a;
+  color: var(--color-ink);
   outline: none;
   transition: all 0.2s;
 }
 
 .register-input:focus {
-  border-color: #1F3864;
+  border-color: var(--color-ink);
   box-shadow: 0 0 0 3px rgba(31, 56, 100, 0.12);
 }
 
 .register-input::placeholder {
-  color: #94a3b8;
+  color: var(--color-ink-faint);
 }
 
 /* Select */
@@ -209,10 +209,10 @@
   width: 100%;
   padding: 10px 40px 10px 40px;
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   font-size: 14px;
-  color: #334155;
+  color: var(--color-ink);
   outline: none;
   cursor: pointer;
   appearance: none;
@@ -220,14 +220,14 @@
 }
 
 .register-select:focus {
-  border-color: #1F3864;
+  border-color: var(--color-ink);
   box-shadow: 0 0 0 3px rgba(31, 56, 100, 0.12);
 }
 
 .register-select-arrow {
   position: absolute;
   right: 14px;
-  color: #94a3b8;
+  color: var(--color-ink-faint);
   pointer-events: none;
 }
 
@@ -238,7 +238,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #94a3b8;
+  color: var(--color-ink-faint);
   padding: 4px;
   display: flex;
   align-items: center;
@@ -246,7 +246,7 @@
 }
 
 .register-password-toggle:hover {
-  color: #475569;
+  color: var(--color-ink-muted);
 }
 
 /* Password Hints */
@@ -263,14 +263,14 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #64748b;
+  color: var(--color-ink-muted);
 }
 
 .register-hint-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #cbd5e1;
+  background: var(--color-surface-alt);
 }
 
 /* Terms Checkbox */
@@ -283,7 +283,7 @@
   align-items: flex-start;
   cursor: pointer;
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-ink-muted);
   line-height: 1.5;
 }
 
@@ -292,8 +292,8 @@
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  border: 1px solid #cbd5e1;
-  accent-color: #1F3864;
+  border: 1px solid var(--color-border);
+  accent-color: var(--color-primary);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -303,13 +303,13 @@
 }
 
 .register-terms-label a {
-  color: #334155;
+  color: var(--color-ink);
   font-weight: 500;
   text-decoration: underline;
 }
 
 .register-terms-label a:hover {
-  color: #1F3864;
+  color: var(--color-ink);
 }
 
 /* Submit Button */
@@ -320,7 +320,7 @@
 .register-submit-btn {
   width: 100%;
   height: 44px;
-  background: #1F3864;
+  background: var(--color-primary);
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -332,7 +332,7 @@
 }
 
 .register-submit-btn:hover {
-  background: #172B4D;
+  background: var(--color-ink);
 }
 
 .register-submit-btn:active {
@@ -350,11 +350,11 @@
   margin-top: 20px;
   text-align: center;
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-ink-muted);
 }
 
 .register-login-link a {
-  color: #1F3864;
+  color: var(--color-ink);
   font-weight: 600;
   text-decoration: none;
   margin-left: 4px;
@@ -368,7 +368,7 @@
 .register-trust-footer {
   margin-top: 28px;
   padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--color-border);
   text-align: center;
   display: flex;
   align-items: center;
@@ -378,7 +378,7 @@
 
 .register-trust-footer span {
   font-size: 11.5px;
-  color: #64748b;
+  color: var(--color-ink-muted);
   line-height: 1.4;
 }
 

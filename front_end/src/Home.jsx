@@ -12,6 +12,7 @@ import './Home.css';
 const Home = ({ user, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [posts, setPosts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [reportModal, setReportModal] = useState({ open: false, postId: null, postTitle: '' });
   const [reportReason, setReportReason] = useState('');
@@ -173,56 +174,88 @@ const Home = ({ user, onLogout }) => {
     return badges[status] || badges['active'];
   };
 
+  const query = searchQuery.trim().toLowerCase();
+  const filteredPosts = query
+    ? posts.filter((post) =>
+        [post.title, post.course_code, post.category, post.author_name, post.description]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query))
+      )
+    : posts;
+
   return (
     <div className="home-page">
 
       {/* Header */}
       <header className="home-header">
-        <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className="logo">
-            <div className="logo-icon"><img src="/logo.png" alt="MicroTeach" /></div>
-          </div>
+        <Link to="/" className="logo" title="MicroTeach Home">
+          <span className="logo-icon"><img src="/logo.png" alt="MicroTeach" /></span>
         </Link>
+
         <div className="search-bar">
-          <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/>
             <line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-          <input type="text" placeholder="Search courses, topics, or tutors..." />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') setSearchQuery(''); }}
+            placeholder="Search posts, courses, or tutors..."
+            aria-label="Search posts"
+          />
+          {searchQuery && (
+            <button className="search-clear" type="button" aria-label="Clear search" onClick={() => setSearchQuery('')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          )}
         </div>
+
         <div className="header-actions">
           {user && user.role === 'student' && (
             <button className="btn-become-tutor-nav" onClick={() => setApplyTeacherOpen(true)}>
               Apply to Teach
             </button>
           )}
+
           {user && (
-            <button className="wallet-balance-btn" onClick={() => setWalletOpen(true)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
-                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
-                <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
-              </svg>
-              <span>৳{walletBalance ? Number(walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 0 }) : '0'}</span>
+            <button className="wallet-balance-btn" onClick={() => setWalletOpen(true)} title="Open wallet">
+              <span className="wallet-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+                  <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
+                </svg>
+              </span>
+              <span className="wallet-amount">৳{walletBalance ? Number(walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 0 }) : '0'}</span>
             </button>
           )}
-          <button className="icon-btn" title="Messages" onClick={() => user ? setChatOpen(true) : navigate('/login')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+
+          <button className="icon-btn" title="Messages" aria-label="Messages" onClick={() => user ? setChatOpen(true) : navigate('/login')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           </button>
-          <button className="icon-btn">&#9776;</button>
-          
+
           {/* Avatar with Dropdown */}
           <div className="avatar-wrapper" ref={dropdownRef}>
-            <div 
-              className="avatar" 
+            <button
+              type="button"
+              className="avatar"
               onClick={() => setDropdownOpen(!dropdownOpen)}
               title={user ? (user.full_name || user.email) : 'Guest'}
+              aria-haspopup="menu"
+              aria-expanded={dropdownOpen}
             >
-              {user ? (user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U') : 'G'}
-            </div>
-            
+              <span className="avatar-initials">
+                {user ? (user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U') : 'G'}
+              </span>
+            </button>
+
             {dropdownOpen && (
               <div className="avatar-dropdown">
                 {user ? (
@@ -289,55 +322,11 @@ const Home = ({ user, onLogout }) => {
         </div>
       </header>
 
-      {/* Categories */}
-      <nav className="categories">
-        <div className="cat-tab active">
-          <span className="cat-icon">&#9783;</span>
-          Algorithms &amp; DS
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#8721;</span>
-          Calculus &amp; Math
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9881;</span>
-          Physics &amp; Lab
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9783;</span>
-          Object-Oriented
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9881;</span>
-          System Architecture
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9889;</span>
-          Circuits &amp; EEE
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#128161;</span>
-          Machine Learning
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#9201;</span>
-          Cram Sessions
-        </div>
-        <div className="cat-tab">
-          <span className="cat-icon">&#128190;</span>
-          Database...
-        </div>
-        <button className="filters-btn">
-          &#9881; Filters
-          <span className="filters-badge">3</span>
-        </button>
-      </nav>
-
       {/* Main Content */}
       <main className="home-main">
         <div className="main-header">
           <div>
-            <h1>My Applications &amp; Campus Engagements</h1>
+            <h1>All posts</h1>
             <p className="subtitle">Manage live peer-tutoring calls, pending solution pitches, and milestone payouts.</p>
           </div>
           {user && (
@@ -354,10 +343,19 @@ const Home = ({ user, onLogout }) => {
         <div className="cards">
           {loading ? (
             <div className="loading-message">Loading posts...</div>
-          ) : posts.length === 0 ? (
-            <div className="empty-message">No posts yet. Create the first one!</div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="empty-message">
+              {query ? (
+                <>
+                  <strong>No posts match &ldquo;{searchQuery.trim()}&rdquo;</strong>
+                  <span className="empty-hint">Try a different course code, topic, or tutor name.</span>
+                </>
+              ) : (
+                'No posts yet. Create the first one!'
+              )}
+            </div>
           ) : (
-            posts.map((post) => {
+            filteredPosts.map((post) => {
               const statusBadge = getStatusBadge(post.status, post.is_completed);
               const isOwnPost = user && String(post.user_id) === String(user.user_id);
               return (

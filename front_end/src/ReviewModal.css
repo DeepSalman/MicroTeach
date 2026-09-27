@@ -35,17 +35,17 @@
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--color-ink);
 }
 
 .review-close {
   width: 30px;
   height: 30px;
   border: none;
-  background: #f3f4f6;
+  background: var(--color-surface-alt);
   border-radius: 8px;
   font-size: 20px;
-  color: #666;
+  color: var(--color-ink-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -53,8 +53,8 @@
 }
 
 .review-close:hover {
-  background: #e5e7eb;
-  color: #1a1a2e;
+  background: var(--color-surface-alt);
+  color: var(--color-ink);
 }
 
 .review-form {
@@ -69,7 +69,7 @@
   display: block;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-ink);
   margin-bottom: 10px;
 }
 
@@ -81,7 +81,7 @@
 
 .review-star {
   font-size: 32px;
-  color: #d1d5db;
+  color: var(--color-ink-faint);
   cursor: pointer;
   transition: color 0.15s, transform 0.15s;
   user-select: none;
@@ -92,13 +92,13 @@
 }
 
 .review-star.active {
-  color: #f59e0b;
+  color: var(--color-accent);
 }
 
 .review-rating-text {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-ink-muted);
 }
 
 .review-comment-section {
@@ -109,14 +109,14 @@
   display: block;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-ink);
   margin-bottom: 8px;
 }
 
 .review-textarea {
   width: 100%;
   padding: 12px 14px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--color-border);
   border-radius: 10px;
   font-size: 0.9rem;
   font-family: inherit;
@@ -126,14 +126,14 @@
 }
 
 .review-textarea:focus {
-  border-color: #f59e0b;
+  border-color: var(--color-accent);
 }
 
 .review-char-count {
   display: block;
   text-align: right;
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--color-ink-faint);
   margin-top: 4px;
 }
 
@@ -146,13 +146,13 @@
 }
 
 .review-message.success {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
 }
 
 .review-message.error {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .review-actions {
@@ -163,27 +163,27 @@
 
 .review-btn-cancel {
   padding: 10px 20px;
-  background: #f3f4f6;
+  background: var(--color-surface-alt);
   border: none;
   border-radius: 10px;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-ink-muted);
   cursor: pointer;
 }
 
 .review-btn-cancel:hover {
-  background: #e5e7eb;
+  background: var(--color-surface-alt);
 }
 
 .review-btn-submit {
   padding: 10px 24px;
-  background: #f59e0b;
+  background: var(--color-accent);
   border: none;
   border-radius: 10px;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-ink);
   cursor: pointer;
   transition: opacity 0.2s;
 }

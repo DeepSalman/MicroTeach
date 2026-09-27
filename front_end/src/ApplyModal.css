@@ -25,23 +25,23 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .apply-modal-header h3 {
   font-size: 16px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .apply-close {
   width: 30px;
   height: 30px;
   border: none;
-  background: #f3f4f6;
+  background: var(--color-surface-alt);
   border-radius: 8px;
   font-size: 20px;
-  color: #666;
+  color: var(--color-ink-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -50,8 +50,8 @@
 }
 
 .apply-close:hover {
-  background: #e5e7eb;
-  color: #1a1a2e;
+  background: var(--color-surface-alt);
+  color: var(--color-ink);
 }
 
 .apply-modal-body {
@@ -76,8 +76,8 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  background: #eaedff;
-  color: #1f3864;
+  background: var(--color-primary-soft);
+  color: var(--color-ink);
   font-family: var(--font-mono);
 }
 
@@ -86,21 +86,21 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  background: #f3f4f6;
-  color: #555;
+  background: var(--color-surface-alt);
+  color: var(--color-ink-muted);
 }
 
 .apply-post-title {
   font-size: 17px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-ink);
   line-height: 1.4;
   margin-bottom: 8px;
 }
 
 .apply-post-desc {
   font-size: 13px;
-  color: #666;
+  color: var(--color-ink-muted);
   line-height: 1.6;
   margin-bottom: 12px;
 }
@@ -115,7 +115,7 @@
 .apply-bounty {
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .apply-delivery {
@@ -123,13 +123,13 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  background: #e8f4f0;
-  color: #1a7a4c;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
 }
 
 .apply-deadline {
   font-size: 12px;
-  color: #e74c8b;
+  color: var(--color-primary);
   font-weight: 500;
 }
 
@@ -139,9 +139,9 @@
   align-items: center;
   gap: 12px;
   padding: 14px;
-  background: #f9fafb;
+  background: var(--color-bg);
   border-radius: 10px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border);
   margin-bottom: 20px;
 }
 
@@ -149,7 +149,7 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: #1a1a2e;
+  background: var(--color-primary);
   color: #fff;
   display: flex;
   align-items: center;
@@ -167,19 +167,19 @@
 .apply-poster-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .apply-poster-dept {
   font-size: 12px;
-  color: #888;
+  color: var(--color-ink-faint);
   margin-top: 1px;
 }
 
 .apply-poster-link {
   font-size: 12px;
   font-weight: 600;
-  color: #1f3864;
+  color: var(--color-ink);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -204,11 +204,11 @@
 .apply-section-header h4 {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .apply-count {
-  background: #1a1a2e;
+  background: var(--color-primary);
   color: #fff;
   border-radius: 50%;
   width: 22px;
@@ -225,7 +225,7 @@
   text-align: center;
   padding: 20px;
   font-size: 13px;
-  color: #888;
+  color: var(--color-ink-faint);
 }
 
 .apply-list {
@@ -239,16 +239,16 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: #f9fafb;
+  background: var(--color-bg);
   border-radius: 10px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border);
 }
 
 .apply-item-avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #1a1a2e;
+  background: var(--color-primary);
   color: #fff;
   display: flex;
   align-items: center;
@@ -266,18 +266,18 @@
 .apply-item-name {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-ink);
 }
 
 .apply-item-dept {
   font-size: 11px;
-  color: #888;
+  color: var(--color-ink-faint);
   margin-top: 1px;
 }
 
 .apply-item-message {
   font-size: 12px;
-  color: #666;
+  color: var(--color-ink-muted);
   font-style: italic;
   margin-top: 4px;
   line-height: 1.4;
@@ -306,23 +306,23 @@
 }
 
 .apply-status-badge.status-pending {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-surface);
+  color: var(--color-accent-ink);
 }
 
 .apply-status-badge.status-accepted {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
 }
 
 .apply-status-badge.status-rejected {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .apply-time {
   font-size: 10px;
-  color: #999;
+  color: var(--color-ink-faint);
 }
 
 /* Apply Form */
@@ -333,36 +333,36 @@
 .apply-form-label {
   font-size: 12px;
   font-weight: 600;
-  color: #444;
+  color: var(--color-ink-muted);
   margin-bottom: 6px;
 }
 
 .apply-message-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
-  color: #333;
+  color: var(--color-ink);
   resize: vertical;
   outline: none;
   transition: border-color 0.2s;
 }
 
 .apply-message-input:focus {
-  border-color: #1a1a2e;
+  border-color: var(--color-ink);
 }
 
 .apply-message-input::placeholder {
-  color: #aaa;
+  color: var(--color-ink-faint);
 }
 
 /* Messages */
 .apply-error {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #dc2626;
+  color: var(--color-danger);
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 13px;
@@ -372,7 +372,7 @@
 .apply-success {
   background: rgba(34, 197, 94, 0.1);
   border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #16a34a;
+  color: var(--color-secondary-ink);
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 13px;
@@ -386,27 +386,27 @@
   justify-content: flex-end;
   gap: 10px;
   padding: 16px 24px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-border);
 }
 
 .apply-cancel-btn {
   padding: 8px 16px;
   background: #fff;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-ink);
   cursor: pointer;
 }
 
 .apply-cancel-btn:hover {
-  background: #f9fafb;
+  background: var(--color-bg);
 }
 
 .apply-submit-btn {
   padding: 8px 20px;
-  background: #1a1a2e;
+  background: var(--color-primary);
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -417,7 +417,7 @@
 }
 
 .apply-submit-btn:hover:not(:disabled) {
-  background: #2c2c4a;
+  background: var(--color-primary-dark);
 }
 
 .apply-submit-btn:disabled {
@@ -434,17 +434,17 @@
 .apply-withdraw-btn {
   padding: 6px 12px;
   background: #fff;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  color: #dc2626;
+  color: var(--color-danger);
   cursor: pointer;
 }
 
 .apply-withdraw-btn:hover:not(:disabled) {
-  background: #fef2f2;
-  border-color: #dc2626;
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger);
 }
 
 .apply-withdraw-btn:disabled {
@@ -455,7 +455,7 @@
 .apply-own-post-msg,
 .apply-login-msg {
   font-size: 12px;
-  color: #888;
+  color: var(--color-ink-faint);
   font-style: italic;
 }
 
@@ -464,8 +464,8 @@
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-  border: 1.5px solid #ddd6fe;
+  background: linear-gradient(135deg, var(--color-primary-soft) 0%, var(--color-primary-soft) 100%);
+  border: 1.5px solid var(--color-primary-soft);
   border-radius: 12px;
   padding: 16px;
   margin-top: 16px;
@@ -481,23 +481,23 @@
   margin: 0 0 4px;
   font-size: 14px;
   font-weight: 700;
-  color: #4c1d95;
+  color: var(--color-primary-dark);
 }
 
 .apply-teacher-banner-content p {
   margin: 0;
   font-size: 12px;
-  color: #5b21b6;
+  color: var(--color-primary-dark);
   line-height: 1.45;
 }
 
 .apply-teacher-redirect-btn {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%) !important;
   color: #ffffff !important;
   font-weight: 700 !important;
 }
 
 .apply-teacher-redirect-btn:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary-dark) 100%) !important;
   transform: translateY(-1px);
 }
