@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchPosts, reportPost, fetchUserPostApplications, fetchPostApplicationCount, fetchWalletBalance, fetchUserProfile, fetchUserApplications } from './api';
 import ApplyModal from './ApplyModal';
@@ -7,6 +7,7 @@ import ChatModal from './ChatModal';
 import WalletModal from './WalletModal';
 import ApplyTeacherModal from './ApplyTeacherModal';
 import TransactionReportModal from './TransactionReportModal';
+import { formatDeadline } from './utils';
 import './Home.css';
 
 const Home = ({ user, onLogout }) => {
@@ -33,6 +34,46 @@ const Home = ({ user, onLogout }) => {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
+  // Reset session-scoped state when the signed-in user changes (adjusting state during render)
+  const [prevUserId, setPrevUserId] = useState(user?.user_id ?? null);
+  if ((user?.user_id ?? null) !== prevUserId) {
+    setPrevUserId(user?.user_id ?? null);
+    setAppliedPostIds(new Set());
+    setDbUserRole(user?.role || 'student');
+    setTeacherAppStatus(null);
+  }
+
+  const loadApplicantCounts = useCallback((postsData) => {
+    const counts = {};
+    return Promise.all(
+      postsData.map((postData) =>
+        fetchPostApplicationCount(postData.post_id)
+          .then((response) => { counts[postData.post_id] = response.data.count; })
+          .catch(() => { counts[postData.post_id] = 0; })
+      )
+    ).then(() => { setPostApplicantCounts(counts); });
+  }, []);
+
+  const loadPosts = useCallback(() => {
+    return fetchPosts()
+      .then((response) => {
+        setPosts(response.data);
+        return loadApplicantCounts(response.data);
+      })
+      .catch((err) => { console.error('Failed to load posts:', err); })
+      .finally(() => { setLoading(false); });
+  }, [loadApplicantCounts]);
+
+  const loadAppliedPosts = useCallback(() => {
+    if (!user?.user_id) return Promise.resolve();
+    return fetchUserPostApplications(user.user_id)
+      .then((response) => {
+        const ids = new Set(response.data.map((app) => app.post_id));
+        setAppliedPostIds(ids);
+      })
+      .catch((err) => { console.error('Failed to load applied posts:', err); });
+  }, [user]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -45,7 +86,7 @@ const Home = ({ user, onLogout }) => {
 
   useEffect(() => {
     loadPosts();
-  }, []);
+  }, [loadPosts]);
 
   useEffect(() => {
     if (user?.user_id) {
@@ -71,49 +112,8 @@ const Home = ({ user, onLogout }) => {
           }
         })
         .catch(() => {});
-    } else {
-      setAppliedPostIds(new Set());
-      setDbUserRole('student');
-      setTeacherAppStatus(null);
     }
-  }, [user]);
-
-  const loadAppliedPosts = async () => {
-    try {
-      const response = await fetchUserPostApplications(user.user_id);
-      const ids = new Set(response.data.map(app => app.post_id));
-      setAppliedPostIds(ids);
-    } catch (err) {
-      console.error('Failed to load applied posts:', err);
-    }
-  };
-
-  const loadPosts = async () => {
-    try {
-      const response = await fetchPosts();
-      setPosts(response.data);
-      loadApplicantCounts(response.data);
-    } catch (err) {
-      console.error('Failed to load posts:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadApplicantCounts = async (postsData) => {
-    const counts = {};
-    await Promise.all(
-      postsData.map(async (post) => {
-        try {
-          const response = await fetchPostApplicationCount(post.post_id);
-          counts[post.post_id] = response.data.count;
-        } catch {
-          counts[post.post_id] = 0;
-        }
-      })
-    );
-    setPostApplicantCounts(counts);
-  };
+  }, [user, loadAppliedPosts]);
 
   const handleLogout = () => {
     setDropdownOpen(false);
@@ -222,10 +222,8 @@ const Home = ({ user, onLogout }) => {
           {user && (
             <button className="wallet-balance-btn" onClick={() => setWalletOpen(true)} title="Open wallet">
               <span className="wallet-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
-                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
-                  <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9m18 0V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3"/>
                 </svg>
               </span>
               <span className="wallet-amount">৳{walletBalance ? Number(walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 0 }) : '0'}</span>
@@ -345,7 +343,7 @@ const Home = ({ user, onLogout }) => {
               {query ? (
                 <>
                   <strong>No posts match &ldquo;{searchQuery.trim()}&rdquo;</strong>
-                  <span className="empty-hint">Try a different course code, topic, or tutor name.</span>
+                  <span className="empty-hint">Try a different topic, level, or tutor name.</span>
                 </>
               ) : (
                 'No posts yet. Create the first one!'
@@ -383,7 +381,7 @@ const Home = ({ user, onLogout }) => {
                   <div className="card-meta">
                     <span className="meta-chip">{getDeliveryLabel(post.delivery_format)}</span>
                     <span className="meta-chip funded">100% Funded</span>
-                    {post.deadline && <span className="meta-chip due-chip">Due {post.deadline}</span>}
+                    {post.deadline && <span className="meta-chip due-chip">Due {formatDeadline(post.deadline)}</span>}
                   </div>
 
                   <div className="card-bottom">

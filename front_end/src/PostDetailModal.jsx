@@ -1,9 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchPostApplications, updateApplicationStatus, closePost, checkReviewExists } from './api';
 import ConfirmModal from './ConfirmModal';
 import ReviewModal from './ReviewModal';
 import TransactionReportModal from './TransactionReportModal';
+import { formatDeadline } from './utils';
 import './PostDetailModal.css';
+
+const getTimeAgo = (dateStr) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+};
 
 const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   const [applications, setApplications] = useState([]);
@@ -15,9 +26,29 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   const [txDisputeOpen, setTxDisputeOpen] = useState(false);
   const [reviewedApps, setReviewedApps] = useState(new Set());
 
+  const loadApplications = useCallback(() => {
+    return fetchPostApplications(post.post_id)
+      .then((response) => {
+        setApplications(response.data);
+        const reviewed = new Set();
+        const checks = response.data
+          .filter((app) => app.status === 'completed')
+          .map((app) =>
+            checkReviewExists(post.post_id, user.user_id)
+              .then((res) => {
+                if (res.data.exists) reviewed.add(app.application_id);
+              })
+              .catch(() => {})
+          );
+        return Promise.all(checks).then(() => { setReviewedApps(reviewed); });
+      })
+      .catch((err) => { console.error('Failed to load applications:', err); })
+      .finally(() => { setLoading(false); });
+  }, [post.post_id, user.user_id]);
+
   useEffect(() => {
     loadApplications();
-  }, [post.post_id]);
+  }, [loadApplications]);
 
   const handleClosePost = () => {
     setConfirmModal({
@@ -36,32 +67,6 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
         }
       }
     });
-  };
-
-  const loadApplications = async () => {
-    setLoading(true);
-    try {
-      const response = await fetchPostApplications(post.post_id);
-      setApplications(response.data);
-
-      // Check review status for completed apps
-      const reviewed = new Set();
-      for (const app of response.data) {
-        if (app.status === 'completed') {
-          try {
-            const res = await checkReviewExists(post.post_id, user.user_id);
-            if (res.data.exists) {
-              reviewed.add(app.application_id);
-            }
-          } catch (e) {}
-        }
-      }
-      setReviewedApps(reviewed);
-    } catch (err) {
-      console.error('Failed to load applications:', err);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleStatusChange = async (applicationId, newStatus, requestedBy) => {
@@ -95,16 +100,6 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
     if (half) stars += '½';
     for (let i = full + (half ? 1 : 0); i < 5; i++) stars += '☆';
     return stars;
-  };
-
-  const getTimeAgo = (dateStr) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
   };
 
   const isPostSettled = post.status === 'completed' || post.status === 'resolved' || Boolean(post.is_completed) || applications.some(a => a.status === 'completed');
@@ -149,7 +144,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
           {/* Post Info */}
           <div className="pd-post-info">
             <div className="pd-post-meta">
-              <span className="pd-course-code">{post.course_code}</span>
+              {post.course_code && <span className="pd-course-code">{post.course_code}</span>}
               <span className="pd-category">{post.category}</span>
             </div>
             <h4 className="pd-post-title">{post.title}</h4>
@@ -157,7 +152,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
             <div className="pd-post-details">
               <span className="pd-bounty">৳{post.bounty}</span>
               <span className="pd-delivery">{getDeliveryLabel(post.delivery_format)}</span>
-              {post.deadline && <span className="pd-deadline">Due: {post.deadline}</span>}
+              {post.deadline && <span className="pd-deadline">Due: {formatDeadline(post.deadline)}</span>}
             </div>
           </div>
 

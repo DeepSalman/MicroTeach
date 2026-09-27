@@ -260,7 +260,7 @@ const DisputesEscrow = ({ user }) => {
                     <div className="de-card-header-left">
                       <span className="de-id">{caseId}</span>
                       <span className="de-dot">•</span>
-                      <span className="de-course">{item.course_code}: {item.post_title}</span>
+                      <span className="de-course">{item.course_code ? `${item.course_code}: ` : ''}{item.post_title}</span>
                       <span className="de-priority-badge">{getDisputeTypeLabel(item.dispute_type)}</span>
                     </div>
                     <div className="de-card-header-right">

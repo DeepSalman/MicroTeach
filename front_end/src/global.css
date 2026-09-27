@@ -4,7 +4,7 @@
    ============================================================ */
 
 /* --- Google Fonts Import --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 /* --- Font Family Variables --- */
 :root {
@@ -50,14 +50,14 @@
   --color-border: #e6e4da;
   --color-card: #ffffff;
 
-  /* Primary font for everything */
+  /* Secondary text (body, labels, UI) — neo-grotesque sans-serif */
   --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Monospace for code, input fields, technical elements */
   --font-mono: 'Courier New', 'SF Mono', 'Fira Code', monospace;
 
-  /* Heading font (same as primary, but you can change to a display font) */
-  --font-heading: var(--font-primary);
+  /* Primary text (headings & bigger display text) */
+  --font-heading: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* --- Heading Sizes --- */
   --text-h1: 2.0rem;

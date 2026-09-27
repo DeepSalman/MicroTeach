@@ -120,7 +120,7 @@
   padding: 8px 14px;
   border-radius: 10px;
   border: 1.5px solid var(--color-accent);
-  background: linear-gradient(135deg, var(--color-surface-soft), var(--color-surface));
+  background: #fff;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -129,7 +129,7 @@
 }
 
 .wallet-balance-btn:hover {
-  background: linear-gradient(135deg, var(--color-surface), var(--color-accent-soft));
+  background: var(--color-surface-soft);
   border-color: var(--color-accent-dark);
 }
 

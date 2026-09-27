@@ -1,6 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchPostApplications, applyToPost, withdrawApplication } from './api';
+import { formatDeadline } from './utils';
 import './ApplyModal.css';
+
+const getTimeAgo = (dateStr) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+};
 
 const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, onOpenTeacherModal }) => {
   const [applications, setApplications] = useState([]);
@@ -14,20 +25,16 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
   const isOwnPost = user && String(post.user_id) === String(user.user_id);
   const isTeacher = user && (user.role === 'both' || user.role === 'tutor');
 
-  useEffect(() => {
-    loadApplications();
+  const loadApplications = useCallback(() => {
+    return fetchPostApplications(post.post_id)
+      .then((res) => { setApplications(res.data); })
+      .catch((err) => { console.error('Failed to load applications:', err); })
+      .finally(() => { setLoading(false); });
   }, [post.post_id]);
 
-  const loadApplications = async () => {
-    try {
-      const response = await fetchPostApplications(post.post_id);
-      setApplications(response.data);
-    } catch (err) {
-      console.error('Failed to load applications:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    loadApplications();
+  }, [loadApplications]);
 
   const handleApply = async () => {
     setSubmitting(true);
@@ -90,16 +97,6 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
     return sum % 4;
   };
 
-  const getTimeAgo = (dateStr) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  };
-
   return (
     <div className="apply-overlay" onClick={onClose}>
       <div className="apply-modal" onClick={(e) => e.stopPropagation()}>
@@ -112,7 +109,7 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
           {/* Post Info */}
           <div className="apply-post-info">
             <div className="apply-post-meta">
-              <span className="apply-course-code">{post.course_code}</span>
+              {post.course_code && <span className="apply-course-code">{post.course_code}</span>}
               <span className="apply-category">{post.category}</span>
             </div>
             <h4 className="apply-post-title">{post.title}</h4>
@@ -120,7 +117,7 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
             <div className="apply-post-details">
               <span className="apply-bounty">৳{post.bounty}</span>
               <span className="apply-delivery">{getDeliveryLabel(post.delivery_format)}</span>
-              {post.deadline && <span className="apply-deadline">Due: {post.deadline}</span>}
+              {post.deadline && <span className="apply-deadline">Due: {formatDeadline(post.deadline)}</span>}
             </div>
           </div>
 

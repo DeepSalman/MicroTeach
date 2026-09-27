@@ -107,8 +107,12 @@ const ReportQueue = ({ user }) => {
                 <div className="rq-card-left">
                   <span className="rq-id">#{item.report_id}</span>
                   <span className="rq-dot">&bull;</span>
-                  <span className="rq-course">{item.course_code}</span>
-                  <span className="rq-dot">&bull;</span>
+                  {item.course_code && (
+                    <>
+                      <span className="rq-course">{item.course_code}</span>
+                      <span className="rq-dot">&bull;</span>
+                    </>
+                  )}
                   <span className="rq-time">{getTimeAgo(item.created_at)}</span>
                 </div>
                 <span className={`rq-status-badge ${item.status}`}>

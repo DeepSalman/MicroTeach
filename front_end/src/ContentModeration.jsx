@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchPosts } from './api';
+import { formatDeadline } from './utils';
 import './ContentModeration.css';
 
 const ContentModeration = ({ user }) => {
@@ -90,12 +91,12 @@ const ContentModeration = ({ user }) => {
                       </div>
                     </div>
                   </td>
-                  <td><span className="course-code">{post.course_code}</span></td>
+                  <td>{post.course_code && <span className="course-code">{post.course_code}</span>}</td>
                   <td className="td-title">{post.title}</td>
                   <td><span className="category-tag">{post.category}</span></td>
                   <td>{getDeliveryLabel(post.delivery_format)}</td>
                   <td className="td-bounty">৳{post.bounty}</td>
-                  <td className="td-deadline">{post.deadline || '—'}</td>
+                  <td className="td-deadline">{formatDeadline(post.deadline) || '—'}</td>
                   <td>
                     <span className={`status-badge ${statusBadge.class}`}>
                       {statusBadge.label}

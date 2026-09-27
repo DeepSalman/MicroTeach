@@ -98,7 +98,7 @@ const TransactionReportModal = ({ post, user, isOpen, onClose, onSuccess }) => {
             <div className="trm-eyebrow">ESCROW &amp; TRANSACTION DISPUTE</div>
             <h2 className="trm-title">Report Transaction Issue</h2>
             <div className="trm-post-ref">
-              <span className="trm-course-tag">{post.course_code}</span>
+              {post.course_code && <span className="trm-course-tag">{post.course_code}</span>}
               <span className="trm-post-title-text">{post.title || post.post_title}</span>
             </div>
           </div>

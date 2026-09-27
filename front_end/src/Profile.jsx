@@ -272,10 +272,8 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
         </div>
         <div className="header-actions">
           <button className="wallet-balance-btn" onClick={() => setWalletOpen(true)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
-              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
-              <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9m18 0V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3"/>
             </svg>
             <span>৳{walletBalance ? Number(walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 0 }) : '0'}</span>
           </button>
@@ -489,7 +487,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                 return (
                   <div key={post.post_id} className="post-card">
                     <div className="post-card-header">
-                      <span className="course-badge">{post.course_code.split(' ')[0]}</span>
+                      {post.course_code && <span className="course-badge">{post.course_code.split(' ')[0]}</span>}
                       <span className="status-badge">● {statusBadge.text}</span>
                     </div>
                     <div className="post-card-meta">
@@ -572,7 +570,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                 return (
                   <div key={app.application_id} className={`post-card ${isAccepted ? 'post-card--accepted' : ''} ${isCancelRequested ? 'post-card--cancel-requested' : ''} ${isCancelled ? 'post-card--cancelled' : ''} ${isCompleted ? 'post-card--completed' : ''}`}>
                     <div className="post-card-header">
-                      <span className="course-badge">{app.course_code?.split(' ')[0]}</span>
+                      {app.course_code && <span className="course-badge">{app.course_code.split(' ')[0]}</span>}
                       {isAccepted && <span className="status-badge status-badge--accepted">✓ Accepted</span>}
                       {isRejected && <span className="status-badge status-badge--rejected">✕ Rejected</span>}
                       {isPending && <span className="status-badge status-badge--pending">● Pending</span>}

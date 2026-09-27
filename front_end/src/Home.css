@@ -184,7 +184,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-accent-soft), var(--color-accent));
   color: var(--color-accent-ink);
 }
 

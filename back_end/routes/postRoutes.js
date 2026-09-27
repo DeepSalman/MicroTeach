@@ -72,8 +72,8 @@ router.get('/user/:userId', async (req, res) => {
 router.post('/', async (req, res) => {
   const { user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent } = req.body;
 
-  if (!user_id || !category || !course_code || !title) {
-    return res.status(400).json({ message: 'User ID, category, course code, and title are required.' });
+  if (!user_id || !category || !title) {
+    return res.status(400).json({ message: 'User ID, category, and title are required.' });
   }
 
   const bountyAmount = parseFloat(bounty) || 0;
@@ -100,7 +100,7 @@ router.post('/', async (req, res) => {
     const [result] = await db.query(query, [
       user_id,
       category,
-      course_code,
+      course_code || '',
       title,
       description || '',
       delivery_format || 'live_call',
