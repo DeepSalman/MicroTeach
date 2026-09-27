@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useState, useEffect } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float } from '@react-three/drei';
 import * as THREE from 'three';
@@ -13,184 +13,11 @@ function seededRandom(seed) {
   };
 }
 
-// ==========================================
-// 1. ORIGINAL BUTTERFLY DESIGN (PRESERVED)
-// ==========================================
-function OriginalButterflyWing({ side, wingRef }) {
-  const isRight = side === 'right';
-  const sign = isRight ? 1 : -1;
-
-  const wingShape = useMemo(() => {
-    const shape = new THREE.Shape();
-    shape.moveTo(0, 0);
-    shape.bezierCurveTo(0.3 * sign, 0.6, 1.2 * sign, 1.0, 1.4 * sign, 0.7);
-    shape.bezierCurveTo(1.5 * sign, 0.5, 1.3 * sign, 0.1, 1.0 * sign, -0.1);
-    shape.bezierCurveTo(0.7 * sign, -0.3, 0.3 * sign, -0.4, 0.15 * sign, -0.25);
-    shape.bezierCurveTo(0.05 * sign, -0.15, 0, -0.05, 0, 0);
-    return shape;
-  }, [sign]);
-
-  const lowerWingShape = useMemo(() => {
-    const shape = new THREE.Shape();
-    shape.moveTo(0, 0);
-    shape.bezierCurveTo(0.2 * sign, -0.3, 0.8 * sign, -0.7, 0.9 * sign, -0.5);
-    shape.bezierCurveTo(0.95 * sign, -0.35, 0.7 * sign, -0.05, 0.4 * sign, 0.05);
-    shape.bezierCurveTo(0.2 * sign, 0.1, 0.05 * sign, 0.05, 0, 0);
-    return shape;
-  }, [sign]);
-
-  return (
-    <group ref={wingRef}>
-      <mesh rotation={[0.1, 0, 0]}>
-        <shapeGeometry args={[wingShape]} />
-        <meshStandardMaterial
-          color="#ff2d78"
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0.95}
-          roughness={0.2}
-          metalness={0.3}
-          emissive="#ff2d78"
-          emissiveIntensity={0.3}
-        />
-      </mesh>
-      <mesh position={[0.6 * sign, 0.35, 0.01]} rotation={[0.1, 0, 0]}>
-        <circleGeometry args={[0.15, 32]} />
-        <meshStandardMaterial
-          color="#ffffff"
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0.4}
-        />
-      </mesh>
-      <mesh position={[0.35 * sign, 0.15, 0.01]} rotation={[0.1, 0, 0]}>
-        <circleGeometry args={[0.07, 32]} />
-        <meshStandardMaterial
-          color="#ffe066"
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0.7}
-        />
-      </mesh>
-      <mesh position={[0, -0.05, 0]} rotation={[-0.15, 0, 0]}>
-        <shapeGeometry args={[lowerWingShape]} />
-        <meshStandardMaterial
-          color="#ff6b1a"
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0.92}
-          roughness={0.2}
-          metalness={0.3}
-          emissive="#ff6b1a"
-          emissiveIntensity={0.25}
-        />
-      </mesh>
-      <mesh position={[0.5 * sign, -0.3, 0.01]} rotation={[-0.15, 0, 0]}>
-        <circleGeometry args={[0.1, 32]} />
-        <meshStandardMaterial
-          color="#ffffff"
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0.35}
-        />
-      </mesh>
-    </group>
-  );
-}
-
-function OriginalButterflyBody() {
-  return (
-    <group>
-      <mesh>
-        <capsuleGeometry args={[0.04, 0.6, 8, 16]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
-      </mesh>
-      <mesh position={[0, 0.42, 0]}>
-        <sphereGeometry args={[0.06, 16, 16]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
-      </mesh>
-      <mesh position={[-0.03, 0.44, 0.04]}>
-        <sphereGeometry args={[0.015, 8, 8]} />
-        <meshStandardMaterial color="#e74c8b" emissive="#e74c8b" emissiveIntensity={0.5} />
-      </mesh>
-      <mesh position={[0.03, 0.44, 0.04]}>
-        <sphereGeometry args={[0.015, 8, 8]} />
-        <meshStandardMaterial color="#e74c8b" emissive="#e74c8b" emissiveIntensity={0.5} />
-      </mesh>
-      <OriginalAntenna side="left" />
-      <OriginalAntenna side="right" />
-    </group>
-  );
-}
-
-function OriginalAntenna({ side }) {
-  const isLeft = side === 'left';
-  const sign = isLeft ? -1 : 1;
-  const curve = useMemo(() => {
-    return new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, 0.44, 0),
-      new THREE.Vector3(sign * 0.15, 0.65, 0.05),
-      new THREE.Vector3(sign * 0.2, 0.75, 0.02)
-    );
-  }, [sign]);
-  const points = useMemo(() => curve.getPoints(20), [curve]);
-
-  return (
-    <group>
-      <line>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={points.length}
-            array={new Float32Array(points.flatMap(p => [p.x, p.y, p.z]))}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color="#ffffff" linewidth={1} />
-      </line>
-      <mesh position={[sign * 0.2, 0.75, 0.02]}>
-        <sphereGeometry args={[0.02, 8, 8]} />
-        <meshStandardMaterial color="#ffffff" emissive="#ff2d78" emissiveIntensity={0.3} />
-      </mesh>
-    </group>
-  );
-}
-
-function OriginalButterfly() {
-  const groupRef = useRef();
-  const leftWingRef = useRef();
-  const rightWingRef = useRef();
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    if (leftWingRef.current && rightWingRef.current) {
-      const flapAngle = Math.sin(t * 6) * 1.2;
-      leftWingRef.current.rotation.y = flapAngle;
-      rightWingRef.current.rotation.y = -flapAngle;
-    }
-    if (groupRef.current) {
-      groupRef.current.position.x = Math.sin(t * 0.7) * 0.8;
-      groupRef.current.position.y = Math.sin(t * 1.1) * 0.3;
-      groupRef.current.position.z = Math.cos(t * 0.5) * 0.4;
-      groupRef.current.rotation.y = Math.sin(t * 0.7) * 0.3;
-      groupRef.current.rotation.z = Math.sin(t * 1.1) * 0.1;
-    }
-  });
-
-  return (
-    <group ref={groupRef} rotation={[0.3, 0, 0]}>
-      <OriginalButterflyBody />
-      <OriginalButterflyWing side="left" wingRef={leftWingRef} />
-      <OriginalButterflyWing side="right" wingRef={rightWingRef} />
-    </group>
-  );
-}
-
 // ==============================================================
-// 2. NEW ULTRA-VIBRANT BUTTERFLY (BIOLUMINESCENT SWALLOWTAIL / MORPHO)
+// ULTRA-VIBRANT BUTTERFLY (BIOLUMINESCENT SWALLOWTAIL / MORPHO)
 // ==============================================================
 
-// Theme color palettes for the vibrant design
+// Theme color palettes
 const VIBRANT_THEMES = {
   morpho: {
     name: 'Celestial Morpho',
@@ -240,11 +67,8 @@ function VibrantForewing({ side, wingRef, themeConfig }) {
   const outerForewingShape = useMemo(() => {
     const s = new THREE.Shape();
     s.moveTo(0, 0);
-    // Sweeping leading edge to apex
     s.bezierCurveTo(0.25 * sign, 0.7, 0.9 * sign, 1.45, 1.65 * sign, 1.2);
-    // Outer scalloped apex curve
     s.bezierCurveTo(1.8 * sign, 1.05, 1.7 * sign, 0.65, 1.35 * sign, 0.2);
-    // Inner trailing margin back to body
     s.bezierCurveTo(1.0 * sign, -0.15, 0.5 * sign, -0.25, 0.2 * sign, -0.15);
     s.bezierCurveTo(0.05 * sign, -0.08, 0, -0.02, 0, 0);
     return s;
@@ -264,27 +88,23 @@ function VibrantForewing({ side, wingRef, themeConfig }) {
   // Delicate filigree vein branches
   const veins = useMemo(() => {
     return [
-      // Subcostal / radial vein
       createVeinGeometry([
         new THREE.Vector3(0, 0.05, 0.01),
         new THREE.Vector3(0.5 * sign, 0.6, 0.01),
         new THREE.Vector3(1.1 * sign, 1.05, 0.01),
         new THREE.Vector3(1.55 * sign, 1.12, 0.01)
       ]),
-      // Main medial vein
       createVeinGeometry([
         new THREE.Vector3(0, 0.02, 0.01),
         new THREE.Vector3(0.55 * sign, 0.45, 0.01),
         new THREE.Vector3(1.15 * sign, 0.7, 0.01),
         new THREE.Vector3(1.5 * sign, 0.8, 0.01)
       ]),
-      // Branch 1
       createVeinGeometry([
         new THREE.Vector3(0.55 * sign, 0.45, 0.01),
         new THREE.Vector3(1.0 * sign, 0.4, 0.01),
         new THREE.Vector3(1.4 * sign, 0.5, 0.01)
       ]),
-      // Branch 2
       createVeinGeometry([
         new THREE.Vector3(0.35 * sign, 0.25, 0.01),
         new THREE.Vector3(0.85 * sign, 0.15, 0.01),
@@ -380,17 +200,12 @@ function VibrantHindwing({ side, wingRef, themeConfig }) {
   const isRight = side === 'right';
   const sign = isRight ? 1 : -1;
 
-  // Hindwing shape with swallowtail streamer
   const hindwingShape = useMemo(() => {
     const s = new THREE.Shape();
     s.moveTo(0, 0);
-    // Inner margin along abdomen
     s.bezierCurveTo(0.15 * sign, -0.3, 0.3 * sign, -0.65, 0.45 * sign, -0.9);
-    // Lower scalloped edge leading to swallowtail extension
     s.bezierCurveTo(0.6 * sign, -1.0, 0.8 * sign, -1.15, 0.95 * sign, -1.05);
-    // Swallowtail tail protrusion
     s.bezierCurveTo(1.1 * sign, -1.25, 1.15 * sign, -1.2, 1.05 * sign, -0.95);
-    // Lateral scalloped margin back towards hinge
     s.bezierCurveTo(1.25 * sign, -0.7, 1.2 * sign, -0.35, 0.85 * sign, -0.05);
     s.bezierCurveTo(0.55 * sign, 0.12, 0.2 * sign, 0.1, 0, 0);
     return s;
@@ -438,17 +253,14 @@ function VibrantHindwing({ side, wingRef, themeConfig }) {
 
       {/* 3. Jewel Eye-spot (Ocellus) */}
       <group position={[0.62 * sign, -0.52, 0.01]}>
-        {/* Outer Ring */}
         <mesh>
           <circleGeometry args={[0.13, 24]} />
           <meshStandardMaterial color={themeConfig.edge} side={THREE.DoubleSide} />
         </mesh>
-        {/* Gold Ring */}
         <mesh position={[0, 0, 0.002]}>
           <circleGeometry args={[0.09, 24]} />
           <meshStandardMaterial color={themeConfig.gold} emissive={themeConfig.gold} emissiveIntensity={0.6} side={THREE.DoubleSide} />
         </mesh>
-        {/* Electric Pupil */}
         <mesh position={[0, 0, 0.004]}>
           <circleGeometry args={[0.05, 24]} />
           <meshStandardMaterial color={themeConfig.primary} emissive={themeConfig.glow} emissiveIntensity={1.0} side={THREE.DoubleSide} />
@@ -604,18 +416,15 @@ function VibrantButterfly({ theme = 'morpho' }) {
 
     // 1. Aerodynamic Dual-Phase Flapping
     if (leftForewingRef.current && rightForewingRef.current) {
-      // Forewing leads flap stroke
       const forewingFlap = Math.sin(t * 5.6) * 1.18;
       leftForewingRef.current.rotation.y = forewingFlap;
       rightForewingRef.current.rotation.y = -forewingFlap;
 
-      // Dynamic wing dihedral flex on z-axis
       leftForewingRef.current.rotation.z = Math.cos(t * 5.6) * 0.14;
       rightForewingRef.current.rotation.z = -Math.cos(t * 5.6) * 0.14;
     }
 
     if (leftHindwingRef.current && rightHindwingRef.current) {
-      // Hindwing flaps with natural 0.24 rad phase lag for realistic ripple motion
       const hindwingFlap = Math.sin(t * 5.6 - 0.24) * 1.05;
       leftHindwingRef.current.rotation.y = hindwingFlap;
       rightHindwingRef.current.rotation.y = -hindwingFlap;
@@ -629,7 +438,6 @@ function VibrantButterfly({ theme = 'morpho' }) {
       groupRef.current.position.y = Math.sin(t * 1.05) * 0.35;
       groupRef.current.position.z = Math.cos(t * 0.5) * 0.45;
 
-      // Realistic banking into flight curves
       groupRef.current.rotation.y = Math.sin(t * 0.65) * 0.25;
       groupRef.current.rotation.z = Math.sin(t * 1.05) * 0.12;
       groupRef.current.rotation.x = 0.25 + Math.cos(t * 0.8) * 0.08;
@@ -702,69 +510,20 @@ function VibrantSparkles({ count = 90, theme = 'morpho' }) {
 
 // Floating Scene Wrapper
 function Scene({ design }) {
+  const activeTheme = design === 'aurora' ? 'aurora' : 'morpho';
   return (
     <Float speed={2.2} rotationIntensity={0.25} floatIntensity={0.6}>
-      {design === 'classic' && <OriginalButterfly />}
-      {design === 'morpho' && <VibrantButterfly theme="morpho" />}
-      {design === 'aurora' && <VibrantButterfly theme="aurora" />}
-
-      {design === 'classic' ? (
-        <OriginalSparkleParticles count={80} />
-      ) : (
-        <VibrantSparkles count={90} theme={design} />
-      )}
+      <VibrantButterfly theme={activeTheme} />
+      <VibrantSparkles count={90} theme={activeTheme} />
     </Float>
   );
 }
 
-function OriginalSparkleParticles({ count = 80 }) {
-  const meshRef = useRef();
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const [data] = useState(() => {
-    const rand = seededRandom(77);
-    return Array.from({ length: count }, () => ({
-      position: [(rand() - 0.5) * 8, (rand() - 0.5) * 6, (rand() - 0.5) * 4],
-      speed: 0.3 + rand() * 0.7,
-      offset: rand() * Math.PI * 2,
-      scale: 0.01 + rand() * 0.03,
-    }));
-  });
-
-  useFrame(({ clock }) => {
-    if (!meshRef.current) return;
-    const t = clock.getElapsedTime();
-    data.forEach((p, i) => {
-      const x = p.position[0] + Math.sin(t * p.speed + p.offset) * 0.5;
-      const y = p.position[1] + Math.cos(t * p.speed * 0.7 + p.offset) * 0.4;
-      const z = p.position[2] + Math.sin(t * 0.3 + p.offset) * 0.3;
-      dummy.position.set(x, y, z);
-      const s = p.scale * (0.5 + Math.sin(t * 3 + p.offset) * 0.5);
-      dummy.scale.setScalar(s);
-      dummy.updateMatrix();
-      meshRef.current.setMatrixAt(i, dummy.matrix);
-    });
-    meshRef.current.instanceMatrix.needsUpdate = true;
-  });
-
-  return (
-    <instancedMesh ref={meshRef} args={[null, null, count]}>
-      <sphereGeometry args={[1, 6, 6]} />
-      <meshStandardMaterial
-        color="#f5c6d0"
-        emissive="#e74c8b"
-        emissiveIntensity={0.8}
-        transparent
-        opacity={0.6}
-      />
-    </instancedMesh>
-  );
-}
-
-// Main Component with Live Interactive Selector
+// Main Component with Upper-Center Modern Glassmorphic Nav Bar
 const BookAnimation = () => {
-  // Read saved design or default to the new vibrant 'morpho'
   const [design, setDesign] = useState(() => {
-    return localStorage.getItem('microteach_butterfly_design') || 'morpho';
+    const saved = localStorage.getItem('microteach_butterfly_design');
+    return saved === 'aurora' ? 'aurora' : 'morpho';
   });
 
   const handleSelectDesign = (newDesign) => {
@@ -774,36 +533,29 @@ const BookAnimation = () => {
 
   return (
     <div className="book-animation-container">
-      {/* Interactive Switcher Pill Bar for User Comparison */}
-      <div className="butterfly-switcher-bar">
-        <span className="switcher-label">Butterfly Design:</span>
-        <div className="switcher-buttons">
+      {/* Upper-Center Aligned Modern Glassmorphic Navigation Bar */}
+      <nav className="login-animation-nav" aria-label="Animation Selector">
+        <div className="nav-buttons">
           <button
             type="button"
-            className={`switcher-btn ${design === 'classic' ? 'active' : ''}`}
-            onClick={() => handleSelectDesign('classic')}
-            title="The original pink & orange butterfly"
-          >
-            <span>🦋</span> Classic Coral
-          </button>
-          <button
-            type="button"
-            className={`switcher-btn ${design === 'morpho' ? 'active' : ''}`}
+            className={`nav-btn ${design === 'morpho' ? 'active' : ''}`}
             onClick={() => handleSelectDesign('morpho')}
-            title="New ultra-vibrant electric cyan & neon fuchsia Morpho"
+            title="Celestial Morpho Butterfly"
           >
-            <span>✨</span> Celestial Morpho
+            <span className="btn-icon">✨</span>
+            <span className="btn-text">Celestial Morpho</span>
           </button>
           <button
             type="button"
-            className={`switcher-btn ${design === 'aurora' ? 'active' : ''}`}
+            className={`nav-btn ${design === 'aurora' ? 'active' : ''}`}
             onClick={() => handleSelectDesign('aurora')}
-            title="New radiant imperial gold & sunset amber Swallowtail"
+            title="Golden Aurora Butterfly"
           >
-            <span>🌟</span> Golden Aurora
+            <span className="btn-icon">🌟</span>
+            <span className="btn-text">Golden Aurora</span>
           </button>
         </div>
-      </div>
+      </nav>
 
       <Canvas
         camera={{ position: [0, 0, 5], fov: 48 }}

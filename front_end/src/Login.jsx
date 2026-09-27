@@ -37,33 +37,31 @@ const Login = ({ onLogin }) => {
         
         {/* Left Panel: Login Form */}
         <section className="login-left-panel">
-          <div>
-            <div className="eyebrow">BUILT FOR CAMPUS MICRO-LEARNING .</div>
-
-            <div className="title-block">
-              <div className="title-label">
-                <svg viewBox="0 0 16 16" fill="currentColor" width="10" height="10">
-                  <path d="M4 1h8v2H4V1zm0 12h8v2H4v-2zM1 4h14v8H1V4z"/>
-                </svg>
-                TITLE
-              </div>
-              <div className="title-box">
-                <h1>MicroTeach. The campus exchange built for peer mastery.</h1>
-              </div>
+          <div className="login-form">
+            <div className="login-brand">
+              <span className="login-brand-mark">
+                <img src="/logo.png" alt="" />
+              </span>
+              <span className="login-brand-name">MicroTeach</span>
             </div>
+
+            <header className="login-heading">
+              <h1>Welcome back</h1>
+              <p>Sign in to continue.</p>
+            </header>
 
             {message && <div className="error-message">{message}</div>}
 
             <form onSubmit={handleLogin}>
               <div className="form-group">
-                <div className="form-label">
-                  <span>Email Address</span>
-                  <span className="required">REQUIRED</span>
+                <div className="field-label">
+                  <label htmlFor="email">Email</label>
                 </div>
                 <input
+                  id="email"
                   className="form-input"
                   type="email"
-                  placeholder="you@email.com"
+                  placeholder="you@bracu.ac.bd"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -71,28 +69,39 @@ const Login = ({ onLogin }) => {
               </div>
 
               <div className="form-group">
-                <div className="form-label">
-                  <span>Password</span>
-                  <Link to="/forgot-password" className="forgot">Forgot?</Link>
+                <div className="field-label">
+                  <label htmlFor="password">Password</label>
+                  <Link to="/forgot-password" className="forgot">Forgot password?</Link>
                 </div>
                 <div className="password-wrapper">
                   <input
+                    id="password"
                     className="form-input"
                     type={showPassword ? 'text' : 'password'}
-                    id="password"
-                    placeholder="••••••••••••"
+                    placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    style={{ paddingRight: '40px' }}
                   />
                   <button
                     type="button"
                     className="password-toggle"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label="Toggle password"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? '🙈' : '👁'}
+                    {showPassword ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 3l18 18" />
+                        <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+                        <path d="M9.4 5.3A9.6 9.6 0 0 1 12 5c5.5 0 9.5 7 9.5 7a17.7 17.7 0 0 1-3.4 4.3" />
+                        <path d="M6.6 6.6A17.6 17.6 0 0 0 2.5 12S6.5 19 12 19a9.7 9.7 0 0 0 4.4-1.1" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
                   </button>
                 </div>
               </div>
@@ -104,20 +113,24 @@ const Login = ({ onLogin }) => {
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
-                  Remember authenticated session
+                  Keep me signed in
                 </label>
-                <span className="ttl">TTL: 14 DAYS</span>
               </div>
 
               <button type="submit" className="btn-signin" disabled={loading}>
-                <span>{loading ? 'SIGNING IN...' : 'SIGN IN'}</span>
-                <span className="arrow">&rarr;</span>
+                <span>{loading ? 'Signing in...' : 'Sign in'}</span>
+                <span className="arrow">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14" />
+                    <path d="m13 6 6 6-6 6" />
+                  </svg>
+                </span>
               </button>
 
-              <div className="register-link">
-                Don't have an account?
-                <Link to="/register">Register student account &rarr;</Link>
-              </div>
+              <p className="register-link">
+                New to MicroTeach?
+                <Link to="/register">Create an account</Link>
+              </p>
             </form>
           </div>
         </section>

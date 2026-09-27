@@ -90,6 +90,53 @@
   --tracking-normal: 0;
   --tracking-wide: 0.025em;
   --tracking-wider: 0.05em;
+
+  /* --- Motion --- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   PAGE-LOAD MOTION — shared keyframes for entrance animations
+   ============================================================ */
+@keyframes mt-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mt-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mt-card-in {
+  from { opacity: 0; transform: translateY(26px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes mt-page-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Wraps every routed page (see PageEnter in App.jsx) */
+.page-enter {
+  animation: mt-page-in 0.55s var(--ease-out) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .login-page-wrapper,
+  .login-left-panel,
+  .login-form > *,
+  .login-right-panel,
+  .center-brand,
+  .register-page-wrapper,
+  .register-card,
+  .register-card > *,
+  .register-form > * {
+    animation: none !important;
+  }
 }
 
 /* --- Global Base Styles --- */

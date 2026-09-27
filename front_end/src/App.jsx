@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Home from './Home';
 import Login from './Login';
 import Register from './Register';
@@ -15,6 +15,25 @@ import ContentModeration from './ContentModeration';
 import ReportQueue from './ReportQueue';
 import DisputesEscrow from './DisputesEscrow';
 import TeacherApplications from './TeacherApplications';
+
+// Shared page-load transition: remounts the page shell on every path change
+// so the entrance animation replays on each navigation.
+const PageEnter = ({ children, replay = true }) => {
+  const { pathname } = useLocation();
+  return (
+    <div className="page-enter" key={replay ? pathname : 'page'}>
+      {children}
+    </div>
+  );
+};
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
 
 // Dashboard - shown after login
 const Dashboard = ({ user, onLogout }) => {
@@ -64,11 +83,12 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         {/* Landing page - marketplace home, passes user state */}
         <Route 
           path="/" 
-          element={<Home user={currentUser} onLogout={handleLogout} />} 
+          element={<PageEnter><Home user={currentUser} onLogout={handleLogout} /></PageEnter>} 
         />
 
         {/* Login page */}
@@ -78,7 +98,7 @@ function App() {
             currentUser ? (
               <Navigate to="/" />
             ) : (
-              <Login onLogin={handleLogin} />
+              <PageEnter><Login onLogin={handleLogin} /></PageEnter>
             )
           } 
         />
@@ -90,7 +110,7 @@ function App() {
             currentUser ? (
               <Navigate to="/" />
             ) : (
-              <Register />
+              <PageEnter><Register /></PageEnter>
             )
           } 
         />
@@ -100,7 +120,7 @@ function App() {
           path="/create-post" 
           element={
             currentUser ? (
-              <CreatePost user={currentUser} />
+              <PageEnter><CreatePost user={currentUser} /></PageEnter>
             ) : (
               <Navigate to="/login" />
             )
@@ -112,7 +132,7 @@ function App() {
           path="/dashboard" 
           element={
             currentUser ? (
-              <Dashboard user={currentUser} onLogout={handleLogout} />
+              <PageEnter><Dashboard user={currentUser} onLogout={handleLogout} /></PageEnter>
             ) : (
               <Navigate to="/login" />
             )
@@ -124,7 +144,7 @@ function App() {
           path="/profile" 
           element={
             currentUser ? (
-              <Profile user={currentUser} onLogout={handleLogout} onProfileUpdate={handleProfileUpdate} />
+              <PageEnter><Profile user={currentUser} onLogout={handleLogout} onProfileUpdate={handleProfileUpdate} /></PageEnter>
             ) : (
               <Navigate to="/login" />
             )
@@ -136,7 +156,7 @@ function App() {
           path="/edit-profile" 
           element={
             currentUser ? (
-              <EditProfile user={currentUser} onProfileUpdate={handleProfileUpdate} />
+              <PageEnter><EditProfile user={currentUser} onProfileUpdate={handleProfileUpdate} /></PageEnter>
             ) : (
               <Navigate to="/login" />
             )
@@ -148,16 +168,16 @@ function App() {
           path="/admin"
           element={
             <RequireAdmin currentUser={currentUser}>
-              <AdminLayout user={currentUser} onLogout={handleLogout} />
+              <PageEnter replay={false}><AdminLayout user={currentUser} onLogout={handleLogout} /></PageEnter>
             </RequireAdmin>
           }
         >
-          <Route index element={<AdminPanel user={currentUser} />} />
-          <Route path="users" element={<UserManagement user={currentUser} />} />
-          <Route path="moderation" element={<ContentModeration user={currentUser} />} />
-          <Route path="reports" element={<ReportQueue user={currentUser} />} />
-          <Route path="disputes" element={<DisputesEscrow user={currentUser} />} />
-          <Route path="teacher-applications" element={<TeacherApplications user={currentUser} />} />
+          <Route index element={<PageEnter><AdminPanel user={currentUser} /></PageEnter>} />
+          <Route path="users" element={<PageEnter><UserManagement user={currentUser} /></PageEnter>} />
+          <Route path="moderation" element={<PageEnter><ContentModeration user={currentUser} /></PageEnter>} />
+          <Route path="reports" element={<PageEnter><ReportQueue user={currentUser} /></PageEnter>} />
+          <Route path="disputes" element={<PageEnter><DisputesEscrow user={currentUser} /></PageEnter>} />
+          <Route path="teacher-applications" element={<PageEnter><TeacherApplications user={currentUser} /></PageEnter>} />
         </Route>
       </Routes>
     </Router>
