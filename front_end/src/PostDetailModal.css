@@ -227,6 +227,26 @@
   flex-shrink: 0;
 }
 
+.pd-item-avatar.tone-0 {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.pd-item-avatar.tone-1 {
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
+}
+
+.pd-item-avatar.tone-2 {
+  background: var(--color-surface);
+  color: var(--color-accent-ink);
+}
+
+.pd-item-avatar.tone-3 {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
+}
+
 .pd-item-info {
   flex: 1;
   min-width: 0;

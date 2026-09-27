@@ -258,6 +258,30 @@
   flex-shrink: 0;
 }
 
+.apply-poster-avatar.tone-0,
+.apply-item-avatar.tone-0 {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.apply-poster-avatar.tone-1,
+.apply-item-avatar.tone-1 {
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
+}
+
+.apply-poster-avatar.tone-2,
+.apply-item-avatar.tone-2 {
+  background: var(--color-surface);
+  color: var(--color-accent-ink);
+}
+
+.apply-poster-avatar.tone-3,
+.apply-item-avatar.tone-3 {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
+}
+
 .apply-item-info {
   flex: 1;
   min-width: 0;
@@ -303,6 +327,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 .apply-status-badge.status-pending {
@@ -389,31 +414,24 @@
   border-top: 1px solid var(--color-border);
 }
 
-.apply-cancel-btn {
-  padding: 8px 16px;
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-ink);
-  cursor: pointer;
-}
-
-.apply-cancel-btn:hover {
-  background: var(--color-bg);
-}
-
-.apply-submit-btn {
-  padding: 8px 20px;
-  background: var(--color-primary);
-  border: none;
+.apply-submit-btn,
+.apply-withdraw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 20px;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #fff;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.apply-submit-btn {
+  background: var(--color-primary);
+  border: none;
+  color: #fff;
 }
 
 .apply-submit-btn:hover:not(:disabled) {
@@ -431,15 +449,25 @@
   gap: 10px;
 }
 
+.apply-my-status .apply-status-badge {
+  animation: apply-status-in 0.4s ease both;
+}
+
+@keyframes apply-status-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .apply-withdraw-btn {
-  padding: 6px 12px;
   background: #fff;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
   color: var(--color-danger);
-  cursor: pointer;
 }
 
 .apply-withdraw-btn:hover:not(:disabled) {

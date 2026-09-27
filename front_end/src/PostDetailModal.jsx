@@ -110,6 +110,12 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   const isPostSettled = post.status === 'completed' || post.status === 'resolved' || Boolean(post.is_completed) || applications.some(a => a.status === 'completed');
   const hasAcceptedApplicant = applications.some(a => a.status === 'accepted' || a.status === 'cancellation_requested' || a.status === 'completion_requested' || a.status === 'completed');
 
+  const getAvatarTone = (name = '') => {
+    let sum = 0;
+    for (let i = 0; i < name.length; i += 1) sum += name.charCodeAt(i);
+    return sum % 4;
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       'pending': { class: 'status-pending', text: 'Pending' },
@@ -181,7 +187,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                   return (
                     <div key={app.application_id} className={`pd-item ${isAccepted ? 'pd-item--accepted' : ''} ${isCancelRequested ? 'pd-item--cancel-requested' : ''} ${isCancelled ? 'pd-item--cancelled' : ''} ${isCompleted ? 'pd-item--completed' : ''}`}>
                       <div className="pd-item-left">
-                        <div className="pd-item-avatar">
+                        <div className={`pd-item-avatar tone-${getAvatarTone(app.applicant_name)}`}>
                           {app.applicant_name ? app.applicant_name.charAt(0).toUpperCase() : '?'}
                         </div>
                         <div className="pd-item-info">

@@ -153,25 +153,22 @@ const Home = ({ user, onLogout }) => {
 
   const getDeliveryLabel = (format) => {
     const labels = {
-      'live_call': '📹 Google Meet (30m)',
-      'annotated_pdf': '📝 Annotated Notes',
-      'video_walkthrough': '🎬 Video Walkthrough'
+      'live_call': 'Google Meet · 30 min',
+      'annotated_pdf': 'Annotated Notes',
+      'video_walkthrough': 'Video Walkthrough'
     };
-    return labels[format] || '📹 Google Meet (30m)';
+    return labels[format] || 'Google Meet · 30 min';
   };
 
-  const getStatusBadge = (status, isCompleted) => {
-    if (isCompleted || status === 'completed') {
-      return { class: 'not-selected', text: '✓ Completed' };
-    }
-    const badges = {
-      'active': { class: 'active', text: '● Active Session' },
-      'pending': { class: 'pending', text: '● Pending Review' },
-      'resolved': { class: 'not-selected', text: 'Resolved' },
-      'closed': { class: 'not-selected', text: 'Closed' },
-      'completed': { class: 'not-selected', text: '✓ Completed' }
-    };
-    return badges[status] || badges['active'];
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
+  };
+
+  const getAvatarTone = (name = '') => {
+    let sum = 0;
+    for (let i = 0; i < name.length; i += 1) sum += name.charCodeAt(i);
+    return sum % 4;
   };
 
   const query = searchQuery.trim().toLowerCase();
@@ -356,13 +353,16 @@ const Home = ({ user, onLogout }) => {
             </div>
           ) : (
             filteredPosts.map((post) => {
-              const statusBadge = getStatusBadge(post.status, post.is_completed);
               const isOwnPost = user && String(post.user_id) === String(user.user_id);
               return (
                 <div key={post.post_id} className="card">
                   <div className="card-header">
-                    <span className={`badge ${statusBadge.class}`}>{statusBadge.text}</span>
-                    <span className="course-code">{post.course_code.split(' ')[0]}</span>
+                    {post.is_urgent ? (
+                      <div className="urgent-row">
+                        <span className="meta-chip urgent-chip">High Urgency</span>
+                      </div>
+                    ) : null}
+                    <h3 className="card-title">{post.title}</h3>
                     <span className="report-btn" title="Report Content" onClick={() => openReportModal(post)}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
@@ -377,53 +377,65 @@ const Home = ({ user, onLogout }) => {
                       </span>
                     )}
                   </div>
+
                   <div className="card-subject">{post.category}</div>
-                  <div className="card-title">{post.title}</div>
+
                   <div className="card-meta">
-                    <span>{getDeliveryLabel(post.delivery_format)}</span>
-                    <span className="funded">100% Funded</span>
+                    <span className="meta-chip">{getDeliveryLabel(post.delivery_format)}</span>
+                    <span className="meta-chip funded">100% Funded</span>
+                    {post.deadline && <span className="meta-chip due-chip">Due {post.deadline}</span>}
                   </div>
-                  <div className="card-footer-meta">
-                    <div>{post.course_code} &#9733; {post.author_name}</div>
-                    <div>Posted by {post.author_name} &middot; {post.author_department || 'Dept'}</div>
-                    {post.deadline && <div className="time">⏰ Due: {post.deadline}</div>}
-                    {post.is_urgent && <div className="due">🔥 High Urgency</div>}
-                  </div>
-                    <div className="card-bottom">
+
+                  <div className="card-bottom">
+                    <div className="card-poster">
+                      <span className={`poster-avatar tone-${getAvatarTone(post.author_name)}`}>{getInitials(post.author_name)}</span>
+                      <span className="poster-info">
+                        <span className="poster-name">{post.author_name}</span>
+                        <span className="poster-sub">{post.author_department || 'Dept'}</span>
+                      </span>
+                      <span className="applicant-count">
+                        {postApplicantCounts[post.post_id] || 0} applicant{(postApplicantCounts[post.post_id] || 0) === 1 ? '' : 's'}
+                      </span>
+                    </div>
                     <div className="card-bottom-row">
-                      <div className="price"><strong>৳{post.bounty}</strong></div>
-                      {isOwnPost ? (
-                        <div className="own-post-actions">
-                          {postApplicantCounts[post.post_id] > 0 && (
-                            <span className="applicant-count-badge">{postApplicantCounts[post.post_id]} applicant{postApplicantCounts[post.post_id] !== 1 ? 's' : ''}</span>
-                          )}
+                      <div className="price">
+                        <span className="price-label">Bounty</span>
+                        <strong>৳{post.bounty}</strong>
+                      </div>
+                      <div className="card-cta">
+                        {isOwnPost ? (
                           <button className="view-details-btn" onClick={() => setDetailModalPost(post)}>View Details</button>
-                        </div>
-                      ) : user ? (
-                        (dbUserRole === 'both' || dbUserRole === 'tutor') ? (
-                          appliedPostIds.has(post.post_id) ? (
-                            <button className="apply-btn applied-btn" onClick={() => setApplyModalPost(post)}>Applied</button>
+                        ) : user ? (
+                          (dbUserRole === 'both' || dbUserRole === 'tutor') ? (
+                            appliedPostIds.has(post.post_id) ? (
+                              <button className="apply-btn applied-btn" onClick={() => setApplyModalPost(post)}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                                Applied
+                              </button>
+                            ) : (
+                              <button className="apply-btn" onClick={() => setApplyModalPost(post)}>Apply Now</button>
+                            )
+                          ) : teacherAppStatus === 'pending' ? (
+                            <button
+                              className="apply-btn pending-teacher-btn"
+                              title="Your teacher application is under review by admin"
+                              onClick={() => setApplyTeacherOpen(true)}
+                            >
+                              Application Pending
+                            </button>
                           ) : (
-                            <button className="apply-btn" onClick={() => setApplyModalPost(post)}>Apply Now</button>
+                            <button
+                              className="apply-btn apply-teacher-btn"
+                              title="Only verified teachers can apply. Click to apply for teacher"
+                              onClick={() => setApplyTeacherOpen(true)}
+                            >
+                              Apply for Teacher
+                            </button>
                           )
-                        ) : teacherAppStatus === 'pending' ? (
-                          <button
-                            className="apply-btn pending-teacher-btn"
-                            title="Your teacher application is under review by admin"
-                            onClick={() => setApplyTeacherOpen(true)}
-                          >
-                            ⏳ Application Pending
-                          </button>
-                        ) : (
-                          <button
-                            className="apply-btn apply-teacher-btn"
-                            title="Only verified teachers can apply. Click to apply for teacher"
-                            onClick={() => setApplyTeacherOpen(true)}
-                          >
-                            🎓 Apply for Teacher
-                          </button>
-                        )
-                      ) : null}
+                        ) : null}
+                      </div>
                     </div>
                     {!isOwnPost && !user && (
                       <Link to="/login" className="apply-btn login-apply-btn login-apply-btn--full">Login or Sign Up to Apply</Link>

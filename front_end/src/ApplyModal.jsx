@@ -84,6 +84,12 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
     return badges[status] || badges['pending'];
   };
 
+  const getAvatarTone = (name = '') => {
+    let sum = 0;
+    for (let i = 0; i < name.length; i += 1) sum += name.charCodeAt(i);
+    return sum % 4;
+  };
+
   const getTimeAgo = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
@@ -120,7 +126,7 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
 
           {/* Poster Info */}
           <div className="apply-poster">
-            <div className="apply-poster-avatar">
+            <div className={`apply-poster-avatar tone-${getAvatarTone(post.author_name)}`}>
               {post.author_name ? post.author_name.charAt(0).toUpperCase() : '?'}
             </div>
             <div className="apply-poster-info">
@@ -147,7 +153,7 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
                   const badge = getStatusBadge(app.status);
                   return (
                     <div key={app.application_id} className="apply-item">
-                      <div className="apply-item-avatar">
+                      <div className={`apply-item-avatar tone-${getAvatarTone(app.applicant_name)}`}>
                         {app.applicant_name ? app.applicant_name.charAt(0).toUpperCase() : '?'}
                       </div>
                       <div className="apply-item-info">
@@ -198,7 +204,6 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
         </div>
 
         <div className="apply-modal-footer">
-          <button className="apply-cancel-btn" onClick={onClose}>Close</button>
           {user && !isOwnPost && !myApplication && (
             isTeacher ? (
               <button

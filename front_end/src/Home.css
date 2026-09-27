@@ -436,6 +436,14 @@
   .create-post-btn::after {
     animation: none;
   }
+
+  .card {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
 }
 
 /* Cards Grid */
@@ -469,41 +477,49 @@
 }
 
 .card {
-  background: #fff;
+  position: relative;
+  background: var(--color-card);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  padding: 20px;
+  border-radius: 16px;
+  padding: 18px 18px 16px;
   display: flex;
   flex-direction: column;
+  transition: transform 0.22s var(--ease-out), box-shadow 0.22s var(--ease-out), border-color 0.22s var(--ease-out);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: #dcd9cb;
+  box-shadow: 0 16px 30px -18px rgba(26, 26, 46, 0.38);
 }
 
 .card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
-  flex-wrap: nowrap;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .badge.active {
-  background: #fff;
+  background: var(--color-secondary-soft);
   color: var(--color-secondary-ink);
-  border: 1.5px dashed var(--color-secondary);
+  border: none;
 }
 
 .badge.pending {
-  background: #fff;
+  background: var(--color-accent-soft);
   color: var(--color-accent-ink);
-  border: 1.5px dashed var(--color-accent);
+  border: none;
 }
 
 .badge.due {
@@ -516,13 +532,13 @@
   color: var(--color-ink-muted);
 }
 
-.course-code {
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  background: var(--color-surface-alt);
-  color: var(--color-ink-muted);
+.home-page .course-code {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--color-surface);
+  color: var(--color-accent-ink);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -532,30 +548,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   color: var(--color-ink-faint);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
 }
 
-.report-btn:hover {
-  color: var(--color-danger);
-  background: var(--color-danger-soft);
-}
-
-.report-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  color: var(--color-ink-faint);
-  cursor: pointer;
-  transition: all 0.15s;
+.report-btn + .report-btn {
+  margin-left: 0;
 }
 
 .report-btn:hover {
@@ -564,94 +567,164 @@
 }
 
 .card-subject {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   color: var(--color-ink-faint);
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .card-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
   color: var(--color-ink);
-  line-height: 1.4;
   margin-bottom: 14px;
+}
+
+.card-header .card-title {
   flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+  font-size: 15.5px;
+}
+
+.card-header .urgent-chip {
+  flex-shrink: 0;
+}
+
+.card-header .urgent-row {
+  flex: 0 0 100%;
+  display: flex;
 }
 
 .card-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--color-ink-muted);
-  margin-bottom: 12px;
   flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
 }
 
-.card-meta .funded {
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  color: var(--color-ink-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.meta-chip.funded {
+  background: var(--color-secondary-soft);
   color: var(--color-secondary-ink);
   font-weight: 600;
 }
 
-.card-meta .pitches {
-  color: var(--color-primary);
-  font-weight: 500;
+.meta-chip.due-chip {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  font-weight: 600;
 }
 
-.progress-bar {
-  width: 100%;
-  height: 6px;
-  background: var(--color-surface-alt);
-  border-radius: 3px;
-  margin-bottom: 12px;
+.meta-chip.urgent-chip {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-weight: 600;
 }
 
-.progress-fill {
-  height: 100%;
-  background: var(--color-secondary);
-  border-radius: 3px;
-  width: 60%;
-}
-
-.archived {
-  font-size: 12px;
-  color: var(--color-ink-faint);
+/* Poster / trust row */
+.card-poster {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.card-footer-meta {
+.card-bottom .card-poster {
+  margin-bottom: 0;
+}
+
+.poster-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
-  color: var(--color-ink-muted);
-  margin-bottom: 4px;
-  line-height: 1.6;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
-.card-footer-meta .dept {
+.poster-avatar.tone-0 {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.poster-avatar.tone-1 {
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
+}
+
+.poster-avatar.tone-2 {
+  background: var(--color-surface);
+  color: var(--color-accent-ink);
+}
+
+.poster-avatar.tone-3 {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
+}
+
+.poster-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.poster-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poster-sub {
+  font-size: 11.5px;
   color: var(--color-ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.card-footer-meta .time {
-  color: var(--color-primary);
-  font-weight: 500;
-}
-
-.card-footer-meta .due {
+.applicant-count {
+  margin-left: auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--color-surface-alt);
   color: var(--color-ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.card-footer-meta .resolved {
-  color: var(--color-ink-faint);
-  font-style: italic;
-}
-
+/* Footer axis: price left, action right — identical on every card */
 .card-bottom {
   display: flex;
   flex-direction: column;
+  gap: 12px;
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid var(--color-border);
@@ -661,28 +734,56 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .price {
-  font-size: 13px;
-  color: var(--color-ink-muted);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.price-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-faint);
+  margin-bottom: 3px;
 }
 
 .price strong {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--color-ink);
 }
 
+.card-cta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
 .apply-btn {
-  padding: 8px 20px;
+  padding: 9px 16px;
   background: var(--color-primary);
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: background 0.15s ease, transform 0.15s ease, filter 0.15s ease;
 }
 
 .apply-btn:hover {
@@ -690,14 +791,15 @@
 }
 
 .apply-btn.applied-btn {
-  background: transparent;
-  color: var(--color-accent-ink);
-  border: 2px dashed var(--color-accent-ink);
-  font-size: 12px;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-ink);
+  font-size: 12.5px;
+  padding: 9px 14px;
 }
 
 .apply-btn.applied-btn:hover {
-  background: rgba(212, 160, 23, 0.08);
+  background: var(--color-secondary-soft);
+  filter: brightness(0.97);
 }
 
 .apply-btn.login-apply-btn {
@@ -706,7 +808,7 @@
   align-items: center;
   justify-content: center;
   font-size: 13px;
-  padding: 10px 22px;
+  padding: 11px 22px;
   white-space: nowrap;
   line-height: 1.4;
   font-weight: 600;
@@ -714,7 +816,6 @@
 
 .login-apply-btn--full {
   width: 100%;
-  margin-top: 12px;
 }
 
 .apply-btn.disabled {
@@ -722,46 +823,20 @@
   cursor: not-allowed;
 }
 
-.your-post-badge {
-  padding: 8px 20px;
-  background: var(--color-secondary-soft);
-  color: var(--color-secondary-ink);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  border: 1px solid var(--color-secondary-soft);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.own-post-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.applicant-count-badge {
-  padding: 4px 10px;
-  background: var(--color-primary-soft);
-  color: var(--color-primary-dark);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 .view-details-btn {
-  padding: 8px 16px;
+  padding: 9px 16px;
   background: var(--color-primary);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: 9px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .view-details-btn:hover {
@@ -1134,38 +1209,27 @@
 
 /* ── Card Apply for Teacher Button (when user is not both/tutor) ── */
 .apply-btn.apply-teacher-btn {
-  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary-dark) 100%) !important;
-  color: #ffffff !important;
-  border: none !important;
-  font-weight: 700 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.28) !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  font-weight: 600;
 }
 
 .apply-btn.apply-teacher-btn:hover {
-  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary-dark) 100%) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4) !important;
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
 }
 
 /* ── Card Pending Teacher Application Button ── */
 .apply-btn.pending-teacher-btn {
-  background: var(--color-surface-soft) !important;
-  color: var(--color-accent-ink) !important;
-  border: 1.5px solid var(--color-accent-soft) !important;
-  font-weight: 700 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
+  background: var(--color-surface-soft);
+  color: var(--color-accent-ink);
+  border: 1px solid var(--color-accent-soft);
+  font-weight: 600;
 }
 
 .apply-btn.pending-teacher-btn:hover {
-  background: var(--color-surface) !important;
-  border-color: var(--color-accent-soft) !important;
-  color: var(--color-accent-ink) !important;
+  background: var(--color-surface);
+  border-color: var(--color-accent-soft);
+  color: var(--color-accent-ink);
 }
