@@ -16,6 +16,7 @@ import ReportQueue from './ReportQueue';
 import DisputesEscrow from './DisputesEscrow';
 import TeacherApplications from './TeacherApplications';
 import MasterData from './MasterData';
+import ErrorBoundary from './ErrorBoundary';
 
 // Shared page-load transition: remounts the page shell on every path change
 // so the entrance animation replays on each navigation.
@@ -63,8 +64,13 @@ const RequireAdmin = ({ currentUser, children }) => {
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('microteach_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('microteach_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      localStorage.removeItem('microteach_user');
+      return null;
+    }
   });
 
   const handleLogin = (userData) => {
@@ -85,6 +91,7 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
+      <ErrorBoundary>
       <Routes>
         {/* Landing page - marketplace home, passes user state */}
         <Route 
@@ -181,7 +188,11 @@ function App() {
           <Route path="teacher-applications" element={<PageEnter><TeacherApplications user={currentUser} /></PageEnter>} />
           <Route path="master-data" element={<PageEnter><MasterData user={currentUser} /></PageEnter>} />
         </Route>
+
+        {/* Fallback wildcard route to avoid blank screens on unmatched URLs */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ErrorBoundary>
     </Router>
   );
 }

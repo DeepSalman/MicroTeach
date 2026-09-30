@@ -1,4 +1,4 @@
-// Vercel Serverless Function entry point
+// Vercel Serverless Function entry point (catch-all for /api/*)
 // Forwards incoming API requests to the Express backend app
 const app = require('../back_end/server');
 

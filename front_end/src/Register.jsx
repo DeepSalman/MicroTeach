@@ -71,7 +71,12 @@ const Register = () => {
         role: formData.role,
         department: formData.department
       });
-      navigate('/login');
+      navigate('/login', {
+        state: {
+          registeredEmail: email,
+          message: 'Account created successfully! Please sign in below.'
+        }
+      });
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {

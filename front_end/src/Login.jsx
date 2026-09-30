@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { loginUser } from './api';
 import BookAnimation from './BookAnimation';
+import ErrorBoundary from './ErrorBoundary';
 import './Login.css';
 
 const Login = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const [email, setEmail] = useState(location.state?.registeredEmail || '');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState('');
+  const [successNotice, setSuccessNotice] = useState(location.state?.message || '');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -17,6 +20,7 @@ const Login = ({ onLogin }) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
+    setSuccessNotice('');
 
     try {
       const response = await loginUser({ email, password });
@@ -50,6 +54,20 @@ const Login = ({ onLogin }) => {
               <p>Sign in to continue.</p>
             </header>
 
+            {successNotice && (
+              <div style={{
+                background: '#ecfdf5',
+                color: '#065f46',
+                border: '1px solid #a7f3d0',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: '500',
+                marginBottom: '16px'
+              }}>
+                ✓ {successNotice}
+              </div>
+            )}
             {message && <div className="error-message">{message}</div>}
 
             <form onSubmit={handleLogin}>
@@ -137,7 +155,9 @@ const Login = ({ onLogin }) => {
 
         {/* Right Panel: Book Animation */}
         <section className="login-right-panel">
-          <BookAnimation />
+          <ErrorBoundary fallback={<div className="login-anim-fallback" style={{ width: '100%', height: '100%', minHeight: '300px' }} />}>
+            <BookAnimation />
+          </ErrorBoundary>
 
           <div className="center-brand">
             <div className="brand-icon"><img src="/logo.png" alt="MicroTeach" /></div>
