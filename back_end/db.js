@@ -109,6 +109,7 @@ if (isPostgres) {
   }
 
   dbInterface = {
+    isPostgres: true,
     query: (sql, params) => executePgQuery(pool, sql, params),
     getConnection: async () => {
       const client = await pool.connect();
@@ -138,6 +139,7 @@ if (isPostgres) {
   });
 
   dbInterface = {
+    isPostgres: false,
     query: (sql, params) => pool.query(sql, params),
     getConnection: () => pool.getConnection()
   };
@@ -189,4 +191,5 @@ const initSchema = (async () => {
 })();
 
 module.exports = dbInterface;
+module.exports.isPostgres = isPostgres;
 module.exports.initSchema = initSchema;

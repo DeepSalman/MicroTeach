@@ -13,6 +13,7 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 
 // ── Auto-ensure table columns exist on startup ──
 (async () => {
+  if (db.isPostgres) return;
   try {
     const [cols] = await db.query('SHOW COLUMNS FROM Messages');
     const existing = cols.map(c => c.Field);

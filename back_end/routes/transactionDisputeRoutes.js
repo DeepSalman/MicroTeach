@@ -4,6 +4,7 @@ const db = require('../db');
 
 // ── Auto-create Transaction_Disputes table ──
 (async () => {
+  if (db.isPostgres) return;
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS Transaction_Disputes (

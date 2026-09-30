@@ -4,6 +4,7 @@ const db = require('../db');
 
 // Ensure extra columns on startup
 (async function ensureReportColumns() {
+  if (db.isPostgres) return;
   try {
     const [cols] = await db.query('SHOW COLUMNS FROM Reports');
     const colNames = cols.map(c => c.Field);

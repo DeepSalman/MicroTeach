@@ -13,6 +13,7 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 
 // ── Auto-create Teacher_Application_Documents table ──
 (async () => {
+  if (db.isPostgres) return;
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS Teacher_Application_Documents (

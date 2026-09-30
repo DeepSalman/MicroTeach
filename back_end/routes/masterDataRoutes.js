@@ -4,6 +4,7 @@ const db = require('../db');
 
 // Ensure Master_Transaction_Types table exists and has default entries
 (async function ensureMasterDataTables() {
+  if (db.isPostgres) return;
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS Master_Transaction_Types (
