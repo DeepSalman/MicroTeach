@@ -10,7 +10,7 @@ const CreatePost = ({ user }) => {
     title: '',
     description: '',
     deliveryFormat: 'live_call',
-    bounty: 350,
+    bounty: 0,
     deadlineDate: '',
     deadlineTime: '',
     isUrgent: false
@@ -71,15 +71,19 @@ const CreatePost = ({ user }) => {
         title: formData.title,
         description: formData.description,
         delivery_format: formData.deliveryFormat,
-        bounty: formData.bounty,
+        bounty: formData.bounty || 0,
         deadline: formData.deadlineDate
           ? `${formData.deadlineDate}T${formData.deadlineTime || '23:59'}`
           : '',
-        is_urgent: formData.isUrgent
+        is_urgent: formData.isUrgent ? 1 : 0
       });
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create post. Please try again.');
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to create post. Please try again.');
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -232,7 +236,7 @@ const CreatePost = ({ user }) => {
                     type="number"
                     name="bounty"
                     className="form-input bounty-field"
-                    min="100"
+                    min="0"
                     max="5000"
                     step="50"
                     value={formData.bounty}
@@ -241,7 +245,7 @@ const CreatePost = ({ user }) => {
                 </div>
                 {parseFloat(formData.bounty) > walletBalance && (
                   <span className="field-hint insufficient-hint">
-                    Insufficient balance. Please top up your wallet.
+                    Insufficient balance (৳{Number(walletBalance).toFixed(2)}). Set bounty to 0 or top up your wallet in Profile.
                   </span>
                 )}
               </div>

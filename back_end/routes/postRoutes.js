@@ -98,6 +98,7 @@ router.post('/', async (req, res) => {
       VALUES
         (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
+    const isUrgentVal = (is_urgent === true || is_urgent === 1 || is_urgent === '1' || is_urgent === 'true') ? 1 : 0;
     const [result] = await db.query(query, [
       user_id,
       category,
@@ -107,7 +108,7 @@ router.post('/', async (req, res) => {
       delivery_format || 'live_call',
       bountyAmount,
       deadline || null,
-      is_urgent || false
+      isUrgentVal
     ]);
 
     // Record bounty_held transaction AFTER post is created (need post_id as reference)
