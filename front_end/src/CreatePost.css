@@ -19,7 +19,7 @@
   gap: 24px;
 }
 
-/* Breadcrumb */
+/* Breadcrumb (shared base styles — also used by ReportQueue) */
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -409,7 +409,36 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 12px;
   padding-top: 8px;
+}
+
+/* Back buttons */
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #fff;
+  color: var(--color-ink);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-back:hover {
+  background: var(--color-bg);
+  border-color: var(--color-ink-faint);
+}
+
+.btn-back-top {
+  align-self: flex-start;
+  padding: 8px 16px;
+  font-size: 13px;
 }
 
 .btn-publish {
@@ -453,6 +482,7 @@
     gap: 12px;
   }
   
+  .form-actions .btn-back,
   .btn-publish {
     width: 100%;
     justify-content: center;

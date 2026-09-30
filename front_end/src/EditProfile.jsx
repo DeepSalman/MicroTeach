@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserProfile, updateUserProfile } from './api';
+import { avatarStyle } from './utils';
 import './EditProfile.css';
 
 const EditProfile = ({ user, onProfileUpdate }) => {
@@ -9,6 +10,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [avatarColor, setAvatarColor] = useState(null);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -29,6 +31,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
     try {
       const response = await fetchUserProfile(user.user_id);
       const userData = response.data.user;
+      setAvatarColor(userData.avatar_color || null);
       setFormData({
         full_name: userData.full_name || '',
         email: userData.email || '',
@@ -129,7 +132,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
             </svg>
             Back to Profile
           </button>
-          <div className="avatar">
+          <div className="avatar" style={avatarStyle(avatarColor)}>
             {formData.full_name ? formData.full_name.charAt(0).toUpperCase() : 'U'}
           </div>
         </div>
@@ -160,7 +163,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
           <form onSubmit={handleSubmit} className="edit-form">
             {/* Profile Preview */}
             <div className="edit-preview">
-              <div className="preview-avatar">
+              <div className="preview-avatar" style={avatarStyle(avatarColor)}>
                 {formData.full_name ? formData.full_name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="preview-info">

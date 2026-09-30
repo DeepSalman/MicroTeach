@@ -20,7 +20,8 @@ router.get('/', async (req, res) => {
         p.status,
         p.created_at,
         u.full_name AS author_name,
-        u.department AS author_department
+        u.department AS author_department,
+        u.avatar_color AS author_avatar_color
       FROM Posts p
       JOIN Users u ON p.user_id = u.user_id
       WHERE p.status != 'closed'

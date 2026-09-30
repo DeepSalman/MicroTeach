@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../db');
+const { randomAvatarColor } = require('../avatarColors');
 
 // 1. Get all users
 router.get('/', async (req, res) => {
@@ -17,6 +18,7 @@ router.get('/', async (req, res) => {
         student_id,
         wallet_balance,
         is_admin,
+        avatar_color,
         created_at
       FROM Users
     `;
@@ -42,16 +44,17 @@ router.post('/register', async (req, res) => {
 
     const query = `
       INSERT INTO Users
-        (full_name, email, password, role, department)
+        (full_name, email, password, role, department, avatar_color)
       VALUES
-        (?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?)
     `;
     const [result] = await db.query(query, [
       full_name,
       email,
       hashedPassword,
       role || 'student',
-      department || null
+      department || null,
+      randomAvatarColor()
     ]);
     res.status(201).json({ message: 'User registered successfully!', userId: result.insertId });
   } catch (error) {
@@ -75,6 +78,7 @@ router.get('/profile/:userId', async (req, res) => {
         phone,
         student_id,
         is_admin,
+        avatar_color,
         created_at
       FROM Users
       WHERE user_id = ?
@@ -133,7 +137,7 @@ router.put('/profile/:userId', async (req, res) => {
     await db.query(query, [full_name, department || null, bio || null, phone || null, student_id || null, req.params.userId]);
 
     const updatedQuery = `
-      SELECT user_id, full_name, email, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin, created_at
+      SELECT user_id, full_name, email, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin, avatar_color, created_at
       FROM Users WHERE user_id = ?
     `;
     const [rows] = await db.query(updatedQuery, [req.params.userId]);
@@ -166,6 +170,7 @@ router.post('/login', async (req, res) => {
         student_id,
         wallet_balance,
         is_admin,
+        avatar_color,
         password
       FROM Users
       WHERE email = ?
@@ -187,6 +192,32 @@ router.post('/login', async (req, res) => {
 
     const { password: _, ...userData } = user;
     res.status(200).json({ message: 'Login successful!', user: userData });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 6. Admin toggle verification
+router.patch('/:userId/verify', async (req, res) => {
+  const { is_verified } = req.body;
+  try {
+    await db.query('UPDATE Users SET is_verified = ? WHERE user_id = ?', [is_verified ? 1 : 0, req.params.userId]);
+    res.json({ message: `User verification updated to ${is_verified ? 'verified' : 'unverified'}.` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 7. Admin update role
+router.patch('/:userId/role', async (req, res) => {
+  const { role } = req.body;
+  const validRoles = ['student', 'tutor', 'both'];
+  if (!validRoles.includes(role)) {
+    return res.status(400).json({ message: 'Invalid role.' });
+  }
+  try {
+    await db.query('UPDATE Users SET role = ? WHERE user_id = ?', [role, req.params.userId]);
+    res.json({ message: `User role updated to ${role}.` });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

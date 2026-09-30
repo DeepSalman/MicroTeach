@@ -5,6 +5,8 @@ const API = axios.create({ baseURL: "http://localhost:3001/api" });
 export const fetchUsers = () => API.get("/users");
 export const fetchUserProfile = (userId) => API.get(`/users/profile/${userId}`);
 export const updateUserProfile = (userId, data) => API.put(`/users/profile/${userId}`, data);
+export const updateUserVerification = (userId, is_verified) => API.patch(`/users/${userId}/verify`, { is_verified });
+export const updateUserRole = (userId, role) => API.patch(`/users/${userId}/role`, { role });
 export const registerUser = (userData) => API.post("/users/register", userData);
 export const loginUser = (credentials) => API.post("/users/login", credentials);
 
@@ -25,7 +27,9 @@ export const reviewTeacherApplication = (id, data) => API.put(`/teacher-applicat
 
 export const reportPost = (data) => API.post("/reports", data);
 export const fetchReports = () => API.get("/reports");
-export const updateReportStatus = (reportId, status) => API.patch(`/reports/${reportId}/status`, { status });
+export const updateReportStatus = (reportId, status, extra = {}) => API.patch(`/reports/${reportId}/status`, { status, ...extra });
+export const takedownReportedPost = (reportId, data = {}) => API.post(`/reports/${reportId}/takedown`, data);
+export const batchUpdateReportStatus = (data) => API.patch('/reports/batch-status', data);
 
 export const fetchPostApplications = (postId) => API.get(`/post-applications/post/${postId}`);
 export const fetchPostApplicationCount = (postId) => API.get(`/post-applications/post/${postId}/count`);
@@ -68,3 +72,12 @@ export const checkTransactionDispute = (postId, userId) => API.get(`/transaction
 export const submitTransactionDispute = (data) => API.post("/transaction-disputes", data);
 export const resolveTransactionDispute = (id, data) => API.post(`/transaction-disputes/${id}/resolve`, data);
 export const updateTransactionDisputeStatus = (id, status) => API.patch(`/transaction-disputes/${id}/status`, { status });
+
+// Master Data
+export const fetchMasterTransactionTypes = () => API.get("/master-data/transaction-types");
+export const createOrUpdateTransactionType = (data) => API.post("/master-data/transaction-types", data);
+export const toggleTransactionType = (typeCode) => API.patch(`/master-data/transaction-types/${typeCode}/toggle`);
+export const fetchMasterTransactions = (params) => API.get("/master-data/transactions", { params });
+export const fetchLedgerReconciliation = () => API.get("/master-data/reconciliation");
+export const adjustUserBalance = (data) => API.post("/master-data/adjust-balance", data);
+export const fetchAcademicCatalog = () => API.get("/master-data/academic-catalog");

@@ -15,6 +15,7 @@ import ContentModeration from './ContentModeration';
 import ReportQueue from './ReportQueue';
 import DisputesEscrow from './DisputesEscrow';
 import TeacherApplications from './TeacherApplications';
+import MasterData from './MasterData';
 
 // Shared page-load transition: remounts the page shell on every path change
 // so the entrance animation replays on each navigation.
@@ -88,7 +89,7 @@ function App() {
         {/* Landing page - marketplace home, passes user state */}
         <Route 
           path="/" 
-          element={<PageEnter><Home user={currentUser} onLogout={handleLogout} /></PageEnter>} 
+          element={<PageEnter><Home user={currentUser} onLogout={handleLogout} onProfileUpdate={handleProfileUpdate} /></PageEnter>} 
         />
 
         {/* Login page */}
@@ -178,6 +179,7 @@ function App() {
           <Route path="reports" element={<PageEnter><ReportQueue user={currentUser} /></PageEnter>} />
           <Route path="disputes" element={<PageEnter><DisputesEscrow user={currentUser} /></PageEnter>} />
           <Route path="teacher-applications" element={<PageEnter><TeacherApplications user={currentUser} /></PageEnter>} />
+          <Route path="master-data" element={<PageEnter><MasterData user={currentUser} /></PageEnter>} />
         </Route>
       </Routes>
     </Router>

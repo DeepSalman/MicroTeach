@@ -15,6 +15,7 @@ const messageRoutes = require('./routes/messageRoutes');
 const walletRoutes = require('./routes/walletRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const transactionDisputeRoutes = require('./routes/transactionDisputeRoutes');
+const masterDataRoutes = require('./routes/masterDataRoutes');
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/transaction-disputes', transactionDisputeRoutes);
+app.use('/api/master-data', masterDataRoutes);
 
 // Root Test Route
 app.get('/', (req, res) => {
@@ -43,6 +45,8 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+db.initSchema.then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 });

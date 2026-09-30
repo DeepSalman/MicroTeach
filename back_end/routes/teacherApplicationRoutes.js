@@ -76,7 +76,8 @@ router.get('/', async (req, res) => {
         u.email,
         u.student_id AS user_student_id,
         u.department,
-        u.role
+        u.role,
+        u.avatar_color
       FROM Teacher_Applications ta
       JOIN Users u ON ta.user_id = u.user_id
       ORDER BY ta.created_at DESC

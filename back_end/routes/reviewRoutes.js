@@ -55,7 +55,7 @@ router.post('/', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT r.*, u.full_name AS reviewer_name
+      `SELECT r.*, u.full_name AS reviewer_name, u.avatar_color AS reviewer_avatar_color
        FROM Reviews r
        JOIN Users u ON r.reviewer_id = u.user_id
        WHERE r.reviewee_id = ?

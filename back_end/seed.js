@@ -21,6 +21,7 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
 const path = require('path');
+const { randomAvatarColor } = require('./avatarColors');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
@@ -44,6 +45,7 @@ const TABLES = {
       student_id VARCHAR(50),
       wallet_balance DECIMAL(10,2) DEFAULT 0.00,
       is_admin TINYINT(1) DEFAULT 0,
+      avatar_color VARCHAR(7),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
   Skills: `
@@ -341,6 +343,25 @@ async function main() {
     console.log('  All tables already exist');
   }
 
+  // 4b. Older databases may predate avatar_color — add it and backfill
+  try {
+    await conn.query('ALTER TABLE Users ADD COLUMN avatar_color VARCHAR(7) NULL');
+  } catch (err) {
+    if (err.errno !== 1060) throw err; // duplicate column = already there
+  }
+  const [missingColors] = await conn.query(
+    'SELECT user_id FROM Users WHERE avatar_color IS NULL OR avatar_color = ""'
+  );
+  for (const row of missingColors) {
+    await conn.query('UPDATE Users SET avatar_color = ? WHERE user_id = ?', [
+      randomAvatarColor(),
+      row.user_id
+    ]);
+  }
+  if (missingColors.length > 0) {
+    console.log(`  Assigned profile colors to ${missingColors.length} existing user(s)`);
+  }
+
   // 5. Check if data is already seeded
   if (!force && !fresh) {
     const usersEmpty = await tableIsEmpty(conn, 'Users');
@@ -410,9 +431,9 @@ async function main() {
 
   for (const u of USERS) {
     const [r] = await conn.query(
-      `INSERT INTO Users (full_name, email, password, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [u.full_name, u.email, hash, u.role, u.is_verified, u.department, u.bio, u.phone, u.student_id, u.wallet_balance, u.is_admin || 0]
+      `INSERT INTO Users (full_name, email, password, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin, avatar_color)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [u.full_name, u.email, hash, u.role, u.is_verified, u.department, u.bio, u.phone, u.student_id, u.wallet_balance, u.is_admin || 0, randomAvatarColor()]
     );
     uid[u.email] = r.insertId;
     console.log(`  + ${u.full_name} (${u.email})`);

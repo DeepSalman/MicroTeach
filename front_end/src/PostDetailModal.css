@@ -197,20 +197,26 @@
 
 .pd-item {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
   padding: 14px;
   background: var(--color-bg);
   border-radius: 12px;
   border: 1px solid var(--color-border);
 }
 
-.pd-item-left {
+.pd-item-top {
   display: flex;
+  align-items: flex-start;
   gap: 12px;
-  flex: 1;
-  min-width: 0;
+}
+
+.pd-item-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .pd-item-avatar {
@@ -255,6 +261,7 @@
 .pd-item-name-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 2px;
 }
@@ -296,16 +303,17 @@
 }
 
 .pd-item-message {
-  font-size: 12px;
-  color: var(--color-ink-muted);
+  margin: 0;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 12.5px;
   font-style: italic;
-  line-height: 1.4;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  color: var(--color-ink-muted);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .pd-item-meta {
@@ -313,14 +321,7 @@
   color: var(--color-ink-faint);
 }
 
-/* Right side: rating + actions */
-.pd-item-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
-}
+/* Side: rating + profile link */
 
 .pd-rating {
   display: flex;
@@ -358,72 +359,114 @@
 
 .pd-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 2px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
 }
 
+/* ── Action buttons: one shared shape, coloured by intent ── */
+.pd-chat-btn,
+.pd-complete-btn,
+.pd-cancel-btn,
+.pd-dispute-btn,
 .pd-accept-btn,
-.pd-reject-btn {
-  padding: 4px 12px;
-  border: none;
-  border-radius: 6px;
-  font-size: 11px;
+.pd-reject-btn,
+.pd-review-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pd-chat-btn:disabled,
+.pd-complete-btn:disabled,
+.pd-cancel-btn:disabled,
+.pd-dispute-btn:disabled,
+.pd-accept-btn:disabled,
+.pd-reject-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pd-chat-btn {
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.pd-chat-btn:hover {
+  background: #2f2f52;
+}
+
+.pd-complete-btn {
+  background: var(--color-secondary-ink);
+  color: #fff;
+}
+
+.pd-complete-btn:hover:not(:disabled) {
+  background: var(--color-secondary-dark);
 }
 
 .pd-accept-btn {
-  background: var(--color-secondary-soft);
-  color: var(--color-secondary-ink);
+  background: var(--color-secondary);
+  color: var(--color-ink);
 }
 
 .pd-accept-btn:hover:not(:disabled) {
-  background: var(--color-secondary-soft);
+  background: var(--color-secondary-dark);
 }
 
+.pd-cancel-btn {
+  background: #fff;
+  border-color: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.pd-cancel-btn:hover:not(:disabled) {
+  background: var(--color-surface-soft);
+  border-color: var(--color-accent-dark);
+}
+
+.pd-dispute-btn,
 .pd-reject-btn {
-  background: var(--color-danger-soft);
+  background: #fff;
+  border-color: var(--color-danger);
   color: var(--color-danger);
 }
 
-.pd-reject-btn:hover:not(:disabled) {
+.pd-dispute-btn:hover,
+.pd-reject-btn:hover {
   background: var(--color-danger-soft);
 }
 
-.pd-accept-btn:disabled,
-.pd-reject-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.pd-review-btn {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-ink);
+}
+
+.pd-review-btn:hover {
+  background: var(--color-accent-dark);
+  color: #fff;
 }
 
 /* Accepted applicant */
 .pd-item--accepted {
   background: var(--color-secondary-soft);
   border-color: var(--color-secondary);
-}
-
-.pd-accepted-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.pd-chat-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--color-primary);
-  color: #fff;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.pd-chat-icon:hover {
-  background: var(--color-primary-dark);
 }
 
 /* Cancellation states */
@@ -443,71 +486,21 @@
   border-color: var(--color-secondary);
 }
 
-.pd-cancel-btn {
-  padding: 5px 10px;
-  background: #fff;
-  border: 1px solid var(--color-accent);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-accent-ink);
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.pd-cancel-btn:hover:not(:disabled) {
-  background: var(--color-surface-soft);
-  border-color: var(--color-accent-dark);
-}
-
-.pd-cancel-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pd-accepted-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.pd-complete-btn {
-  padding: 5px 10px;
-  background: var(--color-secondary);
-  border: none;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-ink);
-  cursor: pointer;
-  transition: background 0.2s;
-  white-space: nowrap;
-}
-
-.pd-complete-btn:hover:not(:disabled) {
-  background: var(--color-secondary);
-}
-
-.pd-complete-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .pd-completed-badge {
-  padding: 5px 10px;
+  padding: 5px 12px;
   background: var(--color-secondary-soft);
   color: var(--color-secondary-ink);
-  border-radius: 6px;
+  border: 1px solid var(--color-secondary);
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
 }
 
 .pd-waiting-badge {
-  padding: 5px 10px;
+  padding: 5px 12px;
   background: var(--color-surface);
   color: var(--color-accent-ink);
-  border-radius: 6px;
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
 }
@@ -536,48 +529,12 @@
   background: var(--color-bg);
 }
 
-.pd-review-btn {
-  padding: 5px 12px;
-  background: var(--color-accent);
-  color: var(--color-ink);
-  border: none;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.pd-review-btn:hover {
-  opacity: 0.85;
-}
-
 .pd-reviewed-badge {
-  padding: 4px 10px;
+  padding: 5px 12px;
   background: var(--color-secondary-soft);
   color: var(--color-secondary-ink);
-  border-radius: 6px;
+  border: 1px solid var(--color-secondary);
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
-}
-
-/* ── PostDetailModal Dispute Button ── */
-.pd-dispute-btn {
-  background: var(--color-danger-soft);
-  border: 1px solid var(--color-danger-soft);
-  color: var(--color-danger);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-}
-.pd-dispute-btn:hover {
-  background: var(--color-danger-soft);
-  border-color: var(--color-danger-soft);
-  color: var(--color-danger);
 }

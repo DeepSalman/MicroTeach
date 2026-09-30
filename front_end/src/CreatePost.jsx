@@ -89,14 +89,10 @@ const CreatePost = ({ user }) => {
     <div className="create-post-page">
       <div className="create-post-container">
         
-        {/* Breadcrumb */}
-        <div className="breadcrumb">
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="breadcrumb-back">
-            Back to Listings
-          </a>
-          <span className="breadcrumb-sep">/</span>
-          <span className="breadcrumb-current">Post an Academic Problem</span>
-        </div>
+        {/* Top back button */}
+        <button type="button" className="btn-back btn-back-top" onClick={() => navigate('/')}>
+          &larr; Back
+        </button>
 
         {/* Header */}
         <div className="create-post-header">
@@ -278,6 +274,9 @@ const CreatePost = ({ user }) => {
 
           {/* Submit Actions */}
           <div className="form-actions">
+            <button type="button" className="btn-back" onClick={() => navigate('/')}>
+              &larr; Back
+            </button>
             <button type="submit" className="btn-publish" disabled={loading || insufficientBalance}>
               {loading ? 'Publishing...' : insufficientBalance ? 'Insufficient Balance' : 'Publish Problem Card'}
               <span>→</span>

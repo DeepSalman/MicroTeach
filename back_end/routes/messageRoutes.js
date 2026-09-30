@@ -29,6 +29,46 @@ if (!fs.existsSync(UPLOAD_DIR)) {
       await db.query('ALTER TABLE Messages ADD COLUMN mime_type VARCHAR(100) NULL AFTER file_size');
     }
     console.log('[messageRoutes] Messages attachment columns verified');
+
+    // Merge any duplicate conversations between the same pair of users
+    const [duplicates] = await db.query(`
+      SELECT 
+        LEAST(cm1.user_id, cm2.user_id) AS user_a,
+        GREATEST(cm1.user_id, cm2.user_id) AS user_b,
+        COUNT(DISTINCT c.conversation_id) AS conv_count,
+        GROUP_CONCAT(DISTINCT c.conversation_id ORDER BY c.last_message_at DESC, c.conversation_id DESC) AS conv_ids
+      FROM Conversations c
+      JOIN Conversation_Members cm1 ON c.conversation_id = cm1.conversation_id
+      JOIN Conversation_Members cm2 ON c.conversation_id = cm2.conversation_id AND cm1.user_id < cm2.user_id
+      GROUP BY user_a, user_b
+      HAVING conv_count > 1
+    `);
+
+    for (const dup of duplicates) {
+      const convIds = dup.conv_ids.split(',').map(Number);
+      const primaryConvId = convIds[0];
+      const secondaries = convIds.slice(1);
+
+      for (const secId of secondaries) {
+        const [secMsgs] = await db.query(
+          'SELECT * FROM Messages WHERE conversation_id = ? ORDER BY seq ASC',
+          [secId]
+        );
+        for (const msg of secMsgs) {
+          const [maxSeq] = await db.query(
+            'SELECT COALESCE(MAX(seq), 0) + 1 AS next_seq FROM Messages WHERE conversation_id = ?',
+            [primaryConvId]
+          );
+          const nextSeq = maxSeq[0].next_seq;
+          await db.query(
+            `INSERT INTO Messages (conversation_id, seq, sender_id, kind, body, file_path, file_name, file_size, mime_type, client_msg_id, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [primaryConvId, nextSeq, msg.sender_id, msg.kind, msg.body, msg.file_path, msg.file_name, msg.file_size, msg.mime_type, msg.client_msg_id ? msg.client_msg_id + '_merged' : null, msg.created_at]
+          );
+        }
+        await db.query('DELETE FROM Conversations WHERE conversation_id = ?', [secId]);
+      }
+    }
   } catch (err) {
     console.error('[messageRoutes] Schema verification error:', err.message);
   }
@@ -79,7 +119,8 @@ router.get('/inbox/:userId', async (req, res) => {
         p.course_code,
         other_user.user_id AS other_user_id,
         other_user.full_name AS other_user_name,
-        other_user.department AS other_user_department
+        other_user.department AS other_user_department,
+        other_user.avatar_color AS other_user_avatar_color
       FROM Conversation_Members cm
       JOIN Conversations c ON cm.conversation_id = c.conversation_id
       LEFT JOIN Posts p ON c.post_id = p.post_id
@@ -92,9 +133,20 @@ router.get('/inbox/:userId', async (req, res) => {
         GROUP BY conversation_id
       ) lm ON lm.conversation_id = c.conversation_id
       WHERE cm.user_id = ?
-      ORDER BY c.last_message_at DESC
+      ORDER BY c.last_message_at DESC, c.conversation_id DESC
     `, [req.params.userId]);
-    res.json(rows);
+
+    // Ensure 1 unique conversation per other user
+    const seen = new Set();
+    const uniqueRows = [];
+    for (const row of rows) {
+      const otherId = String(row.other_user_id);
+      if (!seen.has(otherId)) {
+        seen.add(otherId);
+        uniqueRows.push(row);
+      }
+    }
+    res.json(uniqueRows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -275,17 +327,23 @@ router.post('/start', async (req, res) => {
   }
 
   try {
-    // Check if conversation already exists between these two users
+    // Check if conversation already exists between these two users (single chat per user pair)
     const [existing] = await db.query(`
-      SELECT c.conversation_id
+      SELECT c.conversation_id, c.post_id
       FROM Conversations c
       JOIN Conversation_Members cm1 ON c.conversation_id = cm1.conversation_id AND cm1.user_id = ?
       JOIN Conversation_Members cm2 ON c.conversation_id = cm2.conversation_id AND cm2.user_id = ?
-      ${post_id ? 'WHERE c.post_id = ?' : ''}
-    `, post_id ? [user_id, other_user_id, post_id] : [user_id, other_user_id]);
+      ORDER BY c.last_message_at DESC, c.conversation_id DESC
+      LIMIT 1
+    `, [user_id, other_user_id]);
 
     if (existing.length > 0) {
-      return res.json({ conversation_id: existing[0].conversation_id, message: 'Existing conversation found.' });
+      const convId = existing[0].conversation_id;
+      // If a post_id is provided and the conversation has no post_id or a different one, update context
+      if (post_id && (!existing[0].post_id || existing[0].post_id !== post_id)) {
+        await db.query('UPDATE Conversations SET post_id = ? WHERE conversation_id = ?', [post_id, convId]);
+      }
+      return res.json({ conversation_id: convId, message: 'Existing conversation found.' });
     }
 
     // Create new conversation

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchPosts } from './api';
-import { formatDeadline } from './utils';
+import { formatDeadline, avatarStyle } from './utils';
 import './ContentModeration.css';
 
 const ContentModeration = ({ user }) => {
@@ -82,7 +82,7 @@ const ContentModeration = ({ user }) => {
                   <td className="td-id">#{post.post_id}</td>
                   <td>
                     <div className="author-cell">
-                      <div className="author-avatar">
+                      <div className="author-avatar" style={avatarStyle(post.author_avatar_color)}>
                         {post.author_name ? post.author_name.charAt(0).toUpperCase() : '?'}
                       </div>
                       <div className="author-info">

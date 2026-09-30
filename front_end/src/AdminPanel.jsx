@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUsers, fetchPosts, fetchSessions, fetchTransactionDisputes } from './api';
+import { fetchUsers, fetchPosts, fetchSessions, fetchTeacherApplications, fetchTransactionDisputes, fetchReports } from './api';
+import { avatarStyle, formatDeadline } from './utils';
 import './AdminPanel.css';
 
 const AdminPanel = ({ user }) => {
@@ -8,34 +9,87 @@ const AdminPanel = ({ user }) => {
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [teacherApps, setTeacherApps] = useState([]);
   const [disputes, setDisputes] = useState([]);
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
   useEffect(() => {
-    loadData();
+    loadDashboardData();
   }, []);
 
-  const loadData = async () => {
+  const loadDashboardData = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    else setLoading(true);
+
     try {
-      const [usersRes, postsRes, sessionsRes, disputesRes] = await Promise.all([
-        fetchUsers(),
-        fetchPosts(),
-        fetchSessions(),
-        fetchTransactionDisputes().catch(() => ({ data: [] }))
+      const [usersRes, postsRes, sessionsRes, teacherAppsRes, disputesRes, reportsRes] = await Promise.all([
+        fetchUsers().catch(() => ({ data: [] })),
+        fetchPosts().catch(() => ({ data: [] })),
+        fetchSessions().catch(() => ({ data: [] })),
+        fetchTeacherApplications().catch(() => ({ data: [] })),
+        fetchTransactionDisputes().catch(() => ({ data: [] })),
+        fetchReports().catch(() => ({ data: [] }))
       ]);
-      setUsers(usersRes.data);
-      setPosts(postsRes.data);
-      setSessions(sessionsRes.data);
+
+      setUsers(usersRes.data || []);
+      setPosts(postsRes.data || []);
+      setSessions(sessionsRes.data || []);
+      setTeacherApps(teacherAppsRes.data || []);
       setDisputes(disputesRes.data || []);
+      setReports(reportsRes.data || []);
+      setLastUpdated(new Date());
     } catch (err) {
-      console.error('Failed to load admin data:', err);
+      console.error('Failed to load admin dashboard data:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Metrics
+  const tutorCount = useMemo(() => users.filter(u => u.role === 'tutor' || u.role === 'both').length, [users]);
+  const studentCount = useMemo(() => users.filter(u => u.role === 'student' || u.role === 'both').length, [users]);
+  const adminCount = useMemo(() => users.filter(u => u.is_admin).length, [users]);
+  const totalWallet = useMemo(() => users.reduce((sum, u) => sum + (parseFloat(u.wallet_balance) || 0), 0), [users]);
+
+  const activePostsCount = useMemo(() => posts.filter(p => p.status === 'active' || (!p.status && !p.is_completed)).length, [posts]);
+  const completedPostsCount = useMemo(() => posts.filter(p => p.status === 'completed' || p.is_completed).length, [posts]);
+  const totalBountyEscrow = useMemo(() => posts.reduce((sum, p) => sum + (parseFloat(p.bounty) || 0), 0), [posts]);
+
+  // Action Items Queues
+  const pendingTeacherApps = useMemo(() => teacherApps.filter(a => a.status === 'pending'), [teacherApps]);
+  const pendingDisputes = useMemo(() => disputes.filter(d => d.status === 'pending' || d.status === 'under_review'), [disputes]);
+  const pendingReports = useMemo(() => reports.filter(r => r.status === 'pending' || !r.status), [reports]);
+  const totalActionItems = pendingTeacherApps.length + pendingDisputes.length + pendingReports.length;
+
+  // Category Breakdown
+  const categoryStats = useMemo(() => {
+    const counts = {};
+    posts.forEach(p => {
+      const cat = p.category || 'General';
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    const total = posts.length || 1;
+    return Object.entries(counts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percent: Math.round((count / total) * 100)
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [posts]);
+
+  // Format Helper
+  const getDeliveryLabel = (format) => {
+    switch (format) {
+      case 'live_call': return 'Live Call';
+      case 'annotated_pdf': return 'Annotated PDF';
+      case 'video_walkthrough': return 'Video Walkthrough';
+      default: return 'Online Session';
     }
   };
 
@@ -44,424 +98,446 @@ const AdminPanel = ({ user }) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const getRoleBadges = (user) => {
-    const badges = [];
-    if (user.role === 'tutor' || user.role === 'both') {
-      badges.push({ label: 'Peer Tutor', class: 'tutor' });
-    }
-    if (user.role === 'student' || user.role === 'both') {
-      badges.push({ label: 'Student', class: 'student' });
-    }
-    if (user.is_admin) {
-      badges.push({ label: 'Admin', class: 'admin' });
-    }
-    return badges;
-  };
-
-  const getStatusInfo = (user) => {
-    if (user.is_verified) {
-      return { label: 'Active', sublabel: 'Verified', class: 'active' };
-    }
-    return { label: 'Pending', sublabel: 'Review', class: 'pending' };
-  };
-
-  const getFilteredUsers = () => {
-    let filtered = [...users];
-
-    if (activeFilter === 'students') {
-      filtered = filtered.filter(u => u.role === 'student');
-    } else if (activeFilter === 'tutors') {
-      filtered = filtered.filter(u => u.role === 'tutor' || u.role === 'both');
-    } else if (activeFilter === 'admins') {
-      filtered = filtered.filter(u => u.is_admin);
-    }
-
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(u =>
-        u.full_name?.toLowerCase().includes(q) ||
-        u.email?.toLowerCase().includes(q) ||
-        u.department?.toLowerCase().includes(q)
-      );
-    }
-
-    return filtered;
-  };
-
-  const filteredUsers = getFilteredUsers();
-  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
-  const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
-
-  const handleSelectUser = (userId) => {
-    setSelectedUsers(prev =>
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedUsers.length === paginatedUsers.length) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(paginatedUsers.map(u => u.user_id));
-    }
-  };
-
-  const tutorCount = users.filter(u => u.role === 'tutor' || u.role === 'both').length;
-  const studentCount = users.filter(u => u.role === 'student' || u.role === 'both').length;
-  const totalWallet = users.reduce((sum, u) => sum + (parseFloat(u.wallet_balance) || 0), 0);
-
   if (loading) {
-    return <div className="admin-loading">Loading admin data...</div>;
+    return (
+      <div className="admin-content">
+        <div className="dash-loading-wrap">
+          <div className="dash-spinner"></div>
+          <span>Loading administrative metrics...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="admin-content">
-      {/* Top Header */}
-      <header className="admin-top-header">
-        <div className="header-breadcrumb">
-          <span className="breadcrumb-label">INSTITUTIONAL GOVERNANCE</span>
-          <span className="breadcrumb-sep">/</span>
-          <span className="breadcrumb-value">Registry Node ID: BRACU-DH-09</span>
+    <div className="admin-content dash-wrapper">
+      {/* ─── Top Dashboard Header ─── */}
+      <header className="dash-header">
+        <div className="dash-header-left">
+          <div className="dash-title-row">
+            <h1 className="dash-title">Platform Dashboard</h1>
+            <div className="dash-live-badge">
+              <span className="dash-live-dot"></span>
+              Live Sync
+            </div>
+          </div>
+          <p className="dash-subtitle">
+            MicroTeach campus peer tutoring operations, escrow health, and moderation overview.
+          </p>
         </div>
-        <div className="header-actions">
-          <button className="header-btn freeze-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Freeze Platform
-          </button>
-          <button className="icon-btn-header">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <button className="icon-btn-header">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="12" y1="17" x2="12.01" y2="17" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+
+        <div className="dash-header-right">
+          <div className="dash-sync-pill">
+            <span className="dash-sync-time">Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <button
+              className="dash-refresh-btn"
+              onClick={() => loadDashboardData(true)}
+              disabled={refreshing}
+              title="Refresh data"
+            >
+              <svg className={refreshing ? 'spin' : ''} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Dashboard Content */}
-      <div className="admin-dashboard">
-        <div className="dashboard-header">
-          <div className="dashboard-title-row">
-            <h1 className="dashboard-title">Dashboard</h1>
-            <div className="dashboard-actions">
-              <button className="action-btn secondary">
+      {/* ─── Core KPI Cards Bar (4 clean metrics) ─── */}
+      <section className="dash-kpi-grid">
+        {/* KPI 1: User Base */}
+        <div className="dash-kpi-card" onClick={() => navigate('/admin/users')} role="button" tabIndex={0}>
+          <div className="dash-kpi-top">
+            <span className="dash-kpi-label">CAMPUS USERS</span>
+            <span className="dash-kpi-icon-wrap user-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="9" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </div>
+          <div className="dash-kpi-number">{users.length}</div>
+          <div className="dash-kpi-footer">
+            <span className="dash-kpi-sub">
+              <strong>{studentCount}</strong> Students &bull; <strong>{tutorCount}</strong> Peer Tutors
+            </span>
+            <span className="dash-kpi-arrow">&rarr;</span>
+          </div>
+        </div>
+
+        {/* KPI 2: Tutoring Requests */}
+        <div className="dash-kpi-card" onClick={() => navigate('/admin/moderation')} role="button" tabIndex={0}>
+          <div className="dash-kpi-top">
+            <span className="dash-kpi-label">ACTIVE BOUNTIES</span>
+            <span className="dash-kpi-icon-wrap gig-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 20h9" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </div>
+          <div className="dash-kpi-number">{activePostsCount}</div>
+          <div className="dash-kpi-footer">
+            <span className="dash-kpi-sub">
+              <strong>{completedPostsCount}</strong> Sessions Completed
+            </span>
+            <span className="dash-kpi-arrow">&rarr;</span>
+          </div>
+        </div>
+
+        {/* KPI 3: Escrow Liquidity */}
+        <div className="dash-kpi-card" onClick={() => navigate('/admin/disputes')} role="button" tabIndex={0}>
+          <div className="dash-kpi-top">
+            <span className="dash-kpi-label">ESCROW CIRCULATION</span>
+            <span className="dash-kpi-icon-wrap escrow-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="4" width="20" height="16" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M2 10h20" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </div>
+          <div className="dash-kpi-number">৳ {Math.round(totalWallet).toLocaleString()}</div>
+          <div className="dash-kpi-footer">
+            <span className="dash-kpi-sub">
+              <strong>৳ {Math.round(totalBountyEscrow).toLocaleString()}</strong> in active gigs
+            </span>
+            <span className="dash-kpi-arrow">&rarr;</span>
+          </div>
+        </div>
+
+        {/* KPI 4: Governance & Attention */}
+        <div className={`dash-kpi-card ${totalActionItems > 0 ? 'kpi-attention' : 'kpi-clean'}`} onClick={() => navigate(pendingTeacherApps.length > 0 ? '/admin/teacher-applications' : pendingDisputes.length > 0 ? '/admin/disputes' : '/admin/reports')} role="button" tabIndex={0}>
+          <div className="dash-kpi-top">
+            <span className="dash-kpi-label">ACTION QUEUE</span>
+            <span className={`dash-kpi-icon-wrap ${totalActionItems > 0 ? 'alert-icon' : 'safe-icon'}`}>
+              {totalActionItems > 0 ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round"/>
-                  <polyline points="22 4 12 14.01 9 11.01" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
+                  <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" strokeLinejoin="round" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Batch Verify Tutors
-              </button>
-              <button className="action-btn primary">
+              ) : (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="8.5" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round"/>
-                  <line x1="20" y1="8" x2="20" y2="14" strokeLinecap="round" strokeLinejoin="round"/>
-                  <line x1="23" y1="11" x2="17" y2="11" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" />
+                  <polyline points="22 4 12 14.01 9 11.01" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                + Manual Student Onboard
-              </button>
-            </div>
+              )}
+            </span>
+          </div>
+          <div className="dash-kpi-number">{totalActionItems}</div>
+          <div className="dash-kpi-footer">
+            <span className="dash-kpi-sub">
+              {totalActionItems > 0 ? `${totalActionItems} Pending Admin Reviews` : 'All Queues Clear & Healthy'}
+            </span>
+            <span className="dash-kpi-arrow">&rarr;</span>
           </div>
         </div>
+      </section>
 
-        {/* Stats Cards */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-card-header">
-              <span className="stat-label">ENROLLED STUDENTS</span>
-              <svg className="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M6 12v5c3 3 9 3 12 0v-5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="stat-value">{users.length.toLocaleString()}</div>
-            <div className="stat-footer">
-              <span className="stat-trend positive">+3.2% term</span>
-            </div>
+      {/* ─── Operational Queues (Action Center) ─── */}
+      <section className="dash-section">
+        <div className="dash-section-header">
+          <div className="dash-section-title-wrap">
+            <h2 className="dash-section-title">Operational Attention Center</h2>
+            <span className="dash-section-hint">High priority tasks requiring admin review and resolution</span>
           </div>
-
-          <div className="stat-card">
-            <div className="stat-card-header">
-              <span className="stat-label">CERTIFIED PEER TUTORS</span>
-              <svg className="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round"/>
-                <polyline points="22 4 12 14.01 9 11.01" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="stat-value">{tutorCount.toLocaleString()}</div>
-            <div className="stat-footer">
-              <span className="stat-ratio">{users.length > 0 ? Math.round((tutorCount / users.length) * 100) : 0}% ratio</span>
-            </div>
-          </div>
-
-          <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => navigate('/admin/disputes')}>
-            <div className="stat-card-header">
-              <span className="stat-label">TRANSACTION DISPUTES</span>
-              <svg className="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="stat-value">{disputes.filter(d => d.status === 'pending' || d.status === 'under_review').length}</div>
-            <div className="stat-footer">
-              <span className="stat-pending">{disputes.filter(d => d.status === 'pending' || d.status === 'under_review').length} pending arbitration</span>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-card-header">
-              <span className="stat-label">ESCROW ACTIVE WALLETS</span>
-              <svg className="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="2" y="4" width="20" height="16" rx="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 10h20" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="stat-value">{users.length.toLocaleString()}</div>
-            <div className="stat-footer">
-              <span className="stat-locked">৳ {totalWallet.toLocaleString()} total</span>
-            </div>
-          </div>
+          <span className="dash-status-pill">
+            {totalActionItems > 0 ? (
+              <span className="badge-warning">{totalActionItems} Items Pending</span>
+            ) : (
+              <span className="badge-success">0 Issues Pending</span>
+            )}
+          </span>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="filter-tabs">
-          <button
-            className={`filter-tab ${activeFilter === 'all' ? 'active' : ''}`}
-            onClick={() => { setActiveFilter('all'); setCurrentPage(1); }}
-          >
-            All Users <span className="filter-count">{users.length.toLocaleString()}</span>
-          </button>
-          <button
-            className={`filter-tab ${activeFilter === 'students' ? 'active' : ''}`}
-            onClick={() => { setActiveFilter('students'); setCurrentPage(1); }}
-          >
-            Students Only <span className="filter-count">{studentCount.toLocaleString()}</span>
-          </button>
-          <button
-            className={`filter-tab ${activeFilter === 'tutors' ? 'active' : ''}`}
-            onClick={() => { setActiveFilter('tutors'); setCurrentPage(1); }}
-          >
-            Certified Tutors <span className="filter-count">{tutorCount.toLocaleString()}</span>
-          </button>
-          <button
-            className={`filter-tab ${activeFilter === 'admins' ? 'active' : ''}`}
-            onClick={() => { setActiveFilter('admins'); setCurrentPage(1); }}
-          >
-            Admins <span className="filter-count">{users.filter(u => u.is_admin).length}</span>
-          </button>
-          <div className="filter-sync">
-            <span className="sync-dot"></span>
-            Database synced 2 mins ago
-          </div>
-        </div>
+        <div className="dash-action-cards">
+          {/* Action Card 1: Teacher Applications */}
+          <div className="dash-action-card">
+            <div className="dash-action-card-header">
+              <div className="dash-action-title-group">
+                <span className="dash-action-icon tutor-app">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M6 12v5c3 3 9 3 12 0v-5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 className="dash-action-heading">Teacher Applications</h3>
+                  <p className="dash-action-desc">Peer tutor ID & verification reviews</p>
+                </div>
+              </div>
+              <span className={`dash-count-badge ${pendingTeacherApps.length > 0 ? 'pending' : 'clear'}`}>
+                {pendingTeacherApps.length} pending
+              </span>
+            </div>
 
-        {/* Search & Filters */}
-        <div className="search-filters">
-          <div className="search-box">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-            />
-          </div>
-          <select className="filter-select">
-            <option>All Departments</option>
-            <option>Computer Science</option>
-            <option>Mathematics</option>
-            <option>Engineering</option>
-            <option>Data Science</option>
-          </select>
-          <select className="filter-select">
-            <option>All Verification Statuses</option>
-            <option>Verified</option>
-            <option>Pending</option>
-          </select>
-          <select className="filter-select">
-            <option>Sort: Last Active</option>
-            <option>Sort: Name A-Z</option>
-            <option>Sort: Newest</option>
-          </select>
-        </div>
+            <div className="dash-action-card-body">
+              <div className="dash-stat-row">
+                <span>Total Applications Submitted:</span>
+                <strong>{teacherApps.length}</strong>
+              </div>
+              <div className="dash-stat-row">
+                <span>Approved Peer Tutors:</span>
+                <strong className="text-success">{teacherApps.filter(a => a.status === 'approved').length}</strong>
+              </div>
+              <div className="dash-stat-row">
+                <span>Pending Review:</span>
+                <strong className={pendingTeacherApps.length > 0 ? 'text-warning' : ''}>
+                  {pendingTeacherApps.length}
+                </strong>
+              </div>
+            </div>
 
-        {/* Bulk Actions */}
-        {selectedUsers.length > 0 && (
-          <div className="bulk-actions">
-            <span className="bulk-count">{selectedUsers.length} selected</span>
-            <button className="bulk-btn verify">Verify Selected ({selectedUsers.length})</button>
-            <button className="bulk-btn notice">Issue Formal Notice</button>
-          </div>
-        )}
-
-        {/* Users Table */}
-        <div className="users-table-container">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th className="th-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                <th>STUDENT / USER IDENTITY</th>
-                <th>CAMPUS ROLE & BADGES</th>
-                <th>ACADEMIC STANDING</th>
-                <th>SESSION VOLUME</th>
-                <th>ESCROW WALLET</th>
-                <th>STATUS</th>
-                <th>ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedUsers.map(u => {
-                const roleBadges = getRoleBadges(u);
-                const statusInfo = getStatusInfo(u);
-                const userSessions = sessions.filter(s =>
-                  s.tutor_id === u.user_id || s.student_id === u.user_id
-                ).length;
-                const userPosts = posts.filter(p => p.user_id === u.user_id).length;
-
-                return (
-                  <tr key={u.user_id} className={selectedUsers.includes(u.user_id) ? 'selected' : ''}>
-                    <td className="td-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={selectedUsers.includes(u.user_id)}
-                        onChange={() => handleSelectUser(u.user_id)}
-                      />
-                    </td>
-                    <td className="td-identity">
-                      <div className="user-identity">
-                        <div className="user-avatar" style={{ background: u.is_admin ? '#6366f1' : '#1e293b' }}>
-                          {getInitials(u.full_name)}
-                        </div>
-                        <div className="user-info">
-                          <div className="user-name">
-                            {u.full_name}
-                            {u.is_verified === 1 && (
-                              <svg className="verified-icon" width="14" height="14" viewBox="0 0 24 24" fill="#22c55e" stroke="none">
-                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                              </svg>
-                            )}
-                            {u.is_admin === 1 && <span className="admin-tag">ADMIN</span>}
-                          </div>
-                          <div className="user-detail">
-                            ID #{u.student_id || u.user_id} &bull; {u.department || 'N/A'}
-                          </div>
-                          <div className="user-email">{u.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="td-role">
-                      <div className="role-badges">
-                        {roleBadges.map((badge, i) => (
-                          <span key={i} className={`role-badge ${badge.class}`}>{badge.label}</span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="td-standing">
-                      <div className="standing-info">
-                        <span className="standing-label">{u.department || 'General'}</span>
-                        <span className="standing-detail">{u.role === 'both' ? 'Student & Tutor' : u.role === 'tutor' ? 'Peer Tutor' : 'Student'}</span>
-                      </div>
-                    </td>
-                    <td className="td-sessions">
-                      <div className="session-info">
-                        <span className="session-count">{userSessions} Sessions</span>
-                        <span className="session-posts">{userPosts} Posts</span>
-                      </div>
-                    </td>
-                    <td className="td-wallet">
-                      <div className="wallet-info">
-                        <span className="wallet-amount">৳ {parseFloat(u.wallet_balance || 0).toLocaleString()}</span>
-                      </div>
-                    </td>
-                    <td className="td-status">
-                      <span className={`status-badge ${statusInfo.class}`}>
-                        <span className="status-dot"></span>
-                        {statusInfo.label}
-                        <span className="status-sub">{statusInfo.sublabel}</span>
-                      </span>
-                    </td>
-                    <td className="td-action">
-                      <button className="action-btn-sm">Profile</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="pagination-bar">
-          <div className="pagination-info">
-            Showing <strong>{(currentPage - 1) * rowsPerPage + 1}</strong> to{' '}
-            <strong>{Math.min(currentPage * rowsPerPage, filteredUsers.length)}</strong> of{' '}
-            <strong>{filteredUsers.length}</strong> accounts
-          </div>
-          <div className="pagination-controls">
-            <span className="rows-label">Rows per page:</span>
-            <select
-              className="rows-select"
-              value={rowsPerPage}
-              onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-            <div className="page-buttons">
+            <div className="dash-action-card-footer">
               <button
-                className="page-btn"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
+                className="dash-action-btn"
+                onClick={() => navigate('/admin/teacher-applications')}
               >
-                &lt;
+                {pendingTeacherApps.length > 0 ? 'Review Applications' : 'View Teacher Logs'} &rarr;
               </button>
-              {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-                const page = currentPage <= 2 ? i + 1 : currentPage + i - 1;
-                if (page > totalPages) return null;
-                return (
-                  <button
-                    key={page}
-                    className={`page-btn ${currentPage === page ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </button>
-                );
-              })}
-              {totalPages > 3 && <span className="page-ellipsis">...</span>}
+            </div>
+          </div>
+
+          {/* Action Card 2: Escrow Disputes */}
+          <div className="dash-action-card">
+            <div className="dash-action-card-header">
+              <div className="dash-action-title-group">
+                <span className="dash-action-icon dispute">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
+                    <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" strokeLinejoin="round" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 className="dash-action-heading">Disputes &amp; Escrow</h3>
+                  <p className="dash-action-desc">Bounty arbitration & session disputes</p>
+                </div>
+              </div>
+              <span className={`dash-count-badge ${pendingDisputes.length > 0 ? 'danger' : 'clear'}`}>
+                {pendingDisputes.length} active
+              </span>
+            </div>
+
+            <div className="dash-action-card-body">
+              <div className="dash-stat-row">
+                <span>Total Disputes Recorded:</span>
+                <strong>{disputes.length}</strong>
+              </div>
+              <div className="dash-stat-row">
+                <span>Resolved &amp; Settled:</span>
+                <strong className="text-success">{disputes.filter(d => d.status === 'resolved' || d.status === 'refunded').length}</strong>
+              </div>
+              <div className="dash-stat-row">
+                <span>Awaiting Arbitration:</span>
+                <strong className={pendingDisputes.length > 0 ? 'text-danger' : ''}>
+                  {pendingDisputes.length}
+                </strong>
+              </div>
+            </div>
+
+            <div className="dash-action-card-footer">
               <button
-                className="page-btn"
-                disabled={currentPage === totalPages || totalPages === 0}
-                onClick={() => setCurrentPage(currentPage + 1)}
+                className="dash-action-btn"
+                onClick={() => navigate('/admin/disputes')}
               >
-                &gt;
+                {pendingDisputes.length > 0 ? 'Resolve Disputes' : 'View Escrow Audit'} &rarr;
               </button>
+            </div>
+          </div>
+
+          {/* Action Card 3: Content Moderation */}
+          <div className="dash-action-card">
+            <div className="dash-action-card-header">
+              <div className="dash-action-title-group">
+                <span className="dash-action-icon report">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" strokeLinecap="round" strokeLinejoin="round" />
+                    <line x1="4" y1="22" x2="4" y2="15" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 className="dash-action-heading">Report Queue</h3>
+                  <p className="dash-action-desc">Flagged user content & posts</p>
+                </div>
+              </div>
+              <span className={`dash-count-badge ${pendingReports.length > 0 ? 'warning' : 'clear'}`}>
+                {pendingReports.length} flagged
+              </span>
+            </div>
+
+            <div className="dash-action-card-body">
+              <div className="dash-stat-row">
+                <span>Total User Flags:</span>
+                <strong>{reports.length}</strong>
+              </div>
+              <div className="dash-stat-row">
+                <span>Addressed / Dismissed:</span>
+                <strong className="text-success">{reports.filter(r => r.status === 'resolved' || r.status === 'dismissed').length}</strong>
+              </div>
+              <div className="dash-stat-row">
+                <span>Needs Review:</span>
+                <strong className={pendingReports.length > 0 ? 'text-warning' : ''}>
+                  {pendingReports.length}
+                </strong>
+              </div>
+            </div>
+
+            <div className="dash-action-card-footer">
+              <button
+                className="dash-action-btn"
+                onClick={() => navigate('/admin/reports')}
+              >
+                {pendingReports.length > 0 ? 'Moderate Reports' : 'View Report Log'} &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Two-Column Operations Layout ─── */}
+      <div className="dash-two-col">
+        {/* Left Col: Recent Tutoring Requests */}
+        <div className="dash-col-main">
+          <div className="dash-card">
+            <div className="dash-card-header">
+              <div>
+                <h3 className="dash-card-title">Recent Tutoring Bounties</h3>
+                <span className="dash-card-subtitle">Latest peer learning requests posted by students</span>
+              </div>
+              <button className="dash-text-link" onClick={() => navigate('/admin/moderation')}>
+                View all in Moderation &rarr;
+              </button>
+            </div>
+
+            {posts.length === 0 ? (
+              <div className="dash-empty">No tutoring posts recorded.</div>
+            ) : (
+              <div className="dash-recent-list">
+                {posts.slice(0, 5).map(p => {
+                  const isCompleted = p.status === 'completed' || p.is_completed;
+                  return (
+                    <div key={p.post_id} className="dash-recent-item">
+                      <div className="dash-recent-left">
+                        <div className="dash-recent-meta">
+                          {p.course_code && <span className="dash-code-badge">{p.course_code}</span>}
+                          <span className="dash-cat-tag">{p.category}</span>
+                          {p.is_urgent ? <span className="dash-urgent-badge">High Urgency</span> : null}
+                        </div>
+                        <h4 className="dash-recent-title">{p.title}</h4>
+                        <div className="dash-recent-author">
+                          <span>Posted by <strong>{p.author_name || 'Student'}</strong></span>
+                          {p.created_at && (
+                            <span className="dash-recent-time">
+                              &bull; {new Date(p.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                          <span className="dash-recent-format">&bull; {getDeliveryLabel(p.delivery_format)}</span>
+                        </div>
+                      </div>
+
+                      <div className="dash-recent-right">
+                        <span className="dash-bounty-badge">৳ {p.bounty}</span>
+                        <span className={`dash-status-pill-sm ${isCompleted ? 'status-completed' : p.status === 'closed' ? 'status-closed' : 'status-active'}`}>
+                          {isCompleted ? 'Completed' : p.status === 'closed' ? 'Closed' : 'Active'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Col: Category Distribution & Quick Links */}
+        <div className="dash-col-side">
+          {/* Category Distribution */}
+          <div className="dash-card">
+            <div className="dash-card-header">
+              <h3 className="dash-card-title">Subject Demand</h3>
+              <span className="dash-card-subtitle">Distribution by academic category</span>
+            </div>
+
+            <div className="dash-cat-breakdown">
+              {categoryStats.map(cat => (
+                <div key={cat.name} className="dash-cat-row">
+                  <div className="dash-cat-row-info">
+                    <span className="dash-cat-name">{cat.name}</span>
+                    <span className="dash-cat-count">{cat.count} posts ({cat.percent}%)</span>
+                  </div>
+                  <div className="dash-cat-bar-bg">
+                    <div className="dash-cat-bar-fill" style={{ width: `${cat.percent}%` }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Management Shortcuts */}
+          <div className="dash-card">
+            <div className="dash-card-header">
+              <h3 className="dash-card-title">Quick Administration</h3>
+              <span className="dash-card-subtitle">Direct shortcuts to management sub-panels</span>
+            </div>
+
+            <div className="dash-shortcuts-grid">
+              <button className="dash-shortcut-btn" onClick={() => navigate('/admin/users')}>
+                <span className="dash-shortcut-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="9" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span>User Accounts</span>
+              </button>
+
+              <button className="dash-shortcut-btn" onClick={() => navigate('/admin/teacher-applications')}>
+                <span className="dash-shortcut-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span>Teacher Apps</span>
+              </button>
+
+              <button className="dash-shortcut-btn" onClick={() => navigate('/admin/disputes')}>
+                <span className="dash-shortcut-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
+                    <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span>Escrow Disputes</span>
+              </button>
+
+              <button className="dash-shortcut-btn" onClick={() => navigate('/admin/moderation')}>
+                <span className="dash-shortcut-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span>Content Moderation</span>
+              </button>
+            </div>
+          </div>
+
+          {/* System Health Info */}
+          <div className="dash-system-card">
+            <div className="dash-sys-row">
+              <span className="dash-sys-label">API Server</span>
+              <span className="dash-sys-val text-success">&bull; Online (Port 3001)</span>
+            </div>
+            <div className="dash-sys-row">
+              <span className="dash-sys-label">Database</span>
+              <span className="dash-sys-val">&bull; MySQL Connected</span>
+            </div>
+            <div className="dash-sys-row">
+              <span className="dash-sys-label">Platform Version</span>
+              <span className="dash-sys-val">MicroTeach v2.4</span>
             </div>
           </div>
         </div>

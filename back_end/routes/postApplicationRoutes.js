@@ -18,6 +18,7 @@ router.get('/post/:postId', async (req, res) => {
         u.department AS applicant_department,
         u.email AS applicant_email,
         u.role AS applicant_role,
+        u.avatar_color AS applicant_avatar_color,
         COALESCE(r.avg_rating, 0) AS avg_rating,
         COALESCE(r.review_count, 0) AS review_count
       FROM Post_Applications pa
@@ -57,6 +58,7 @@ router.get('/user/:userId', async (req, res) => {
         p.status AS post_status,
         p.user_id AS post_author_id,
         u.full_name AS post_author,
+        u.avatar_color AS post_author_avatar_color,
         EXISTS(
           SELECT 1 FROM Post_Applications pa2
           WHERE pa2.post_id = p.post_id AND pa2.status = 'completed'
@@ -140,9 +142,10 @@ router.patch('/:id/status', async (req, res) => {
   }
 
   try {
-    // Verify owner
+    // Verify application and participants
     const [app] = await db.query(
-      `SELECT pa.post_id, p.user_id FROM Post_Applications pa
+      `SELECT pa.post_id, pa.user_id AS applicant_id, p.user_id AS post_owner_id
+       FROM Post_Applications pa
        JOIN Posts p ON pa.post_id = p.post_id
        WHERE pa.application_id = ?`,
       [req.params.id]
@@ -150,12 +153,18 @@ router.patch('/:id/status', async (req, res) => {
     if (app.length === 0) {
       return res.status(404).json({ message: 'Application not found.' });
     }
-    if (owner_id && String(app[0].user_id) !== String(owner_id)) {
-      return res.status(403).json({ message: 'Only the post owner can update application status.' });
+
+    const postOwnerId = app[0].post_owner_id;
+    const applicantId = app[0].applicant_id;
+
+    // Both post owner and applicant are legitimate participants in the gig lifecycle
+    if (owner_id && String(postOwnerId) !== String(owner_id) && String(applicantId) !== String(owner_id)) {
+      return res.status(403).json({ message: 'Unauthorized to update application status.' });
     }
 
     if (status === 'completion_requested') {
-      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = ? WHERE application_id = ?', [status, requested_by || null, req.params.id]);
+      const requesterId = requested_by || owner_id || applicantId;
+      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = ? WHERE application_id = ?', [status, requesterId, req.params.id]);
     } else if (status === 'completed') {
       // Use DB transaction to ensure poster deduction and tutor credit are atomic
       const conn = await db.getConnection();

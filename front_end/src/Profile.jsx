@@ -8,7 +8,10 @@ import ConfirmModal from './ConfirmModal';
 import ReviewModal from './ReviewModal';
 import ApplyTeacherModal from './ApplyTeacherModal';
 import TransactionReportModal from './TransactionReportModal';
+import { avatarStyle } from './utils';
 import './Profile.css';
+
+const REVIEWS_PAGE_SIZE = 5;
 
 const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const navigate = useNavigate();
@@ -26,6 +29,13 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const [submitting, setSubmitting] = useState(false);
   const [postApplications, setPostApplications] = useState([]);
   const [postApplicantCounts, setPostApplicantCounts] = useState({});
+  const [postedFilter, setPostedFilter] = useState('active');
+  const [appliedFilter, setAppliedFilter] = useState('active');
+  const [postedPage, setPostedPage] = useState(1);
+  const [appliedPage, setAppliedPage] = useState(1);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [cardsPerRow, setCardsPerRow] = useState(3);
+  const gridMeasureRef = useRef(null);
   const [detailModalPost, setDetailModalPost] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatStartUser, setChatStartUser] = useState(null);
@@ -37,6 +47,23 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const [reviewedPosts, setReviewedPosts] = useState(new Set());
   const [userReviews, setUserReviews] = useState([]);
   const [userRating, setUserRating] = useState({ avg_rating: 0, review_count: 0 });
+  const [approvalBannerDismissed, setApprovalBannerDismissed] = useState(() => {
+    return !!localStorage.getItem(`microteach_teacher_approved_seen_${user?.user_id}`);
+  });
+
+  useEffect(() => {
+    if (loading) return undefined;
+    const el = gridMeasureRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const measure = () => {
+      const cols = window.innerWidth <= 768 ? 1 : Math.floor((el.clientWidth + 16) / 336);
+      setCardsPerRow(Math.max(1, Math.min(cols || 1, 6)));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading]);
 
   useEffect(() => {
     if (user?.user_id) {
@@ -44,6 +71,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
       checkApplicationStatus();
       loadPostApplications();
       loadReviews();
+      setApprovalBannerDismissed(!!localStorage.getItem(`microteach_teacher_approved_seen_${user.user_id}`));
     }
   }, [user]);
 
@@ -104,8 +132,13 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
     try {
       const response = await fetchUserApplications(user.user_id);
       if (response.data.length > 0) {
+        const hasApproved = response.data.some(a => a.status === 'approved');
         const latest = response.data[0];
-        setApplicationStatus(latest.status);
+        if (hasApproved || latest.status === 'approved') {
+          setApplicationStatus('approved');
+        } else {
+          setApplicationStatus(latest.status);
+        }
         setApplicationData(latest);
       }
     } catch (err) {
@@ -249,6 +282,26 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   }
 
   const { user: userData, posts } = profileData || {};
+  const allPosts = posts || [];
+  const isPostFinished = (p) => Boolean(p.is_completed) || p.status === 'completed' || p.status === 'resolved';
+  const activePosts = allPosts.filter((p) => !isPostFinished(p));
+  const completedPosts = allPosts.filter(isPostFinished);
+  const visiblePosts = postedFilter === 'completed' ? completedPosts : activePosts;
+  const isAppliedFinished = (a) => a.status === 'completed' || a.post_status === 'completed' || Boolean(a.is_completed);
+  const activeApplications = postApplications.filter((a) => !isAppliedFinished(a));
+  const completedApplications = postApplications.filter(isAppliedFinished);
+  const visibleApplications = appliedFilter === 'completed' ? completedApplications : activeApplications;
+
+  const pageSize = Math.max(1, cardsPerRow);
+  const postedTotalPages = Math.max(1, Math.ceil(visiblePosts.length / pageSize));
+  const postedCurrentPage = Math.min(postedPage, postedTotalPages);
+  const pagedPosts = visiblePosts.slice((postedCurrentPage - 1) * pageSize, postedCurrentPage * pageSize);
+  const appliedTotalPages = Math.max(1, Math.ceil(visibleApplications.length / pageSize));
+  const appliedCurrentPage = Math.min(appliedPage, appliedTotalPages);
+  const pagedApplications = visibleApplications.slice((appliedCurrentPage - 1) * pageSize, appliedCurrentPage * pageSize);
+  const reviewsTotalPages = Math.max(1, Math.ceil(userReviews.length / REVIEWS_PAGE_SIZE));
+  const reviewsCurrentPage = Math.min(reviewsPage, reviewsTotalPages);
+  const pagedReviews = userReviews.slice((reviewsCurrentPage - 1) * REVIEWS_PAGE_SIZE, reviewsCurrentPage * REVIEWS_PAGE_SIZE);
   const displayName = userData?.full_name || user?.full_name || 'User';
   const email = userData?.email || user?.email || '';
   const department = userData?.department || '';
@@ -259,8 +312,23 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const memberSince = userData?.created_at ? new Date(userData.created_at).getFullYear() : '2025';
 
   const roleLabels = { student: 'Student', tutor: 'Peer Tutor', both: 'Student & Tutor' };
-  const isStudentOnly = role === 'student';
-  const isApprovedTutor = applicationStatus === 'approved' || role === 'both';
+  const isTutorRole = role === 'both' || role === 'tutor';
+  const isApplicationApproved = applicationStatus === 'approved';
+  const isApprovedTutor = isApplicationApproved || isTutorRole;
+  const isStudentOnly = role === 'student' && !isApprovedTutor;
+  const isApplicationPending = applicationStatus === 'pending' && !isApprovedTutor;
+  const isApplicationRejected = applicationStatus === 'rejected' && !isApprovedTutor;
+
+
+
+  const showApprovalBanner = isApplicationApproved && !approvalBannerDismissed;
+
+  const handleDismissApprovalBanner = () => {
+    if (user?.user_id) {
+      localStorage.setItem(`microteach_teacher_approved_seen_${user.user_id}`, 'true');
+    }
+    setApprovalBannerDismissed(true);
+  };
 
   return (
     <div className="profile-page">
@@ -287,6 +355,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
               className="avatar"
               onClick={() => setDropdownOpen(!dropdownOpen)}
               title={displayName}
+              style={avatarStyle(profileData?.user?.avatar_color)}
             >
               {displayName.charAt(0).toUpperCase()}
             </div>
@@ -344,8 +413,8 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
 
       {/* Main Content */}
       <main className="profile-main">
-        {/* Approval Success Banner */}
-        {isApprovedTutor && (
+        {/* Approval Success Banner - Shown once upon approval, dismissible */}
+        {showApprovalBanner && (
           <div className="approval-banner">
             <div className="approval-banner-inner">
               <div className="approval-icon">&#10003;</div>
@@ -353,12 +422,20 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                 <strong>Congratulations! Your tutor application has been approved.</strong>
                 <span>You can now respond to student posts and start tutoring on MicroTeach.</span>
               </div>
+              <button 
+                className="banner-dismiss-btn" 
+                onClick={handleDismissApprovalBanner}
+                aria-label="Dismiss banner"
+                title="Dismiss"
+              >
+                ✕
+              </button>
             </div>
           </div>
         )}
 
-        {/* Pending Application Banner */}
-        {applicationStatus === 'pending' && (
+        {/* Pending Application Banner - Only when pending and not already approved/tutor */}
+        {isApplicationPending && (
           <div className="pending-banner">
             <div className="pending-banner-inner">
               <div className="pending-icon">&#8987;</div>
@@ -371,7 +448,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
         )}
 
         {/* Rejected Application Banner */}
-        {applicationStatus === 'rejected' && (
+        {isApplicationRejected && (
           <div className="rejected-banner">
             <div className="rejected-banner-inner">
               <div className="rejected-icon">&#10007;</div>
@@ -387,7 +464,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
         <section className="profile-hero">
           <div className="hero-content">
             <div className="hero-left">
-              <div className="avatar-large">
+              <div className="avatar-large" style={avatarStyle(profileData?.user?.avatar_color)}>
                 {displayName.charAt(0).toUpperCase()}
                 <span className="online-dot"></span>
               </div>
@@ -446,10 +523,10 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                   Apply to Teach
                 </button>
               )}
-              {isStudentOnly && applicationStatus === 'pending' && (
+              {isApplicationPending && (
                 <span className="application-badge pending">Application Pending</span>
               )}
-              {isStudentOnly && applicationStatus === 'rejected' && (
+              {isApplicationRejected && (
                 <button className="btn-apply-teacher" onClick={() => setShowApplyModal(true)}>
                   Apply Again
                 </button>
@@ -460,19 +537,32 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
 
         {/* Posted Requests Section */}
         <section className="profile-section">
-          <div className="section-header">
+          <div className="section-header" ref={gridMeasureRef}>
             <div className="section-header-left">
               <div className="section-icon-box primary">post_add</div>
               <div>
                 <div className="section-title-row">
                   <h2>Posted Requests</h2>
-                  <span className="count-badge primary">{posts?.length || 0} Active Posts</span>
+                  <span className="count-badge primary">{activePosts.length} Active Post{activePosts.length !== 1 ? 's' : ''}</span>
                 </div>
                 <p>Academic problems and course questions requested by {displayName}</p>
               </div>
             </div>
             <div className="section-header-right">
-              <button className="btn-filter">Most Recent</button>
+              <div className="filter-pills">
+                <button
+                  className={`filter-pill ${postedFilter === 'active' ? 'is-active' : ''}`}
+                  onClick={() => { setPostedFilter('active'); setPostedPage(1); }}
+                >
+                  Active <span className="filter-count">{activePosts.length}</span>
+                </button>
+                <button
+                  className={`filter-pill ${postedFilter === 'completed' ? 'is-active' : ''}`}
+                  onClick={() => { setPostedFilter('completed'); setPostedPage(1); }}
+                >
+                  Completed <span className="filter-count">{completedPosts.length}</span>
+                </button>
+              </div>
               <button className="btn-primary-sm" onClick={() => navigate('/create-post')}>
                 <span>+</span> New Problem
               </button>
@@ -481,14 +571,15 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
 
           <div className="posts-grid">
             {posts && posts.length > 0 ? (
-              posts.map((post) => {
+              visiblePosts.length > 0 ? (
+              pagedPosts.map((post) => {
                 const statusBadge = getStatusBadge(post.status, post.is_completed);
                 const applicantCount = postApplicantCounts[post.post_id] || 0;
                 return (
                   <div key={post.post_id} className="post-card">
                     <div className="post-card-header">
                       {post.course_code && <span className="course-badge">{post.course_code.split(' ')[0]}</span>}
-                      <span className="status-badge">● {statusBadge.text}</span>
+                      <span className={`status-badge status-badge--${statusBadge.class}`}>{statusBadge.text}</span>
                     </div>
                     <div className="post-card-meta">
                       <span className="posted-time">
@@ -517,10 +608,10 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                               {!post.is_completed && post.status !== 'resolved' && post.status !== 'completed' ? (
                                 <>
                                   <button className="btn-outline-sm" onClick={() => handleClosePost(post.post_id)}>Close Post</button>
-                                  <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost(post)}>⚖️ Dispute Gig</button>
+                                  <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost(post)}>Dispute</button>
                                 </>
                               ) : (
-                                <span className="completed-tag">✓ Gig Completed &amp; Settled</span>
+                                <span className="completed-tag">Gig Completed &amp; Settled</span>
                               )}
                             </>
                           )}
@@ -530,6 +621,11 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                   </div>
                 );
               })
+              ) : (
+                <div className="empty-state">
+                  <p>{postedFilter === 'completed' ? 'No completed gigs yet — finished sessions will show up here.' : 'No active posts right now.'}</p>
+                </div>
+              )
             ) : (
               <div className="empty-state">
                 <p>No posts yet. Create your first post to get help from peer tutors!</p>
@@ -537,6 +633,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
               </div>
             )}
           </div>
+          <Pagination page={postedCurrentPage} totalPages={postedTotalPages} onChange={setPostedPage} />
         </section>
 
         {/* Applied Requests Section */}
@@ -553,13 +650,29 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
               </div>
             </div>
             <div className="section-header-right">
-              <button className="btn-filter">All Statuses</button>
+              <div className="filter-pills">
+                <button
+                  className={`filter-pill ${appliedFilter === 'active' ? 'is-active' : ''}`}
+                  onClick={() => { setAppliedFilter('active'); setAppliedPage(1); }}
+                >
+                  Active <span className="filter-count">{activeApplications.length}</span>
+                </button>
+                <button
+                  className={`filter-pill ${appliedFilter === 'completed' ? 'is-active' : ''}`}
+                  onClick={() => { setAppliedFilter('completed'); setAppliedPage(1); }}
+                >
+                  Completed <span className="filter-count">{completedApplications.length}</span>
+                </button>
+              </div>
             </div>
           </div>
 
           {postApplications.length > 0 ? (
+            <>
             <div className="posts-grid">
-              {postApplications.map((app) => {
+              {pagedApplications.length > 0 ? (
+              pagedApplications.map((app) => {
+                const effectiveUserId = String(user?.user_id || user?.id || (profileData?.user?.user_id) || '');
                 const isCompleted = app.status === 'completed' || app.post_status === 'completed' || Boolean(app.is_completed);
                 const isAccepted = !isCompleted && app.status === 'accepted';
                 const isRejected = app.status === 'rejected';
@@ -567,17 +680,33 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                 const isCancelRequested = !isCompleted && app.status === 'cancellation_requested';
                 const isCancelled = app.status === 'cancelled';
                 const isCompletionRequested = !isCompleted && app.status === 'completion_requested';
+
+                const reqBy = app.completion_requested_by ? String(app.completion_requested_by) : null;
+                const tutorUserId = String(app.user_id);
+                // Did current user (tutor) request completion? (defaults to true if caller or null fallback)
+                const isRequester = Boolean(
+                  isCompletionRequested &&
+                  (!reqBy || reqBy === effectiveUserId || reqBy === tutorUserId)
+                );
+                // Did the other party (student / post author) request completion?
+                const isOtherParty = Boolean(
+                  isCompletionRequested &&
+                  reqBy &&
+                  reqBy !== effectiveUserId &&
+                  reqBy !== tutorUserId
+                );
+
                 return (
                   <div key={app.application_id} className={`post-card ${isAccepted ? 'post-card--accepted' : ''} ${isCancelRequested ? 'post-card--cancel-requested' : ''} ${isCancelled ? 'post-card--cancelled' : ''} ${isCompleted ? 'post-card--completed' : ''}`}>
                     <div className="post-card-header">
                       {app.course_code && <span className="course-badge">{app.course_code.split(' ')[0]}</span>}
-                      {isAccepted && <span className="status-badge status-badge--accepted">✓ Accepted</span>}
-                      {isRejected && <span className="status-badge status-badge--rejected">✕ Rejected</span>}
-                      {isPending && <span className="status-badge status-badge--pending">● Pending</span>}
-                      {isCancelRequested && <span className="status-badge status-badge--pending">⚠ Cancel Requested</span>}
-                      {isCancelled && <span className="status-badge status-badge--rejected">✕ Cancelled</span>}
-                      {isCompletionRequested && <span className="status-badge status-badge--accepted">✓ Complete Requested</span>}
-                      {isCompleted && <span className="status-badge status-badge--accepted">✓ Completed</span>}
+                      {isAccepted && <span className="status-badge status-badge--accepted">Accepted</span>}
+                      {isRejected && <span className="status-badge status-badge--rejected">Rejected</span>}
+                      {isPending && <span className="status-badge status-badge--pending">Pending</span>}
+                      {isCancelRequested && <span className="status-badge status-badge--pending">Cancel Requested</span>}
+                      {isCancelled && <span className="status-badge status-badge--rejected">Cancelled</span>}
+                      {isCompletionRequested && <span className="status-badge status-badge--accepted">Complete Requested</span>}
+                      {isCompleted && <span className="status-badge status-badge--accepted">Completed</span>}
                     </div>
                     <div className="post-card-meta">
                       <span className="posted-time">
@@ -601,7 +730,9 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                           <span className="cancelled-tag">Session cancelled</span>
                         )}
                         {isCompletionRequested && (
-                          <span className="completion-requested-tag">Post owner marked complete</span>
+                          <span className="completion-requested-tag">
+                            {isRequester ? 'Waiting for student to accept' : 'Student marked complete — action required'}
+                          </span>
                         )}
                         {isCompleted && (
                           <span className="completed-tag">Session completed</span>
@@ -610,7 +741,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                       {isCompleted && (
                         <div className="post-card-footer-bottom">
                           <div className="post-card-actions">
-                            <span className="completed-tag">✓ Gig Completed &amp; Settled</span>
+                            <span className="completed-tag">Gig Completed &amp; Settled</span>
                             {!reviewedPosts.has(app.post_id) && (
                               <button className="btn-review-sm" onClick={() => setReviewModal({ open: true, revieweeId: app.post_author_id, revieweeName: app.post_author, postId: app.post_id })}>
                                 Leave Review
@@ -626,7 +757,8 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                         <div className="post-card-footer-bottom">
                           <div className="post-card-actions">
                             <button className="btn-complete-sm" onClick={async () => {
-                              await updateApplicationStatus(app.application_id, { status: 'completion_requested', owner_id: app.post_author_id, requested_by: user.user_id });
+                              const callerId = effectiveUserId || app.user_id;
+                              await updateApplicationStatus(app.application_id, { status: 'completion_requested', owner_id: app.post_author_id, requested_by: callerId });
                               loadPostApplications();
                             }}>
                               Mark Complete
@@ -638,12 +770,12 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                               <span className="meta-icon">chat</span> Message
                             </button>
                             <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id, post_author_id: app.post_author_id, is_completed: false, status: app.post_status })}>
-                              ⚖️ Dispute Gig
+                              Dispute Escrow
                             </button>
                           </div>
                         </div>
                       )}
-                      {isCompletionRequested && String(app.completion_requested_by) !== String(user.user_id) && (
+                      {isCompletionRequested && isOtherParty && (
                         <div className="post-card-footer-bottom">
                           <div className="post-card-actions">
                             <button className="btn-complete-sm" onClick={async () => {
@@ -665,12 +797,12 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                               <span className="meta-icon">chat</span> Message
                             </button>
                             <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id, post_author_id: app.post_author_id, is_completed: false, status: app.post_status })}>
-                              ⚖️ Dispute Gig
+                              Dispute Escrow
                             </button>
                           </div>
                         </div>
                       )}
-                      {isCompletionRequested && String(app.completion_requested_by) === String(user.user_id) && (
+                      {isCompletionRequested && isRequester && (
                         <div className="post-card-footer-bottom">
                           <div className="post-card-actions">
                             <span className="waiting-tag">Waiting for student...</span>
@@ -681,7 +813,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                               <span className="meta-icon">chat</span> Message
                             </button>
                             <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id, post_author_id: app.post_author_id, is_completed: false, status: app.post_status })}>
-                              ⚖️ Dispute Gig
+                              Dispute Escrow
                             </button>
                           </div>
                         </div>
@@ -708,7 +840,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                               <span className="meta-icon">chat</span> Message
                             </button>
                             <button className="btn-dispute-sm" title="Report Transaction / Escrow Issue" onClick={() => setTxDisputeModalPost({ post_id: app.post_id, course_code: app.course_code, title: app.post_title, bounty: app.bounty, user_id: app.post_author_id, post_author_id: app.post_author_id, is_completed: false, status: app.post_status })}>
-                              ⚖️ Dispute Gig
+                              Dispute Escrow
                             </button>
                           </div>
                         </div>
@@ -716,8 +848,15 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                     </div>
                   </div>
                 );
-              })}
+              })
+              ) : (
+                <div className="empty-state">
+                  <p>{appliedFilter === 'completed' ? 'No completed applications yet — finished sessions will show up here.' : 'No active applications right now.'}</p>
+                </div>
+              )}
             </div>
+            <Pagination page={appliedCurrentPage} totalPages={appliedTotalPages} onChange={setAppliedPage} />
+            </>
           ) : (
             <div className="empty-state">
               <p>You haven't applied to any tutoring requests yet. Browse available bounties to start helping peers!</p>
@@ -751,11 +890,12 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
           </div>
 
           {userReviews.length > 0 ? (
+            <>
             <div className="reviews-list">
-              {userReviews.map((review) => (
+              {pagedReviews.map((review) => (
                 <div key={review.review_id} className="review-card">
                   <div className="review-card-header">
-                    <div className="review-avatar">{review.reviewer_name?.charAt(0) || '?'}</div>
+                    <div className="review-avatar" style={avatarStyle(review.reviewer_avatar_color)}>{review.reviewer_name?.charAt(0) || '?'}</div>
                     <div className="review-meta">
                       <span className="reviewer-name">{review.reviewer_name}</span>
                       <span className="review-date">{new Date(review.created_at).toLocaleDateString()}</span>
@@ -769,6 +909,8 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                 </div>
               ))}
             </div>
+            <Pagination page={reviewsCurrentPage} totalPages={reviewsTotalPages} onChange={setReviewsPage} />
+            </>
           ) : (
             <div className="empty-state">
               <p>No reviews yet. Complete tutoring sessions to build your reputation!</p>
@@ -807,7 +949,10 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
           post={detailModalPost}
           user={user}
           onClose={() => setDetailModalPost(null)}
-          onStatusChange={() => loadApplicantCounts(posts)}
+          onStatusChange={() => {
+            loadProfile();
+            loadPostApplications();
+          }}
           onChat={(otherUserId) => {
             setDetailModalPost(null);
             setChatStartUser(otherUserId);
@@ -869,6 +1014,59 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
         </div>
       </footer>
     </div>
+  );
+};
+
+const pageNumbers = (current, total) => {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const wanted = new Set([1, total, current - 1, current, current + 1]);
+  const sorted = [...wanted].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  const items = [];
+  let prev = 0;
+  sorted.forEach((n) => {
+    if (n - prev === 2) items.push(prev + 1);
+    else if (n - prev > 2) items.push('…');
+    items.push(n);
+    prev = n;
+  });
+  return items;
+};
+
+const Pagination = ({ page, totalPages, onChange }) => {
+  if (totalPages <= 1) return null;
+  return (
+    <nav className="pagination" aria-label="Pagination">
+      <button
+        className="page-btn"
+        disabled={page <= 1}
+        onClick={() => onChange(page - 1)}
+        aria-label="Previous page"
+        title="Previous page"
+      >
+        <span className="meta-icon">chevron_left</span>
+      </button>
+      {pageNumbers(page, totalPages).map((n, i) => (n === '…' ? (
+        <span key={`gap-${i}`} className="page-gap">&hellip;</span>
+      ) : (
+        <button
+          key={n}
+          className={`page-num ${n === page ? 'is-active' : ''}`}
+          onClick={() => onChange(n)}
+        >
+          {n}
+        </button>
+      )))}
+      <button
+        className="page-btn"
+        disabled={page >= totalPages}
+        onClick={() => onChange(page + 1)}
+        aria-label="Next page"
+        title="Next page"
+      >
+        <span className="meta-icon">chevron_right</span>
+      </button>
+      <span className="page-status">Page {page} of {totalPages}</span>
+    </nav>
   );
 };
 

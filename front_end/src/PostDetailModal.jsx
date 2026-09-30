@@ -3,7 +3,7 @@ import { fetchPostApplications, updateApplicationStatus, closePost, checkReviewE
 import ConfirmModal from './ConfirmModal';
 import ReviewModal from './ReviewModal';
 import TransactionReportModal from './TransactionReportModal';
-import { formatDeadline } from './utils';
+import { formatDeadline, avatarStyle } from './utils';
 import './PostDetailModal.css';
 
 const getTimeAgo = (dateStr) => {
@@ -181,8 +181,8 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                   const isCompleted = app.status === 'completed';
                   return (
                     <div key={app.application_id} className={`pd-item ${isAccepted ? 'pd-item--accepted' : ''} ${isCancelRequested ? 'pd-item--cancel-requested' : ''} ${isCancelled ? 'pd-item--cancelled' : ''} ${isCompleted ? 'pd-item--completed' : ''}`}>
-                      <div className="pd-item-left">
-                        <div className={`pd-item-avatar tone-${getAvatarTone(app.applicant_name)}`}>
+                      <div className="pd-item-top">
+                        <div className={`pd-item-avatar tone-${getAvatarTone(app.applicant_name)}`} style={avatarStyle(app.applicant_avatar_color)}>
                           {app.applicant_name ? app.applicant_name.charAt(0).toUpperCase() : '?'}
                         </div>
                         <div className="pd-item-info">
@@ -190,23 +190,23 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                             <span className="pd-item-name">{app.applicant_name}</span>
                             <span className={`pd-status-badge ${badge.class}`}>{badge.text}</span>
                           </div>
-                          <div className="pd-item-dept">{app.applicant_department}</div>
-                          {app.message && <div className="pd-item-message">"{app.message}"</div>}
-                          <div className="pd-item-meta">
-                            <span className="pd-item-time">Applied {getTimeAgo(app.created_at)}</span>
+                          {app.applicant_department && <div className="pd-item-dept">{app.applicant_department}</div>}
+                          <div className="pd-item-meta">Applied {getTimeAgo(app.created_at)}</div>
+                        </div>
+                        <div className="pd-item-side">
+                          <div className="pd-rating">
+                            <span className="pd-stars">{getStars(rating)}</span>
+                            <span className="pd-rating-num">{rating > 0 ? rating.toFixed(1) : '—'}</span>
+                            {reviewCount > 0 && <span className="pd-review-count">({reviewCount})</span>}
                           </div>
+                          <span className="pd-view-profile">View Profile</span>
                         </div>
                       </div>
-                      <div className="pd-item-right">
-                        <div className="pd-rating">
-                          <span className="pd-stars">{getStars(rating)}</span>
-                          <span className="pd-rating-num">{rating > 0 ? rating.toFixed(1) : '—'}</span>
-                          {reviewCount > 0 && <span className="pd-review-count">({reviewCount})</span>}
-                        </div>
-                        <span className="pd-view-profile">View Profile</span>
+
+                      {app.message && <p className="pd-item-message">"{app.message}"</p>}
                         {isAccepted && !isPostSettled && (
-                          <div className="pd-accepted-actions">
-                            <span className="pd-chat-icon" onClick={() => onChat && onChat(app.user_id)}>chat</span>
+                          <div className="pd-actions">
+                            <button className="pd-chat-btn" onClick={() => onChat && onChat(app.user_id)}>Chat</button>
                             <button
                               className="pd-complete-btn"
                               onClick={() => handleStatusChange(app.application_id, 'completion_requested', post.user_id)}
@@ -226,12 +226,12 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                               onClick={() => setTxDisputeOpen(true)}
                               title="Report Transaction / Escrow Issue"
                             >
-                              ⚖️ Dispute Escrow
+                              Dispute Escrow
                             </button>
                           </div>
                         )}
-                        {isCompletionRequested && !isPostSettled && String(app.completion_requested_by) !== String(post.user_id) && (
-                          <div className="pd-accepted-actions">
+                        {isCompletionRequested && !isPostSettled && app.completion_requested_by && String(app.completion_requested_by) !== String(post.user_id) && (
+                          <div className="pd-actions">
                             <button
                               className="pd-complete-btn"
                               onClick={() => handleStatusChange(app.application_id, 'completed')}
@@ -251,24 +251,24 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                               onClick={() => setTxDisputeOpen(true)}
                               title="Report Transaction / Escrow Issue"
                             >
-                              ⚖️ Dispute Escrow
+                              Dispute Escrow
                             </button>
                           </div>
                         )}
-                        {isCompletionRequested && !isPostSettled && String(app.completion_requested_by) === String(post.user_id) && (
-                          <div className="pd-accepted-actions">
+                        {isCompletionRequested && !isPostSettled && (!app.completion_requested_by || String(app.completion_requested_by) === String(post.user_id)) && (
+                          <div className="pd-actions">
                             <span className="pd-waiting-badge">Waiting for tutor...</span>
                             <button
                               className="pd-dispute-btn"
                               onClick={() => setTxDisputeOpen(true)}
                               title="Report Transaction / Escrow Issue"
                             >
-                              ⚖️ Dispute Escrow
+                              Dispute Escrow
                             </button>
                           </div>
                         )}
                         {isCompleted && (
-                          <div className="pd-accepted-actions">
+                          <div className="pd-actions">
                             <span className="pd-completed-badge">Session Complete</span>
                             {!reviewedApps.has(app.application_id) && (
                               <button
@@ -284,7 +284,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                           </div>
                         )}
                         {isCancelRequested && !isPostSettled && (
-                          <div className="pd-accepted-actions">
+                          <div className="pd-actions">
                             <button
                               className="pd-cancel-btn"
                               onClick={() => handleStatusChange(app.application_id, 'cancelled')}
@@ -304,7 +304,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                               onClick={() => setTxDisputeOpen(true)}
                               title="Report Transaction / Escrow Issue"
                             >
-                              ⚖️ Dispute Escrow
+                              Dispute Escrow
                             </button>
                           </div>
                         )}
@@ -326,7 +326,6 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                             </button>
                           </div>
                         )}
-                      </div>
                     </div>
                   );
                 })}

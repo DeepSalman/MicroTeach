@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchPostApplications, applyToPost, withdrawApplication } from './api';
-import { formatDeadline } from './utils';
+import { formatDeadline, avatarStyle } from './utils';
 import './ApplyModal.css';
 
 const getTimeAgo = (dateStr) => {
@@ -123,7 +123,7 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
 
           {/* Poster Info */}
           <div className="apply-poster">
-            <div className={`apply-poster-avatar tone-${getAvatarTone(post.author_name)}`}>
+            <div className={`apply-poster-avatar tone-${getAvatarTone(post.author_name)}`} style={avatarStyle(post.author_avatar_color)}>
               {post.author_name ? post.author_name.charAt(0).toUpperCase() : '?'}
             </div>
             <div className="apply-poster-info">
@@ -150,7 +150,7 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
                   const badge = getStatusBadge(app.status);
                   return (
                     <div key={app.application_id} className="apply-item">
-                      <div className={`apply-item-avatar tone-${getAvatarTone(app.applicant_name)}`}>
+                      <div className={`apply-item-avatar tone-${getAvatarTone(app.applicant_name)}`} style={avatarStyle(app.applicant_avatar_color)}>
                         {app.applicant_name ? app.applicant_name.charAt(0).toUpperCase() : '?'}
                       </div>
                       <div className="apply-item-info">

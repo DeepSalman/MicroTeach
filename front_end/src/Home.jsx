@@ -10,7 +10,7 @@ import TransactionReportModal from './TransactionReportModal';
 import { formatDeadline } from './utils';
 import './Home.css';
 
-const Home = ({ user, onLogout }) => {
+const Home = ({ user, onLogout, onProfileUpdate }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +31,7 @@ const Home = ({ user, onLogout }) => {
   const [applyTeacherOpen, setApplyTeacherOpen] = useState(false);
   const [dbUserRole, setDbUserRole] = useState(user?.role || 'student');
   const [teacherAppStatus, setTeacherAppStatus] = useState(null);
+  const [showApprovedBanner, setShowApprovedBanner] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -41,6 +42,7 @@ const Home = ({ user, onLogout }) => {
     setAppliedPostIds(new Set());
     setDbUserRole(user?.role || 'student');
     setTeacherAppStatus(null);
+    setShowApprovedBanner(false);
   }
 
   const loadApplicantCounts = useCallback((postsData) => {
@@ -96,8 +98,17 @@ const Home = ({ user, onLogout }) => {
       // Fetch live role from DB to verify teacher privileges
       fetchUserProfile(user.user_id)
         .then(res => {
-          if (res.data && res.data.role) {
-            setDbUserRole(res.data.role);
+          const profileUser = res.data && (res.data.user || res.data);
+          if (profileUser) {
+            if (profileUser.role) {
+              setDbUserRole(profileUser.role);
+            }
+            if (profileUser.avatar_color) {
+              setMyAvatarColor(profileUser.avatar_color);
+            }
+            if (onProfileUpdate && (profileUser.role !== user.role || profileUser.avatar_color !== user.avatar_color)) {
+              onProfileUpdate({ ...user, role: profileUser.role, avatar_color: profileUser.avatar_color });
+            }
           }
         })
         .catch(() => {});
@@ -106,14 +117,36 @@ const Home = ({ user, onLogout }) => {
       fetchUserApplications(user.user_id)
         .then(res => {
           if (res.data && res.data.length > 0) {
-            setTeacherAppStatus(res.data[0].status);
+            const hasApproved = res.data.some(a => a.status === 'approved');
+            const latest = res.data[0];
+            if (hasApproved || latest.status === 'approved') {
+              setTeacherAppStatus('approved');
+              const storageKey = `microteach_teacher_approved_seen_${user.user_id}`;
+              if (!localStorage.getItem(storageKey)) {
+                setShowApprovedBanner(true);
+              }
+            } else if (latest.status === 'pending') {
+              setTeacherAppStatus('pending');
+              setShowApprovedBanner(false);
+            } else {
+              setTeacherAppStatus(latest.status);
+              setShowApprovedBanner(false);
+            }
           } else {
             setTeacherAppStatus(null);
+            setShowApprovedBanner(false);
           }
         })
         .catch(() => {});
     }
   }, [user, loadAppliedPosts]);
+
+  const handleDismissApprovedBanner = () => {
+    if (user?.user_id) {
+      localStorage.setItem(`microteach_teacher_approved_seen_${user.user_id}`, 'true');
+    }
+    setShowApprovedBanner(false);
+  };
 
   const handleLogout = () => {
     setDropdownOpen(false);
@@ -213,7 +246,7 @@ const Home = ({ user, onLogout }) => {
         </div>
 
         <div className="header-actions">
-          {user && user.role === 'student' && (
+          {user && (dbUserRole === 'student' && user.role === 'student' && teacherAppStatus !== 'approved') && (
             <button className="btn-become-tutor-nav" onClick={() => setApplyTeacherOpen(true)}>
               Apply to Teach
             </button>
@@ -276,7 +309,7 @@ const Home = ({ user, onLogout }) => {
                         Admin Panel
                       </button>
                     )}
-                    {user.role === 'student' && (
+                    {user.role === 'student' && dbUserRole === 'student' && teacherAppStatus !== 'approved' && (
                       <button className="dropdown-item" onClick={() => { setDropdownOpen(false); setApplyTeacherOpen(true); }}>
                         🎓 Apply to Teach
                       </button>
@@ -319,6 +352,27 @@ const Home = ({ user, onLogout }) => {
 
       {/* Main Content */}
       <main className="home-main">
+        {showApprovedBanner && (
+          <div className="home-approval-banner">
+            <div className="home-approval-inner">
+              <div className="home-approval-badge">
+                <span className="home-approval-check">✓</span>
+                <span>Teacher Application Approved</span>
+              </div>
+              <p className="home-approval-text">
+                Congratulations! You are now verified to teach and respond to student posts on MicroTeach.
+              </p>
+              <button 
+                className="home-approval-dismiss"
+                onClick={handleDismissApprovedBanner}
+                aria-label="Dismiss message"
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         <div className="main-header">
           <div>
             <h1>All posts</h1>
@@ -355,25 +409,29 @@ const Home = ({ user, onLogout }) => {
               return (
                 <div key={post.post_id} className="card">
                   <div className="card-header">
-                    {post.is_urgent ? (
-                      <div className="urgent-row">
-                        <span className="meta-chip urgent-chip">High Urgency</span>
-                      </div>
-                    ) : null}
-                    <h3 className="card-title">{post.title}</h3>
-                    <span className="report-btn" title="Report Content" onClick={() => openReportModal(post)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-                        <line x1="4" y1="22" x2="4" y2="15"/>
-                      </svg>
-                    </span>
-                    {post.status !== 'closed' && post.status !== 'resolved' && post.status !== 'completed' && !post.is_completed && (
-                      <span className="report-btn tx-dispute-btn" title="Report Transaction / Escrow Issue" onClick={(e) => { e.stopPropagation(); if (!user) { navigate('/login'); return; } setTxDisputeModalPost(post); }}>
+                    <div className="card-header-main">
+                      {post.is_urgent ? (
+                        <div className="urgent-row">
+                          <span className="meta-chip urgent-chip">High Urgency</span>
+                        </div>
+                      ) : null}
+                      <h3 className="card-title">{post.title}</h3>
+                    </div>
+                    <div className="card-header-actions">
+                      <span className="report-btn" title="Report Content" onClick={() => openReportModal(post)}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                          <line x1="4" y1="22" x2="4" y2="15"/>
                         </svg>
                       </span>
-                    )}
+                      {post.status !== 'closed' && post.status !== 'resolved' && post.status !== 'completed' && !post.is_completed && (
+                        <span className="report-btn tx-dispute-btn" title="Report Transaction / Escrow Issue" onClick={(e) => { e.stopPropagation(); if (!user) { navigate('/login'); return; } setTxDisputeModalPost(post); }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                          </svg>
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="card-subject">{post.category}</div>
@@ -404,7 +462,7 @@ const Home = ({ user, onLogout }) => {
                         {isOwnPost ? (
                           <button className="view-details-btn" onClick={() => setDetailModalPost(post)}>View Details</button>
                         ) : user ? (
-                          (dbUserRole === 'both' || dbUserRole === 'tutor') ? (
+                          (dbUserRole === 'both' || dbUserRole === 'tutor' || teacherAppStatus === 'approved') ? (
                             appliedPostIds.has(post.post_id) ? (
                               <button className="apply-btn applied-btn" onClick={() => setApplyModalPost(post)}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">

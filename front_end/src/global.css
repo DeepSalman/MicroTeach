@@ -220,3 +220,23 @@ code, pre, .mono {
   flex: 1;
   min-width: 0;
 }
+
+/* ============================================================
+   MATERIAL SYMBOLS — ligature icons (e.g. "schedule", "people")
+   ============================================================ */
+.meta-icon,
+.section-icon-box {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
