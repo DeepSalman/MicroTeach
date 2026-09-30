@@ -1,19 +1,11 @@
 const dotenv = require('dotenv');
 const path = require('path');
 dotenv.config({ path: path.join(__dirname, '.env') });
-dotenv.config({ path: path.join(process.cwd(), '.env') });
-dotenv.config({ path: path.join(process.cwd(), 'back_end', '.env') });
-
 const { randomAvatarColor } = require('./avatarColors');
 
-const SUPABASE_FALLBACK_URL = "postgresql://postgres.tdbflvjdjrjzomywuxqg:thereisaverystrongpasswordwhichis%40123@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true";
-
-// Determine effective database connection string
-const rawDbUrl = process.env.DATABASE_URL || (process.env.VERCEL || process.env.NODE_ENV === 'production' ? SUPABASE_FALLBACK_URL : null);
-
 const isPostgres = Boolean(
-  rawDbUrl &&
-  (rawDbUrl.startsWith('postgres://') || rawDbUrl.startsWith('postgresql://'))
+  process.env.DATABASE_URL &&
+  (process.env.DATABASE_URL.startsWith('postgres://') || process.env.DATABASE_URL.startsWith('postgresql://'))
 );
 
 let pool;
@@ -22,14 +14,14 @@ let dbInterface;
 if (isPostgres) {
   // ─── PostgreSQL / Supabase Driver ───
   const { Pool } = require('pg');
-  const isLocalPg = rawDbUrl.includes('localhost') || rawDbUrl.includes('127.0.0.1');
+  const isLocalPg = process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1');
 
   pool = new Pool({
-    connectionString: rawDbUrl,
+    connectionString: process.env.DATABASE_URL,
     ssl: isLocalPg ? false : { rejectUnauthorized: false },
-    max: 5,
+    max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000
+    connectionTimeoutMillis: 5000
   });
 
   // Convert MySQL '?' syntax to PostgreSQL '$1, $2...' & handle array expansion

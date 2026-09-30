@@ -35,13 +35,15 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // Reset session-scoped state safely when the signed-in user changes
-  useEffect(() => {
+  // Reset session-scoped state when the signed-in user changes (adjusting state during render)
+  const [prevUserId, setPrevUserId] = useState(user?.user_id ?? null);
+  if ((user?.user_id ?? null) !== prevUserId) {
+    setPrevUserId(user?.user_id ?? null);
     setAppliedPostIds(new Set());
     setDbUserRole(user?.role || 'student');
     setTeacherAppStatus(null);
     setShowApprovedBanner(false);
-  }, [user?.user_id]);
+  }
 
   const loadApplicantCounts = useCallback((postsData) => {
     const counts = {};
@@ -104,15 +106,8 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
             if (profileUser.avatar_color) {
               setMyAvatarColor(profileUser.avatar_color);
             }
-            // Only update parent if valid values exist and actually differ
-            const roleChanged = Boolean(profileUser.role && user.role && profileUser.role !== user.role);
-            const colorChanged = Boolean(profileUser.avatar_color && user.avatar_color && profileUser.avatar_color !== user.avatar_color);
-            if (onProfileUpdate && (roleChanged || colorChanged)) {
-              onProfileUpdate({
-                ...user,
-                role: profileUser.role || user.role,
-                avatar_color: profileUser.avatar_color || user.avatar_color
-              });
+            if (onProfileUpdate && (profileUser.role !== user.role || profileUser.avatar_color !== user.avatar_color)) {
+              onProfileUpdate({ ...user, role: profileUser.role, avatar_color: profileUser.avatar_color });
             }
           }
         })
@@ -144,7 +139,7 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
         })
         .catch(() => {});
     }
-  }, [user?.user_id, loadAppliedPosts]);
+  }, [user, loadAppliedPosts]);
 
   const handleDismissApprovedBanner = () => {
     if (user?.user_id) {
