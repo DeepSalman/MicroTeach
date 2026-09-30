@@ -73,9 +73,13 @@ const TeacherApplications = ({ user }) => {
       });
     } catch (err) {
       console.error('Failed to review application:', err);
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to update application.');
       setFeedback({
         type: 'error',
-        message: err.response?.data?.message || 'Failed to update application.'
+        message: msg
       });
     } finally {
       setActionLoading(null);

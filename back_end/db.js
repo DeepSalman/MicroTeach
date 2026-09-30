@@ -76,19 +76,45 @@ if (isPostgres) {
     return sql;
   }
 
-  function extractInsertId(firstRow) {
+  const TABLE_PK_MAP = {
+    users: 'user_id',
+    posts: 'post_id',
+    teacher_applications: 'application_id',
+    post_applications: 'application_id',
+    teacher_application_documents: 'document_id',
+    transactions: 'transaction_id',
+    transaction_disputes: 'dispute_id',
+    reports: 'report_id',
+    sessions: 'session_id',
+    skills: 'skill_id',
+    reviews: 'review_id',
+    conversations: 'conversation_id',
+    messages: 'message_id'
+  };
+
+  function extractInsertId(firstRow, rawSql = '') {
     if (!firstRow) return null;
+    const match = rawSql.match(/insert\s+into\s+[`"']?([a-zA-Z0-9_]+)/i);
+    if (match) {
+      const tbl = match[1].toLowerCase();
+      const pkField = TABLE_PK_MAP[tbl];
+      if (pkField && firstRow[pkField] !== undefined) {
+        return firstRow[pkField];
+      }
+    }
     return (
-      firstRow.user_id ||
+      firstRow.application_id ||
+      firstRow.document_id ||
       firstRow.post_id ||
       firstRow.report_id ||
       firstRow.transaction_id ||
       firstRow.dispute_id ||
-      firstRow.application_id ||
       firstRow.session_id ||
       firstRow.skill_id ||
-      firstRow.document_id ||
+      firstRow.review_id ||
+      firstRow.message_id ||
       firstRow.conversation_id ||
+      firstRow.user_id ||
       firstRow.id ||
       Object.values(firstRow)[0] ||
       null
@@ -104,7 +130,7 @@ if (isPostgres) {
 
     if (isInsert) {
       const firstRow = res.rows[0];
-      const insertId = extractInsertId(firstRow);
+      const insertId = extractInsertId(firstRow, rawSql);
       const resultObj = {
         insertId,
         affectedRows: res.rowCount,

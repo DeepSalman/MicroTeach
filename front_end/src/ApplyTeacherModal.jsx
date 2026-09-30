@@ -47,7 +47,11 @@ const ApplyTeacherModal = ({ user, isOpen, onClose, onSuccess }) => {
       setSuccess(true);
       if (onSuccess) onSuccess();
     } catch (err) {
-      setError(err.response?.data?.message || 'Submission failed. Please try again.');
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Submission failed. Please try again.');
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

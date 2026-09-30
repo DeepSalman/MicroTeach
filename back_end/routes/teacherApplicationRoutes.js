@@ -152,14 +152,14 @@ router.post('/', (req, res) => {
       await conn.beginTransaction();
 
       // Check user exists and not already a tutor
-      const [users] = await conn.query('SELECT role FROM Users WHERE user_id = ?', [user_id]);
+      const [users] = await conn.query('SELECT role, student_id FROM Users WHERE user_id = ?', [user_id]);
       if (users.length === 0) {
         await conn.rollback();
         return res.status(404).json({ message: 'User not found.' });
       }
       if (users[0].role === 'tutor' || users[0].role === 'both') {
         await conn.rollback();
-        return res.status(400).json({ message: 'User is already a tutor.' });
+        return res.status(400).json({ message: 'You are already registered as a verified tutor.' });
       }
 
       // Check no pending application
@@ -169,15 +169,22 @@ router.post('/', (req, res) => {
       );
       if (existing.length > 0) {
         await conn.rollback();
-        return res.status(400).json({ message: 'You already have a pending application.' });
+        return res.status(400).json({ message: 'You already have an application under review.' });
       }
 
       // Insert application
       const [appResult] = await conn.query(
-        'INSERT INTO Teacher_Applications (user_id, reason, expertise) VALUES (?, ?, ?)',
-        [user_id, reason.trim(), (expertise || '').trim()]
+        'INSERT INTO Teacher_Applications (user_id, student_id, reason, expertise) VALUES (?, ?, ?, ?)',
+        [user_id, users[0].student_id || null, reason.trim(), (expertise || '').trim()]
       );
-      const applicationId = appResult.insertId;
+      let applicationId = appResult.insertId;
+      if (!applicationId) {
+        const [recent] = await conn.query(
+          'SELECT application_id FROM Teacher_Applications WHERE user_id = ? ORDER BY application_id DESC LIMIT 1',
+          [user_id]
+        );
+        applicationId = recent[0]?.application_id;
+      }
 
       // Insert documents
       const docsToInsert = [
