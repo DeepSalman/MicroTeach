@@ -25,19 +25,26 @@ app.use(express.json());
 // Serve uploaded files (teacher documents, etc.)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// API Routes
-app.use('/api/users', userRoutes);
-app.use('/api/skills', skillRoutes);
-app.use('/api/sessions', sessionRoutes);
-app.use('/api/posts', postRoutes);
-app.use('/api/teacher-applications', teacherApplicationRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/post-applications', postApplicationRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/transaction-disputes', transactionDisputeRoutes);
-app.use('/api/master-data', masterDataRoutes);
+// API Routes (Dual-mounted for /api and direct paths for Vercel serverless compatibility)
+const apiRoutes = [
+  ['/users', userRoutes],
+  ['/skills', skillRoutes],
+  ['/sessions', sessionRoutes],
+  ['/posts', postRoutes],
+  ['/teacher-applications', teacherApplicationRoutes],
+  ['/reports', reportRoutes],
+  ['/post-applications', postApplicationRoutes],
+  ['/messages', messageRoutes],
+  ['/wallet', walletRoutes],
+  ['/reviews', reviewRoutes],
+  ['/transaction-disputes', transactionDisputeRoutes],
+  ['/master-data', masterDataRoutes]
+];
+
+apiRoutes.forEach(([subPath, handler]) => {
+  app.use(`/api${subPath}`, handler);
+  app.use(subPath, handler);
+});
 
 // Root Test Route
 app.get('/', (req, res) => {

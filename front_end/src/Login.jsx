@@ -25,7 +25,7 @@ const Login = ({ onLogin }) => {
       if (onLogin) onLogin(user);
       navigate('/');
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      console.error('Login error details:', err.response || err); setMessage(err.response?.data?.message || err.response?.data?.error || err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
