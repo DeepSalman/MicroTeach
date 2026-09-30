@@ -29,7 +29,12 @@ const Login = ({ onLogin }) => {
       if (onLogin) onLogin(user);
       navigate('/');
     } catch (err) {
-      console.error('Login error details:', err.response || err); setMessage(err.response?.data?.message || err.response?.data?.error || err.message || 'Login failed. Please check your credentials.');
+      console.error('Login error details:', err.response || err);
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Login failed. Please check your credentials.');
+      setMessage(msg);
     } finally {
       setLoading(false);
     }

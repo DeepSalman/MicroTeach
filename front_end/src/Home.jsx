@@ -101,9 +101,6 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
             if (profileUser.role) {
               setDbUserRole(profileUser.role);
             }
-            if (profileUser.avatar_color) {
-              setMyAvatarColor(profileUser.avatar_color);
-            }
             // Only update parent if valid values exist and actually differ
             const roleChanged = Boolean(profileUser.role && user.role && profileUser.role !== user.role);
             const colorChanged = Boolean(profileUser.avatar_color && user.avatar_color && profileUser.avatar_color !== user.avatar_color);

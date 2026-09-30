@@ -5,10 +5,20 @@ const path = require('path');
 const fs = require('fs');
 const db = require('../db');
 
+const os = require('os');
+
 // ── Ensure upload directory exists ──
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'teacher_documents');
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const UPLOAD_DIR = isServerless
+  ? path.join(os.tmpdir(), 'uploads', 'teacher_documents')
+  : path.join(__dirname, '..', 'uploads', 'teacher_documents');
+
+try {
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
+} catch (err) {
+  console.warn('[teacherApplicationRoutes] Upload dir creation warning:', err.message);
 }
 
 // ── Auto-create Teacher_Application_Documents table ──

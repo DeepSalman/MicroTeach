@@ -31,7 +31,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve uploaded files (teacher documents, etc.)
+const os = require('os');
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+// Serve uploaded files (teacher documents, chat attachments, etc.)
+if (isServerless) {
+  try {
+    app.use('/uploads', express.static(path.join(os.tmpdir(), 'uploads')));
+  } catch (_) {}
+}
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes (Dual-mounted for /api and direct paths for Vercel serverless compatibility)

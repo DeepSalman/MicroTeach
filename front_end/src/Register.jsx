@@ -78,7 +78,11 @@ const Register = () => {
         }
       });
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Registration failed. Please try again.');
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Registration failed. Please try again.');
+      setError(msg);
     } finally {
       setLoading(false);
     }

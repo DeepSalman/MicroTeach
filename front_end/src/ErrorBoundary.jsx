@@ -73,7 +73,7 @@ class ErrorBoundary extends React.Component {
             <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px', lineHeight: '1.5' }}>
               We encountered an unexpected display issue. Don't worry, your data is safe.
             </p>
-            {this.state.error?.message && (
+            {this.state.error && (
               <pre style={{
                 background: '#f1f5f9',
                 color: '#475569',
@@ -84,7 +84,11 @@ class ErrorBoundary extends React.Component {
                 overflowX: 'auto',
                 marginBottom: '20px'
               }}>
-                {this.state.error.message}
+                {typeof this.state.error?.message === 'string'
+                  ? this.state.error.message
+                  : typeof this.state.error === 'string'
+                    ? this.state.error
+                    : JSON.stringify(this.state.error, null, 2)}
               </pre>
             )}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
