@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { fetchTeacherApplications, reviewTeacherApplication } from './api';
 import './TeacherApplications.css';
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL =
+  import.meta.env.VITE_SERVER_URL ||
+  (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
 const TeacherApplications = ({ user }) => {
   const [applications, setApplications] = useState([]);

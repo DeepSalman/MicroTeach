@@ -3,7 +3,9 @@ import { fetchInbox, fetchMessages, sendMessage, markAsRead, startConversation }
 import { avatarStyle } from './utils';
 import './ChatModal.css';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE =
+  import.meta.env.VITE_SERVER_URL ||
+  (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
 const QUICK_EMOJIS = ['👍', '📚', '💡', '✅', '🙌', '❓', '❤️', '🔥'];
 

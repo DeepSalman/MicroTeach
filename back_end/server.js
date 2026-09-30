@@ -44,9 +44,13 @@ app.get('/', (req, res) => {
   res.send('Microteach Backend API is running!');
 });
 
+module.exports = app;
+
 const PORT = process.env.PORT || 5000;
-db.initSchema.then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+if (require.main === module) {
+  db.initSchema.then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
   });
-});
+}
