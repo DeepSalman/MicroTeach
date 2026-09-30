@@ -22,6 +22,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// URL Normalization Middleware for Vercel Serverless
+app.use((req, res, next) => {
+  const matchedPath = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'];
+  if (matchedPath && (req.url.includes('index.js') || req.url.includes('[...all]') || req.url === '/api' || req.url === '/api/')) {
+    req.url = matchedPath;
+  }
+  next();
+});
+
 // Serve uploaded files (teacher documents, etc.)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -47,6 +56,10 @@ apiRoutes.forEach(([subPath, handler]) => {
 });
 
 // Root Test Route
+app.get('/api', (req, res) => {
+  res.json({ status: 'ok', message: 'Microteach Backend API is running!' });
+});
+
 app.get('/', (req, res) => {
   res.send('Microteach Backend API is running!');
 });
