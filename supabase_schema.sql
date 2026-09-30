@@ -7,12 +7,26 @@
 -- 3. Click 'New query', paste this ENTIRE script, and click 'RUN'.
 -- ============================================================
 
--- Reset if desired (uncomment if recreating from scratch)
--- DROP SCHEMA public CASCADE;
--- CREATE SCHEMA public;
-
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Clean drop of any previous tables (eliminates case-sensitive name conflicts from earlier attempts)
+DROP TABLE IF EXISTS "Messages", messages CASCADE;
+DROP TABLE IF EXISTS "Conversation_Members", conversation_members CASCADE;
+DROP TABLE IF EXISTS "Conversations", conversations CASCADE;
+DROP TABLE IF EXISTS "Reviews", reviews CASCADE;
+DROP TABLE IF EXISTS "Transactions", transactions CASCADE;
+DROP TABLE IF EXISTS "Post_Applications", post_applications CASCADE;
+DROP TABLE IF EXISTS "Reports", reports CASCADE;
+DROP TABLE IF EXISTS "Teacher_Application_Documents", teacher_application_documents CASCADE;
+DROP TABLE IF EXISTS "Teacher_Applications", teacher_applications CASCADE;
+DROP TABLE IF EXISTS "Sessions", sessions CASCADE;
+DROP TABLE IF EXISTS "Posts", posts CASCADE;
+DROP TABLE IF EXISTS "User_Skills", user_skills CASCADE;
+DROP TABLE IF EXISTS "Skills", skills CASCADE;
+DROP TABLE IF EXISTS "Transaction_Disputes", transaction_disputes CASCADE;
+DROP TABLE IF EXISTS "Master_Transaction_Types", master_transaction_types CASCADE;
+DROP TABLE IF EXISTS "Users", users CASCADE;
 
 -- 1. Users
 CREATE TABLE IF NOT EXISTS Users (
@@ -247,7 +261,7 @@ INSERT INTO Users (user_id, full_name, email, password, role, is_verified, depar
 INSERT INTO Users (user_id, full_name, email, password, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin, avatar_color) VALUES (12, 'joy', 'joy@gmail.com', '$2b$10$KLKrWihT6hZuuPqSy5eFaeexHTuMpYeu88wtJJXHUuH/StknjO35e', 'both', 1, 'cs', NULL, NULL, NULL, 9999600.00, 0, '#f0ea8f') ON CONFLICT (user_id) DO NOTHING;
 INSERT INTO Users (user_id, full_name, email, password, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin, avatar_color) VALUES (13, 'yousuf', 'yousuf@gmail.com', '$2b$10$WMUhDFUVhmYxhAx6ieHmA.HhitS4sM9p/2ushMGtvK6gLRBJViEzO', 'both', 1, 'cs', NULL, NULL, NULL, 1450.00, 0, '#6ba578') ON CONFLICT (user_id) DO NOTHING;
 INSERT INTO Users (user_id, full_name, email, password, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin, avatar_color) VALUES (15, 'Maria', 'maria@gmail.com', '$2b$10$3aBu77HSyCrsG3VYvpgfkeiuBxndJg9KY2OU.ucE4iwNnPqf8trgW', 'both', 1, 'ee', NULL, NULL, NULL, 650.00, 0, '#f0ea8f') ON CONFLICT (user_id) DO NOTHING;
-SELECT setval(pg_get_serial_sequence('Users', 'user_id'), COALESCE((SELECT MAX(user_id) FROM Users), 1));
+SELECT setval(pg_get_serial_sequence('users', 'user_id'), COALESCE((SELECT MAX(user_id) FROM Users), 1));
 
 -- Skills
 INSERT INTO Skills (skill_id, skill_name, category) VALUES (1, 'Algorithms & Data Structures', 'Computer Science') ON CONFLICT (skill_id) DO NOTHING;
@@ -262,7 +276,7 @@ INSERT INTO Skills (skill_id, skill_name, category) VALUES (9, 'System Architect
 INSERT INTO Skills (skill_id, skill_name, category) VALUES (10, 'Statistics & Probability', 'Mathematics') ON CONFLICT (skill_id) DO NOTHING;
 INSERT INTO Skills (skill_id, skill_name, category) VALUES (11, 'Python Programming', 'Computer Science') ON CONFLICT (skill_id) DO NOTHING;
 INSERT INTO Skills (skill_id, skill_name, category) VALUES (12, 'Java Programming', 'Computer Science') ON CONFLICT (skill_id) DO NOTHING;
-SELECT setval(pg_get_serial_sequence('Skills', 'skill_id'), COALESCE((SELECT MAX(skill_id) FROM Skills), 1));
+SELECT setval(pg_get_serial_sequence('skills', 'skill_id'), COALESCE((SELECT MAX(skill_id) FROM Skills), 1));
 
 -- Posts
 INSERT INTO Posts (post_id, user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent, status) VALUES (1, 2, 'Algorithms & DS', 'CSE 221', 'Dynamic Programming memoization table segmentation fault in Bellman-Ford', 'Need quick help tracing out array boundary indices and memo lookup in bottom-up state formulation. My recursion-to-tabulation conversion keeps hitting segfault on the inner loop.', 'live_call', 350.00, 'Today at 10:00 PM', 1, 'closed') ON CONFLICT (post_id) DO NOTHING;
@@ -281,7 +295,7 @@ INSERT INTO Posts (post_id, user_id, category, course_code, title, description, 
 INSERT INTO Posts (post_id, user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent, status) VALUES (14, 7, 'University Level', '', 'High urgency problem ', '', 'live_call', 100.00, NULL, 1, 'active') ON CONFLICT (post_id) DO NOTHING;
 INSERT INTO Posts (post_id, user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent, status) VALUES (15, 15, 'HSC Level', '', 'Testing the acceptance button ', '', 'live_call', 350.00, NULL, 1, 'active') ON CONFLICT (post_id) DO NOTHING;
 INSERT INTO Posts (post_id, user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent, status) VALUES (16, 15, 'University Level', '', 'Testing the mark complete button ', '', 'live_call', 350.00, NULL, 0, 'completed') ON CONFLICT (post_id) DO NOTHING;
-SELECT setval(pg_get_serial_sequence('Posts', 'post_id'), COALESCE((SELECT MAX(post_id) FROM Posts), 1));
+SELECT setval(pg_get_serial_sequence('posts', 'post_id'), COALESCE((SELECT MAX(post_id) FROM Posts), 1));
 
 -- Post Applications
 INSERT INTO Post_Applications (application_id, post_id, user_id, message, status, completion_requested_by) VALUES (1, 1, 1, 'I am a TA for CSE 221 and specialize in DP. Can help you debug the memoization table.', 'cancelled', NULL) ON CONFLICT (application_id) DO NOTHING;
@@ -308,16 +322,16 @@ INSERT INTO Post_Applications (application_id, post_id, user_id, message, status
 INSERT INTO Post_Applications (application_id, post_id, user_id, message, status, completion_requested_by) VALUES (40, 13, 15, '', 'completed', NULL) ON CONFLICT (application_id) DO NOTHING;
 INSERT INTO Post_Applications (application_id, post_id, user_id, message, status, completion_requested_by) VALUES (41, 15, 7, '', 'completion_requested', 15) ON CONFLICT (application_id) DO NOTHING;
 INSERT INTO Post_Applications (application_id, post_id, user_id, message, status, completion_requested_by) VALUES (42, 16, 7, '', 'completed', NULL) ON CONFLICT (application_id) DO NOTHING;
-SELECT setval(pg_get_serial_sequence('Post_Applications', 'application_id'), COALESCE((SELECT MAX(application_id) FROM Post_Applications), 1));
+SELECT setval(pg_get_serial_sequence('post_applications', 'application_id'), COALESCE((SELECT MAX(application_id) FROM Post_Applications), 1));
 
 -- Teacher Applications
-INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (2, 5, NULL, 'Strong background in OOP and databases. Want to tutor junior students.', 'Object-Oriented Programming, Database Management Systems', 'rejected', 7, 'Sat Sep 26 2026 10:41:14 GMT+0600 (Bangladesh Standard Time)') ON CONFLICT (application_id) DO NOTHING;
-INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (6, 2, NULL, 'ok kk dddddddddddddddddddddddddddick', 'okjdeofhoej foeu23ofijoeifhjoehfoejof 2p3nr032rfjfoinfoin2p', 'approved', 7, 'Sat Sep 26 2026 12:03:18 GMT+0600 (Bangladesh Standard Time)') ON CONFLICT (application_id) DO NOTHING;
-INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (7, 10, NULL, 'ami onekkkkkkkk moivaeige3oighe3hg9fiehgihewoiuhgeoiuhgfoeihgfi', 'efegegewgwgvw', 'approved', 7, 'Sat Sep 26 2026 13:57:07 GMT+0600 (Bangladesh Standard Time)') ON CONFLICT (application_id) DO NOTHING;
-INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (8, 12, NULL, 'abcajksdgashx k` kjfh klhs zlkj cj', '', 'approved', 7, 'Sat Sep 26 2026 14:08:31 GMT+0600 (Bangladesh Standard Time)') ON CONFLICT (application_id) DO NOTHING;
-INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (9, 13, NULL, 'I wanna apply for teacher jjjjjjjjjjj', '', 'approved', 7, 'Sat Sep 26 2026 15:28:44 GMT+0600 (Bangladesh Standard Time)') ON CONFLICT (application_id) DO NOTHING;
-INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (10, 15, NULL, 'ami porate chai fewfhfhoewiqhfeoiqfhq', 'cse', 'approved', 7, 'Tue Sep 29 2026 15:10:14 GMT+0600 (Bangladesh Standard Time)') ON CONFLICT (application_id) DO NOTHING;
-SELECT setval(pg_get_serial_sequence('Teacher_Applications', 'application_id'), COALESCE((SELECT MAX(application_id) FROM Teacher_Applications), 1));
+INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (2, 5, NULL, 'Strong background in OOP and databases. Want to tutor junior students.', 'Object-Oriented Programming, Database Management Systems', 'rejected', 7, '2026-09-26 10:41:14+06:00') ON CONFLICT (application_id) DO NOTHING;
+INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (6, 2, NULL, 'ok kk dddddddddddddddddddddddddddick', 'okjdeofhoej foeu23ofijoeifhjoehfoejof 2p3nr032rfjfoinfoin2p', 'approved', 7, '2026-09-26 12:03:18+06:00') ON CONFLICT (application_id) DO NOTHING;
+INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (7, 10, NULL, 'ami onekkkkkkkk moivaeige3oighe3hg9fiehgihewoiuhgeoiuhgfoeihgfi', 'efegegewgwgvw', 'approved', 7, '2026-09-26 13:57:07+06:00') ON CONFLICT (application_id) DO NOTHING;
+INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (8, 12, NULL, 'abcajksdgashx k` kjfh klhs zlkj cj', '', 'approved', 7, '2026-09-26 14:08:31+06:00') ON CONFLICT (application_id) DO NOTHING;
+INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (9, 13, NULL, 'I wanna apply for teacher jjjjjjjjjjj', '', 'approved', 7, '2026-09-26 15:28:44+06:00') ON CONFLICT (application_id) DO NOTHING;
+INSERT INTO Teacher_Applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (10, 15, NULL, 'ami porate chai fewfhfhoewiqhfeoiqfhq', 'cse', 'approved', 7, '2026-09-29 15:10:14+06:00') ON CONFLICT (application_id) DO NOTHING;
+SELECT setval(pg_get_serial_sequence('teacher_applications', 'application_id'), COALESCE((SELECT MAX(application_id) FROM Teacher_Applications), 1));
 
 -- Reports
 INSERT INTO Reports (report_id, post_id, user_id, reason, description, status, admin_notes, action_taken) VALUES (1, 1, 5, 'spam', NULL, 'pending', NULL, NULL) ON CONFLICT (report_id) DO NOTHING;
@@ -325,7 +339,7 @@ INSERT INTO Reports (report_id, post_id, user_id, reason, description, status, a
 INSERT INTO Reports (report_id, post_id, user_id, reason, description, status, admin_notes, action_taken) VALUES (3, 3, 2, 'academic_dishonesty', NULL, 'reviewed', NULL, NULL) ON CONFLICT (report_id) DO NOTHING;
 INSERT INTO Reports (report_id, post_id, user_id, reason, description, status, admin_notes, action_taken) VALUES (4, 6, 5, 'fraud', NULL, 'pending', NULL, NULL) ON CONFLICT (report_id) DO NOTHING;
 INSERT INTO Reports (report_id, post_id, user_id, reason, description, status, admin_notes, action_taken) VALUES (5, 2, 12, 'spam', NULL, 'pending', 'Test admin review note', 'reviewed') ON CONFLICT (report_id) DO NOTHING;
-SELECT setval(pg_get_serial_sequence('Reports', 'report_id'), COALESCE((SELECT MAX(report_id) FROM Reports), 1));
+SELECT setval(pg_get_serial_sequence('reports', 'report_id'), COALESCE((SELECT MAX(report_id) FROM Reports), 1));
 
 -- Transactions
 INSERT INTO Transactions (transaction_id, user_id, type, amount, balance_after, reference_id, description) VALUES (1, 2, 'top_up', 100.00, 600.00, NULL, 'Topped up ৳100') ON CONFLICT (transaction_id) DO NOTHING;
@@ -355,7 +369,7 @@ INSERT INTO Transactions (transaction_id, user_id, type, amount, balance_after, 
 INSERT INTO Transactions (transaction_id, user_id, type, amount, balance_after, reference_id, description) VALUES (25, 15, 'bounty_held', 350.00, 1000.00, 15, 'Held ৳350 bounty for post: Testing the acceptance button ') ON CONFLICT (transaction_id) DO NOTHING;
 INSERT INTO Transactions (transaction_id, user_id, type, amount, balance_after, reference_id, description) VALUES (26, 15, 'bounty_held', 350.00, 650.00, 16, 'Held ৳350 bounty for post: Testing the mark complete button ') ON CONFLICT (transaction_id) DO NOTHING;
 INSERT INTO Transactions (transaction_id, user_id, type, amount, balance_after, reference_id, description) VALUES (27, 7, 'bounty_received', 350.00, 350.00, 16, 'Received ৳350 bounty for post #16') ON CONFLICT (transaction_id) DO NOTHING;
-SELECT setval(pg_get_serial_sequence('Transactions', 'transaction_id'), COALESCE((SELECT MAX(transaction_id) FROM Transactions), 1));
+SELECT setval(pg_get_serial_sequence('transactions', 'transaction_id'), COALESCE((SELECT MAX(transaction_id) FROM Transactions), 1));
 
 -- Master Transaction Types
 INSERT INTO Master_Transaction_Types (type_code, name, direction, category, accounting_treatment, is_disputable, is_reversible, trigger_method, min_amount, max_amount, description, is_active) VALUES ('admin_adjustment', 'Administrative Ledger Correction', 'neutral', 'Governance & Audit', 'Manual General Ledger Adjustment', FALSE, TRUE, 'Manual (Super Admin Only)', 0.00, 50000.00, 'Audited discretionary credit or debit by Super Admin for ledger reconciliation or disputes.', TRUE) ON CONFLICT (type_code) DO NOTHING;
@@ -372,4 +386,4 @@ INSERT INTO Transaction_Disputes (dispute_id, post_id, application_id, reporter_
 INSERT INTO Transaction_Disputes (dispute_id, post_id, application_id, reporter_id, respondent_id, reporter_role, dispute_type, reason, split_percentage, proposed_refund_amount, proposed_payout_amount, description, status) VALUES (2, 7, 11, 13, 12, 'tutor', 'full_refund', 'Tutor missed scheduled session / no-show', 50, 450.00, 0.00, 'hifeoiwofhoeihfoiefohgw2o', 'dismissed') ON CONFLICT (dispute_id) DO NOTHING;
 INSERT INTO Transaction_Disputes (dispute_id, post_id, application_id, reporter_id, respondent_id, reporter_role, dispute_type, reason, split_percentage, proposed_refund_amount, proposed_payout_amount, description, status) VALUES (3, 2, NULL, 5, 1, 'student', 'full_refund', 'Tutor missed scheduled session / no-show', 50, 300.00, 0.00, 'The tutor did not show up to our scheduled Discord session and did not respond to messages for over 24 hours.', 'resolved') ON CONFLICT (dispute_id) DO NOTHING;
 INSERT INTO Transaction_Disputes (dispute_id, post_id, application_id, reporter_id, respondent_id, reporter_role, dispute_type, reason, split_percentage, proposed_refund_amount, proposed_payout_amount, description, status) VALUES (4, 4, NULL, 5, 2, 'student', 'split', 'Incomplete session or partial delivery', 60, 240.00, 160.00, 'We completed about 35 minutes of the 60 minute session before the tutor had connection issues. We agreed on a 60-40 split.', 'resolved') ON CONFLICT (dispute_id) DO NOTHING;
-SELECT setval(pg_get_serial_sequence('Transaction_Disputes', 'dispute_id'), COALESCE((SELECT MAX(dispute_id) FROM Transaction_Disputes), 1));
+SELECT setval(pg_get_serial_sequence('transaction_disputes', 'dispute_id'), COALESCE((SELECT MAX(dispute_id) FROM Transaction_Disputes), 1));
