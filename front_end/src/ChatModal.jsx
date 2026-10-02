@@ -11,7 +11,7 @@ const QUICK_EMOJIS = ['👍', '📚', '💡', '✅', '🙌', '❓', '❤️', '�
 
 const getFileUrl = (filePath) => {
   if (!filePath) return '';
-  if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath;
+  if (filePath.startsWith('data:') || filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath;
   const clean = filePath.startsWith('/') ? filePath.slice(1) : filePath;
   return `${API_BASE}/${clean}`;
 };
@@ -496,13 +496,13 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
 
                           <div className={`chat-msg-bubble ${isImage ? 'has-image' : ''} ${isPdf ? 'has-pdf' : ''}`}>
                             {/* Image Message */}
-                            {isImage && msg.file_path && (
+                            {isImage && (msg.file_data || msg.file_path) && (
                               <div className="chat-msg-image-wrap">
                                 <img
-                                  src={getFileUrl(msg.file_path)}
+                                  src={msg.file_data || getFileUrl(msg.file_path)}
                                   alt={msg.file_name || 'Attached photo'}
                                   className="chat-msg-img"
-                                  onClick={() => setPreviewImageModal(getFileUrl(msg.file_path))}
+                                  onClick={() => setPreviewImageModal(msg.file_data || getFileUrl(msg.file_path))}
                                   onLoad={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
                                   title="Click to view full photo"
                                   loading="lazy"
@@ -511,7 +511,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
                             )}
 
                             {/* PDF Document Message */}
-                            {isPdf && msg.file_path && (
+                            {isPdf && (msg.file_data || msg.file_path) && (
                               <div className="chat-msg-pdf-card">
                                 <div className="chat-pdf-icon-badge">
                                   <span>PDF</span>
@@ -525,7 +525,8 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
                                   )}
                                 </div>
                                 <a
-                                  href={getFileUrl(msg.file_path)}
+                                  href={msg.file_data || getFileUrl(msg.file_path)}
+                                  download={msg.file_name || 'document.pdf'}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="chat-pdf-action-btn"

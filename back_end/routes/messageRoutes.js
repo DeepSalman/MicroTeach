@@ -39,6 +39,9 @@ try {
     if (!existing.includes('mime_type')) {
       await db.query('ALTER TABLE Messages ADD COLUMN mime_type VARCHAR(100) NULL AFTER file_size');
     }
+    if (!existing.includes('file_data')) {
+      await db.query('ALTER TABLE Messages ADD COLUMN file_data LONGTEXT NULL AFTER mime_type');
+    }
     console.log('[messageRoutes] Messages attachment columns verified');
 
     // Merge any duplicate conversations between the same pair of users
@@ -177,6 +180,7 @@ router.get('/:conversationId/messages', async (req, res) => {
         m.file_name,
         m.file_size,
         m.mime_type,
+        m.file_data,
         m.created_at,
         u.full_name AS sender_name
       FROM Messages m
@@ -257,7 +261,17 @@ router.post('/:conversationId/messages', (req, res) => {
       let mimeType = null;
       let preview = '';
 
+      let fileDataUri = null;
       if (file) {
+        try {
+          if (file.path && fs.existsSync(file.path)) {
+            const buf = fs.readFileSync(file.path);
+            fileDataUri = `data:${file.mimetype || 'image/jpeg'};base64,${buf.toString('base64')}`;
+          }
+        } catch (e) {
+          console.warn('[messageRoutes] Error reading uploaded file into base64:', e.message);
+        }
+
         filePath = path.posix.join('uploads', 'chat_attachments', file.filename);
         fileName = file.originalname;
         fileSize = file.size;
@@ -282,14 +296,14 @@ router.post('/:conversationId/messages', (req, res) => {
       // Insert message
       await db.query(
         `INSERT INTO Messages 
-         (conversation_id, seq, sender_id, kind, body, file_path, file_name, file_size, mime_type, client_msg_id) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [convId, nextSeq, sender_id, kind, body, filePath, fileName, fileSize, mimeType, effectiveClientMsgId]
+         (conversation_id, seq, sender_id, kind, body, file_path, file_name, file_size, mime_type, file_data, client_msg_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [convId, nextSeq, sender_id, kind, body, filePath, fileName, fileSize, mimeType, fileDataUri, effectiveClientMsgId]
       );
 
       // Update conversation preview + timestamp
       await db.query(
-        'UPDATE Conversations SET last_message_preview = ?, last_message_at = NOW(3) WHERE conversation_id = ?',
+        'UPDATE Conversations SET last_message_preview = ?, last_message_at = NOW() WHERE conversation_id = ?',
         [preview, convId]
       );
 
@@ -306,6 +320,7 @@ router.post('/:conversationId/messages', (req, res) => {
         file_name: fileName,
         file_size: fileSize,
         mime_type: mimeType,
+        file_data: fileDataUri,
         message: 'Message sent successfully.'
       });
     } catch (error) {
@@ -392,6 +407,35 @@ router.get('/unread/:userId', async (req, res) => {
     res.json({ unread: rows[0].total_unread });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// 7. Get message attachment file directly (supports both serverless base64 and disk files)
+router.get('/:conversationId/:seq/file', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT file_path, file_name, mime_type, file_data FROM Messages WHERE conversation_id = ? AND seq = ?',
+      [req.params.conversationId, req.params.seq]
+    );
+    if (rows.length === 0 || (!rows[0].file_path && !rows[0].file_data)) {
+      return res.status(404).send('Attachment not found');
+    }
+    const msg = rows[0];
+    if (msg.file_data && msg.file_data.startsWith('data:')) {
+      const parts = msg.file_data.split(',');
+      const mime = parts[0].split(':')[1].split(';')[0];
+      const buf = Buffer.from(parts[1], 'base64');
+      res.setHeader('Content-Type', mime || msg.mime_type || 'application/octet-stream');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(buf);
+    }
+    const diskPath = path.join(__dirname, '..', msg.file_path);
+    if (fs.existsSync(diskPath)) {
+      return res.sendFile(diskPath);
+    }
+    res.status(404).send('File not found');
+  } catch (err) {
+    res.status(500).send(err.message);
   }
 });
 
