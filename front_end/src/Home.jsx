@@ -7,6 +7,7 @@ import ChatModal from './ChatModal';
 import WalletModal from './WalletModal';
 import ApplyTeacherModal from './ApplyTeacherModal';
 import TransactionReportModal from './TransactionReportModal';
+import Footer from './Footer';
 import { formatDeadline } from './utils';
 import './Home.css';
 
@@ -596,52 +597,7 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
       </main>
 
       {/* Footer */}
-      <footer className="home-footer">
-        <div className="footer-grid">
-          <div className="footer-col">
-            <h3>Campus Support</h3>
-            <a href="#" onClick={(e) => e.preventDefault()}>Help Center &amp; FAQs</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>MicroTeach AirCover for Tutors</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Anti-Plagiarism Standards</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Disability &amp; Scribe Support</a>
-          </div>
-          <div className="footer-col">
-            <h3>Community</h3>
-            <a href="#" onClick={(e) => e.preventDefault()}>Campus Peer Forum</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Department Leaderboards</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Midterm Study Lounges</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Campus Ambassador Program</a>
-          </div>
-          <div className="footer-col">
-            <h3>Hosting &amp; Tutoring</h3>
-            <a href="#" onClick={(e) => { e.preventDefault(); if (user && user.role === 'student') setApplyTeacherOpen(true); }}>Become a Verified Tutor</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Hourly &amp; Milestone Rates</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Escrow Payout Guidelines</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Tutor Code of Conduct</a>
-          </div>
-          <div className="footer-col">
-            <h3>MicroTeach</h3>
-            <a href="#" onClick={(e) => e.preventDefault()}>Newsroom &amp; Release Notes</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Campus Integrity Policy</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Careers at MicroTeach</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Student Privacy Notice</a>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <div>
-            &copy; 2025 MicroTeach, Inc. &nbsp;&middot;&nbsp;
-            <a href="#" onClick={(e) => e.preventDefault()}>Privacy</a> &middot;
-            <a href="#" onClick={(e) => e.preventDefault()}>Terms</a> &middot;
-            <a href="#" onClick={(e) => e.preventDefault()}>Sitemap</a> &middot;
-            <a href="#" onClick={(e) => e.preventDefault()}>Campus Safety &amp; Escrow</a>
-          </div>
-          <div className="right">
-            <span className="lang">&#127760; English (US)</span>
-            <span>&#x09F3; BDT</span>
-            <span className="icons">&lt; &gt; &#128187;</span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
       {/* Report Modal */}
       {reportModal.open && (
         <div className="report-overlay" onClick={closeReportModal}>

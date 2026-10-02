@@ -8,6 +8,7 @@ import ConfirmModal from './ConfirmModal';
 import ReviewModal from './ReviewModal';
 import ApplyTeacherModal from './ApplyTeacherModal';
 import TransactionReportModal from './TransactionReportModal';
+import Footer from './Footer';
 import { avatarStyle } from './utils';
 import './Profile.css';
 
@@ -1011,16 +1012,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
       />
 
       {/* Footer */}
-      <footer className="home-footer">
-        <div className="footer-bottom">
-          <div>
-            &copy; 2025 MicroTeach, Inc. &nbsp;&middot;&nbsp;
-            <a href="#" onClick={(e) => e.preventDefault()}>Privacy</a> &middot;
-            <a href="#" onClick={(e) => e.preventDefault()}>Terms</a> &middot;
-            <a href="#" onClick={(e) => e.preventDefault()}>Campus Safety & Escrow</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

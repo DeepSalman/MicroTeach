@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserProfile, updateUserProfile } from './api';
 import { avatarStyle } from './utils';
+import Footer from './Footer';
 import './EditProfile.css';
 
 const EditProfile = ({ user, onProfileUpdate }) => {
@@ -322,16 +323,7 @@ const EditProfile = ({ user, onProfileUpdate }) => {
       </main>
 
       {/* Footer */}
-      <footer className="home-footer">
-        <div className="footer-bottom">
-          <div>
-            &copy; 2025 MicroTeach, Inc. &nbsp;&middot;&nbsp;
-            <a href="#" onClick={(e) => e.preventDefault()}>Privacy</a> &middot;
-            <a href="#" onClick={(e) => e.preventDefault()}>Terms</a> &middot;
-            <a href="#" onClick={(e) => e.preventDefault()}>Campus Safety & Escrow</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
