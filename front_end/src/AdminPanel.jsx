@@ -668,8 +668,8 @@ const AdminPanel = ({ user }) => {
               <span className="dash-sys-val">&bull; MySQL Connected</span>
             </div>
             <div className="dash-sys-row">
-              <span className="dash-sys-label">Platform Version</span>
-              <span className="dash-sys-val">MicroTeach v2.4</span>
+              <span className="dash-sys-label">Platform</span>
+              <span className="dash-sys-val">MicroTeach</span>
             </div>
           </div>
         </div>

@@ -301,7 +301,7 @@ const MasterData = ({ user }) => {
             <h1 className="md-title">Master Data &amp; Financial Registry</h1>
             <span className="md-system-pill">
               <span className="md-pulse-dot"></span>
-              Core Ledger Engine v2.4
+              Core Ledger Engine
             </span>
           </div>
 

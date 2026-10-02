@@ -48,14 +48,9 @@ const AdminSidebar = ({ user, userCount, onLogout }) => {
           <div className="sidebar-logo-icon"><img src="/logo.png" alt="MicroTeach" /></div>
           <div className="sidebar-logo-text">
             <span className="logo-title">MicroTeach</span>
-            <span className="logo-subtitle">Admin Portal <span className="version">v2.4</span></span>
+            <span className="logo-subtitle">Admin Portal</span>
           </div>
         </div>
-      </div>
-      <div className="sidebar-status">
-        <span className="sidebar-status-dot"></span>
-        <span>Node: Academic-East</span>
-        <span className="status-active">Active</span>
       </div>
       <nav className="sidebar-nav">
         <div className="nav-section">
