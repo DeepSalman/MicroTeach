@@ -29,6 +29,24 @@ const CreatePost = ({ user }) => {
 
   const domains = ['University Level', 'HSC Level', 'SSC Level'];
 
+  const getTodayDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getCurrentTimeString = () => {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  const todayStr = getTodayDateString();
+  const currentTimeStr = getCurrentTimeString();
+
   const deliveryOptions = [
     { id: 'live_call', name: 'Live Micro-Call', desc: '15-30 min live session with a shared whiteboard.' },
     { id: 'annotated_pdf', name: 'Annotated PDF', desc: 'Marked-up diagrams, commented code, and a written breakdown.' },
@@ -40,6 +58,21 @@ const CreatePost = ({ user }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // Immediate validation against past date/time selection
+    if (name === 'deadlineDate' && value && value < todayStr) {
+      setError('Deadline date cannot be in the past. Please select today or a future date.');
+      return;
+    }
+    if (name === 'deadlineTime' && value && formData.deadlineDate === todayStr && value < currentTimeStr) {
+      setError('Deadline time cannot be in the past for today. Please select a future time.');
+      return;
+    }
+
+    if (error && (name === 'deadlineDate' || name === 'deadlineTime')) {
+      setError('');
+    }
+
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
@@ -58,6 +91,20 @@ const CreatePost = ({ user }) => {
     if (bountyAmount > 0 && bountyAmount > walletBalance) {
       setError(`Insufficient wallet balance. Your balance is ৳${walletBalance.toFixed(2)}, but the bounty is ৳${bountyAmount.toFixed(2)}. Please top up your wallet.`);
       return;
+    }
+
+    // Validate deadline cannot be in the past
+    if (formData.deadlineDate) {
+      const deadlineStr = `${formData.deadlineDate}T${formData.deadlineTime || '23:59'}`;
+      const deadlineDate = new Date(deadlineStr);
+      if (isNaN(deadlineDate.getTime())) {
+        setError('Please enter a valid target resolution deadline.');
+        return;
+      }
+      if (deadlineDate <= new Date()) {
+        setError('The deadline cannot be in the past. Please select a future date and time.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -210,17 +257,22 @@ const CreatePost = ({ user }) => {
                     type="date"
                     name="deadlineDate"
                     className="form-input"
+                    min={todayStr}
                     value={formData.deadlineDate}
                     onChange={handleChange}
+                    title="Deadline date cannot be in the past"
                   />
                   <input
                     type="time"
                     name="deadlineTime"
                     className="form-input"
+                    min={formData.deadlineDate === todayStr ? currentTimeStr : undefined}
                     value={formData.deadlineTime}
                     onChange={handleChange}
+                    title={formData.deadlineDate === todayStr ? "Deadline time cannot be in the past for today" : "Deadline time"}
                   />
                 </div>
+                <span className="field-hint">Specify when you need this resolved (must be a future date and time).</span>
               </div>
               <div className="form-field">
                 <label className="field-label">Escrow Bounty (৳ BDT)</label>

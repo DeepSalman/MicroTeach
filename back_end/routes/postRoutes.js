@@ -77,6 +77,19 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ message: 'User ID, category, and title are required.' });
   }
 
+  // Validate deadline: cannot be in the past
+  if (deadline && typeof deadline === 'string' && deadline.trim()) {
+    const deadlineTimestamp = Date.parse(deadline.trim());
+    if (isNaN(deadlineTimestamp)) {
+      return res.status(400).json({ message: 'Invalid deadline format. Please provide a valid date.' });
+    }
+    // Allow 60 seconds grace period for network latency / clock skew
+    const graceWindow = Date.now() - 60 * 1000;
+    if (deadlineTimestamp < graceWindow) {
+      return res.status(400).json({ message: 'The deadline cannot be in the past. Please select a future date and time.' });
+    }
+  }
+
   const bountyAmount = parseFloat(bounty) || 0;
 
   try {
