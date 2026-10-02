@@ -109,6 +109,7 @@ const Register = () => {
           <p className="register-subtitle">Join your campus peer learning &amp; micro-tutoring network</p>
         </div>
 
+
         {error && <div className="register-error-message">{error}</div>}
 
         {/* Registration Form */}
