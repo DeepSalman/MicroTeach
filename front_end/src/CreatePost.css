@@ -469,8 +469,21 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .create-post-page {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(20px, env(safe-area-inset-bottom)) 12px;
+  }
+  
+  .form-section {
+    padding: 18px 14px;
+  }
+  
   .create-post-header {
     flex-direction: column;
+    gap: 12px;
+  }
+  
+  .deadline-inputs {
+    grid-template-columns: 1fr;
   }
   
   .delivery-options {

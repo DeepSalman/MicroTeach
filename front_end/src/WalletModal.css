@@ -225,3 +225,48 @@
   font-size: 0.75rem;
   color: var(--color-ink-faint);
 }
+
+/* ── Mobile Responsive Support ── */
+@media (max-width: 480px) {
+  .wallet-modal-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .wallet-modal {
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 18px 18px 0 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .wallet-modal-header {
+    padding: 16px 18px 0 18px;
+  }
+
+  .wallet-balance-section {
+    margin: 16px 18px;
+    padding: 18px;
+  }
+
+  .wallet-balance-amount {
+    font-size: 1.8rem;
+  }
+
+  .wallet-topup-form {
+    padding: 0 18px 18px 18px;
+  }
+
+  .wallet-topup-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .wallet-topup-btn {
+    width: 100%;
+  }
+
+  .wallet-transactions {
+    padding: 0 18px max(20px, env(safe-area-inset-bottom)) 18px;
+  }
+}

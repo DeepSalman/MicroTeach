@@ -1059,7 +1059,7 @@
   .home-page .home-header {
     flex-wrap: wrap;
     gap: 12px;
-    padding: 10px 16px;
+    padding: max(10px, env(safe-area-inset-top)) 16px 10px 16px;
   }
 
   .home-page .search-bar {
@@ -1079,21 +1079,60 @@
   }
 
   .home-page .btn-become-tutor-nav {
-    padding: 0 12px;
-    height: 36px;
-    font-size: 12px;
+    padding: 0 10px;
+    height: 34px;
+    font-size: 11.5px;
   }
 
   .home-page .wallet-balance-btn {
-    padding-right: 12px;
+    padding: 0 10px 0 8px;
+    height: 34px;
+    font-size: 12px;
   }
 
   .home-main {
-    padding: 20px 16px;
+    padding: 16px 12px 32px;
   }
 
   .footer-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .footer-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 400px) {
+  .home-page .home-header {
+    padding: max(8px, env(safe-area-inset-top)) 10px 8px 10px;
+    gap: 8px;
+  }
+
+  .home-page .header-actions {
+    gap: 5px;
+  }
+
+  .home-page .btn-become-tutor-nav {
+    padding: 0 6px;
+    font-size: 11px;
+    letter-spacing: -0.2px;
+  }
+
+  .home-page .wallet-balance-btn {
+    padding: 0 6px 0 4px;
+  }
+
+  .home-page .icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .home-page .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
   }
 }
 

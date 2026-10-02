@@ -113,3 +113,26 @@
 .cm-btn-success:hover {
   background: var(--color-secondary);
 }
+
+/* ── Mobile Responsive Support ── */
+@media (max-width: 480px) {
+  .cm-overlay {
+    padding: 12px;
+  }
+
+  .cm-modal {
+    border-radius: 16px;
+    width: 100%;
+  }
+
+  .cm-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+    padding: 0 18px max(18px, env(safe-area-inset-bottom)) 18px;
+  }
+
+  .cm-btn {
+    width: 100%;
+    text-align: center;
+  }
+}

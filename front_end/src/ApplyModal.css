@@ -529,3 +529,45 @@
   background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary-dark) 100%) !important;
   transform: translateY(-1px);
 }
+
+/* ── Mobile Responsive Support ── */
+@media (max-width: 600px) {
+  .apply-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .apply-modal {
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 18px 18px 0 0;
+    width: 100%;
+  }
+
+  .apply-modal-header {
+    padding: 16px 18px;
+  }
+
+  .apply-modal-body {
+    padding: 16px 18px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .apply-modal-footer {
+    padding: 14px 18px;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .apply-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .apply-btn-cancel,
+  .apply-btn-submit,
+  .apply-withdraw-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

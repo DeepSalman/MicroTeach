@@ -1111,22 +1111,33 @@
    RESPONSIVE
    ═══════════════════════════════════════════ */
 @media (max-width: 700px) {
+  .chat-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
   .chat-modal {
     flex-direction: column;
     height: 92vh;
+    height: 92dvh;
     max-height: none;
-    border-radius: 16px;
+    border-radius: 18px 18px 0 0;
+    width: 100%;
   }
 
   .chat-sidebar {
     width: 100%;
-    max-height: 220px;
+    max-height: 200px;
     border-right: none;
     border-bottom: 1px solid var(--color-border);
   }
 
   .chat-search-wrap {
     display: none;
+  }
+
+  .chat-conv-list {
+    -webkit-overflow-scrolling: touch;
   }
 
   .chat-conv-item {
@@ -1136,8 +1147,16 @@
     border-bottom: 1px solid var(--color-border);
   }
 
+  .chat-messages {
+    -webkit-overflow-scrolling: touch;
+  }
+
   .chat-msg {
-    max-width: 85%;
+    max-width: 88%;
+  }
+
+  .chat-input-bar {
+    padding: 10px 14px max(14px, env(safe-area-inset-bottom)) 14px;
   }
 
   .chat-emoji-strip {

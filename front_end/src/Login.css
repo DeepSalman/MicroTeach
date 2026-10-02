@@ -491,3 +491,22 @@
     font-size: 11px;
   }
 }
+
+@media (max-width: 600px) {
+  .login-animation-nav {
+    top: max(10px, env(safe-area-inset-top));
+    max-width: 94vw;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .login-animation-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .login-left-panel {
+    padding: max(64px, calc(env(safe-area-inset-top) + 54px)) 20px max(24px, env(safe-area-inset-bottom));
+  }
+  .login-right-panel {
+    min-height: 220px;
+  }
+}

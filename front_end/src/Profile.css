@@ -1503,4 +1503,56 @@
   }
 }
 
+@media (max-width: 480px) {
+  .profile-page .home-header {
+    padding: max(8px, env(safe-area-inset-top)) 12px 8px;
+    gap: 8px;
+  }
+
+  .profile-main {
+    padding: 12px 10px max(24px, env(safe-area-inset-bottom)) 10px;
+  }
+
+  .profile-hero,
+  .profile-section {
+    padding: 14px 12px;
+    border-radius: 14px;
+  }
+
+  .hero-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 24px;
+  }
+
+  .hero-stats {
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .hero-stat-item {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 100px;
+  }
+
+  .applicant-item,
+  .applied-item-card {
+    padding: 12px;
+  }
+
+  .applicant-actions,
+  .applied-card-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .applicant-actions button,
+  .applied-card-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ── Transaction Dispute Button in Profile ── */

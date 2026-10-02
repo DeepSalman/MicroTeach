@@ -232,3 +232,16 @@
 
 /* ── Hidden canvas ── */
 .idc-canvas-hidden { display: none; }
+
+@media (max-width: 480px) {
+  .idc-dropzone {
+    padding: 20px 12px;
+    min-height: 140px;
+  }
+  .idc-dz-icon {
+    font-size: 28px;
+  }
+  .idc-video {
+    max-height: 220px;
+  }
+}

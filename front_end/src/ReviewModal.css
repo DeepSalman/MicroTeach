@@ -196,3 +196,38 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ── Mobile Responsive Support ── */
+@media (max-width: 480px) {
+  .review-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .review-modal {
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 18px 18px 0 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .review-header {
+    padding: 16px 18px 0 18px;
+  }
+
+  .review-form {
+    padding: 16px 18px max(20px, env(safe-area-inset-bottom)) 18px;
+  }
+
+  .review-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .review-btn-cancel,
+  .review-btn-submit {
+    width: 100%;
+    text-align: center;
+  }
+}

@@ -501,3 +501,40 @@
 .trm-success-actions {
   margin-top: 8px;
 }
+
+/* ── Mobile Responsive Support ── */
+@media (max-width: 640px) {
+  .trm-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .trm-modal {
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 18px 18px 0 0;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .trm-header {
+    padding: 16px 18px;
+  }
+
+  .trm-form {
+    padding: 16px 18px;
+    gap: 16px;
+  }
+
+  .trm-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+    padding: 14px 18px max(16px, env(safe-area-inset-bottom)) 18px;
+  }
+
+  .trm-btn-primary,
+  .trm-btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -238,3 +238,38 @@
   transition: background 0.2s;
 }
 .atm-done-btn:hover { background: var(--color-secondary); }
+
+/* ── Mobile Responsive Support ── */
+@media (max-width: 600px) {
+  .atm-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .atm-modal {
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 18px 18px 0 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .atm-header {
+    padding: 16px 18px;
+  }
+
+  .atm-form {
+    padding: 16px 18px max(20px, env(safe-area-inset-bottom)) 18px;
+    gap: 16px;
+  }
+
+  .atm-footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .atm-submit-btn,
+  .atm-cancel-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
