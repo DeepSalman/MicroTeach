@@ -321,19 +321,33 @@
 .hero-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 13px;
   color: var(--color-ink-muted);
   flex-wrap: wrap;
 }
 
+.hero-meta .meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.hero-meta .meta-svg,
 .hero-meta .meta-icon {
-  font-size: 14px;
-  color: var(--color-ink);
+  width: 15px;
+  height: 15px;
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .hero-meta .dot-sep {
   color: var(--color-ink-faint);
+  font-size: 12px;
+  user-select: none;
 }
 
 .hero-meta .response-time {
