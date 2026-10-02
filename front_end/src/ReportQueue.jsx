@@ -149,9 +149,13 @@ const ReportQueue = ({ user }) => {
       });
     } catch (err) {
       console.error('Failed to update status:', err);
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to update report status.');
       setFeedback({
         type: 'error',
-        message: err.response?.data?.message || 'Failed to update report status.'
+        message: msg
       });
     } finally {
       setActionLoading(null);
@@ -195,9 +199,13 @@ const ReportQueue = ({ user }) => {
       setTakedownModal(null);
     } catch (err) {
       console.error('Failed to take down post:', err);
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to process post takedown.');
       setFeedback({
         type: 'error',
-        message: err.response?.data?.message || 'Failed to process post takedown.'
+        message: msg
       });
     } finally {
       setActionLoading(null);
@@ -239,9 +247,13 @@ const ReportQueue = ({ user }) => {
       setSelectedIds(new Set());
     } catch (err) {
       console.error('Bulk update error:', err);
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to execute bulk action.');
       setFeedback({
         type: 'error',
-        message: err.response?.data?.message || 'Failed to execute bulk action.'
+        message: msg
       });
     } finally {
       setActionLoading(null);

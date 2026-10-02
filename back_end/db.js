@@ -60,7 +60,7 @@ if (isPostgres) {
         const paramVal = params[rawParamIdx++];
         if (Array.isArray(paramVal)) {
           if (paramVal.length === 0) {
-            newSql += 'NULL';
+            newSql += `$${pIdx++}`;
             flatParams.push(null);
           } else {
             const placeholders = paramVal.map(() => `$${pIdx++}`).join(', ');

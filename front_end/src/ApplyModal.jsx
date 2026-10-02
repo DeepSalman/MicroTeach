@@ -51,7 +51,11 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
       loadApplications();
       if (onApplySuccess) onApplySuccess();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit application.');
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to submit application.');
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -67,7 +71,11 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
       loadApplications();
       if (onWithdrawSuccess) onWithdrawSuccess();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to withdraw application.');
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to withdraw application.');
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

@@ -56,7 +56,8 @@ const Dashboard = ({ user, onLogout }) => {
 };
 
 const RequireAdmin = ({ currentUser, children }) => {
-  if (!currentUser || currentUser.is_admin !== 1) {
+  const isAdmin = Boolean(currentUser && (currentUser.is_admin === 1 || currentUser.is_admin === true || currentUser.is_admin === '1' || Number(currentUser.is_admin) === 1));
+  if (!isAdmin) {
     return <Navigate to="/" />;
   }
   return children;

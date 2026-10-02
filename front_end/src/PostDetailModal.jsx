@@ -33,18 +33,19 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
         const reviewed = new Set();
         const checks = response.data
           .filter((app) => app.status === 'completed')
-          .map((app) =>
-            checkReviewExists(post.post_id, user.user_id)
+          .map((app) => {
+            if (!user?.user_id) return Promise.resolve();
+            return checkReviewExists(post.post_id, user.user_id)
               .then((res) => {
                 if (res.data.exists) reviewed.add(app.application_id);
               })
-              .catch(() => {})
-          );
+              .catch(() => {});
+          });
         return Promise.all(checks).then(() => { setReviewedApps(reviewed); });
       })
       .catch((err) => { console.error('Failed to load applications:', err); })
       .finally(() => { setLoading(false); });
-  }, [post.post_id, user.user_id]);
+  }, [post.post_id, user?.user_id]);
 
   useEffect(() => {
     loadApplications();
@@ -59,7 +60,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
       confirmText: 'Close Post',
       onConfirm: async () => {
         try {
-          const res = await closePost(post.post_id, user.user_id);
+          const res = await closePost(post.post_id, user?.user_id);
           setAlertModal({ open: true, title: 'Post Closed', message: res.data.message, type: 'success' });
           setTimeout(() => onClose(), 1200);
         } catch (err) {
@@ -72,7 +73,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   const handleStatusChange = async (applicationId, newStatus, requestedBy) => {
     setActionLoading(applicationId);
     try {
-      await updateApplicationStatus(applicationId, { status: newStatus, owner_id: user.user_id, requested_by: requestedBy || null });
+      await updateApplicationStatus(applicationId, { status: newStatus, owner_id: user?.user_id, requested_by: requestedBy || null });
       loadApplications();
       if (onStatusChange) onStatusChange();
     } catch (err) {
@@ -365,7 +366,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
       <ReviewModal
         isOpen={reviewModal.open}
         onClose={() => setReviewModal({ open: false, revieweeId: null, revieweeName: '' })}
-        reviewerId={user.user_id}
+        reviewerId={user?.user_id}
         revieweeId={reviewModal.revieweeId}
         postId={post.post_id}
         revieweeName={reviewModal.revieweeName}

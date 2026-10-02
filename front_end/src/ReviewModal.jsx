@@ -36,7 +36,11 @@ const ReviewModal = ({ isOpen, onClose, reviewerId, revieweeId, postId, reviewee
         onClose();
       }, 1000);
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Failed to submit review.');
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to submit review.');
+      setMessage(msg);
     }
     setLoading(false);
   };

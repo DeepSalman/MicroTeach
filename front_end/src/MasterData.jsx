@@ -156,7 +156,11 @@ const MasterData = ({ user }) => {
       setEditTypeModal(null);
       loadTypes();
     } catch (err) {
-      setFeedback({ type: 'error', message: err.response?.data?.message || 'Failed to save transaction type.' });
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to save transaction type.');
+      setFeedback({ type: 'error', message: msg });
     } finally {
       setActionLoading(false);
     }
@@ -177,7 +181,11 @@ const MasterData = ({ user }) => {
       if (activeTab === 'ledger') loadLedger();
       loadTypes();
     } catch (err) {
-      setFeedback({ type: 'error', message: err.response?.data?.message || 'Failed to adjust user balance.' });
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to adjust user balance.');
+      setFeedback({ type: 'error', message: msg });
     } finally {
       setActionLoading(false);
     }

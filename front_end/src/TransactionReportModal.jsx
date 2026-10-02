@@ -80,7 +80,11 @@ const TransactionReportModal = ({ post, user, isOpen, onClose, onSuccess }) => {
       setSubmittedCase(res.data.case_id || 'TX-DISP-ACK');
       if (onSuccess) onSuccess();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit transaction dispute. Please try again.');
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to submit transaction dispute. Please try again.');
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

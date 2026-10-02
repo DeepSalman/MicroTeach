@@ -258,7 +258,7 @@ router.put('/:id/review', async (req, res) => {
 
     await conn.query(
       'UPDATE Teacher_Applications SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE application_id = ?',
-      [status, reviewed_by, req.params.id]
+      [status, reviewed_by || null, req.params.id]
     );
 
     if (status === 'approved') {

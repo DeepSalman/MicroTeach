@@ -80,7 +80,11 @@ const DisputesEscrow = ({ user }) => {
       setFeedback({ type: 'success', message: `Case #TX-${String(disputeId).padStart(4, '0')} marked as ${newStatus.replace('_', ' ').toUpperCase()}.` });
     } catch (err) {
       console.error('Failed to update status:', err);
-      setFeedback({ type: 'error', message: err.response?.data?.message || 'Failed to update status.' });
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to update status.');
+      setFeedback({ type: 'error', message: msg });
     } finally {
       setActionLoading(null);
     }
@@ -139,7 +143,11 @@ const DisputesEscrow = ({ user }) => {
       }));
     } catch (err) {
       console.error('Settlement execution failed:', err);
-      setFeedback({ type: 'error', message: err.response?.data?.message || 'Failed to execute settlement.' });
+      const raw = err.response?.data?.message || err.response?.data?.error || err.message;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (raw && typeof raw === 'object' ? JSON.stringify(raw) : null) || 'Failed to execute settlement.');
+      setFeedback({ type: 'error', message: msg });
     } finally {
       setActionLoading(null);
     }
