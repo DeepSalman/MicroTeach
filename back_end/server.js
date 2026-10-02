@@ -11,6 +11,7 @@ const postRoutes = require('./routes/postRoutes');
 const teacherApplicationRoutes = require('./routes/teacherApplicationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const postApplicationRoutes = require('./routes/postApplicationRoutes');
+const postCommentRoutes = require('./routes/postCommentRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const walletRoutes = require('./routes/walletRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
@@ -51,6 +52,7 @@ const apiRoutes = [
   ['/teacher-applications', teacherApplicationRoutes],
   ['/reports', reportRoutes],
   ['/post-applications', postApplicationRoutes],
+  ['/post-comments', postCommentRoutes],
   ['/messages', messageRoutes],
   ['/wallet', walletRoutes],
   ['/reviews', reviewRoutes],
@@ -74,7 +76,7 @@ app.get('/', (req, res) => {
 
 module.exports = app;
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 if (require.main === module) {
   db.initSchema.then(() => {
     app.listen(PORT, () => {

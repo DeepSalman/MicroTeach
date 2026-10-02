@@ -7,6 +7,7 @@ const CreatePost = ({ user }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     category: 'University Level',
+    courseName: '',
     title: '',
     description: '',
     deliveryFormat: 'live_call',
@@ -87,6 +88,11 @@ const CreatePost = ({ user }) => {
       return;
     }
 
+    if (!formData.courseName.trim()) {
+      setError(`Please enter the ${formData.category === 'University Level' ? 'course' : 'subject'} name.`);
+      return;
+    }
+
     const bountyAmount = parseFloat(formData.bounty) || 0;
     if (bountyAmount > 0 && bountyAmount > walletBalance) {
       setError(`Insufficient wallet balance. Your balance is ৳${walletBalance.toFixed(2)}, but the bounty is ৳${bountyAmount.toFixed(2)}. Please top up your wallet.`);
@@ -114,7 +120,7 @@ const CreatePost = ({ user }) => {
       await createPost({
         user_id: user.user_id,
         category: formData.category,
-        course_code: '',
+        course_code: formData.courseName.trim(),
         title: formData.title,
         description: formData.description,
         delivery_format: formData.deliveryFormat,
@@ -160,7 +166,7 @@ const CreatePost = ({ user }) => {
           <div className="form-section">
             <div className="section-header">
               <label>Domain</label>
-              <span className="step-label">Step 1 of 5</span>
+              <span className="step-label">Step 1 of 6</span>
             </div>
             <div className="category-pills">
               {domains.map((domain) => (
@@ -168,7 +174,7 @@ const CreatePost = ({ user }) => {
                   key={domain}
                   type="button"
                   className={`cat-pill ${formData.category === domain ? 'active' : ''}`}
-                  onClick={() => setFormData({ ...formData, category: domain })}
+                  onClick={() => setFormData({ ...formData, category: domain, courseName: '' })}
                 >
                   {domain}
                 </button>
@@ -176,11 +182,35 @@ const CreatePost = ({ user }) => {
             </div>
           </div>
 
-          {/* Section 2: Problem Headline */}
+          {/* Section 2: Course or Subject */}
+          <div className="form-section">
+            <div className="section-header">
+              <label>{formData.category === 'University Level' ? 'Course Name' : 'Subject Name'}</label>
+              <span className="step-label">Step 2 of 6</span>
+            </div>
+            <div className="form-field">
+              <label className="field-label" htmlFor="course-name">
+                {formData.category === 'University Level' ? 'Course Name' : 'Subject Name'}
+              </label>
+              <input
+                id="course-name"
+                type="text"
+                name="courseName"
+                className="form-input"
+                maxLength="50"
+                placeholder={formData.category === 'University Level' ? 'e.g. Data Structures or CSE 221' : 'e.g. Physics or Higher Mathematics'}
+                value={formData.courseName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Section 3: Problem Headline */}
           <div className="form-section">
             <div className="section-header">
               <label>Problem Headline</label>
-              <span className="step-label">Step 2 of 5</span>
+              <span className="step-label">Step 3 of 6</span>
             </div>
             <div className="form-field">
               <div className="field-label-row">
@@ -200,11 +230,11 @@ const CreatePost = ({ user }) => {
             </div>
           </div>
 
-          {/* Section 3: Description */}
+          {/* Section 4: Description */}
           <div className="form-section">
             <div className="section-header">
               <label>Description of the problem</label>
-              <span className="step-label">Step 3 of 5</span>
+              <span className="step-label">Step 4 of 6</span>
             </div>
             <div className="form-field">
               <textarea
@@ -218,11 +248,11 @@ const CreatePost = ({ user }) => {
             </div>
           </div>
 
-          {/* Section 4: Resolution Format */}
+          {/* Section 5: Resolution Format */}
           <div className="form-section">
             <div className="section-header">
               <label>Resolution Format</label>
-              <span className="step-label">Step 4 of 5</span>
+              <span className="step-label">Step 5 of 6</span>
             </div>
             <div className="delivery-options">
               {deliveryOptions.map((opt) => (
@@ -243,11 +273,11 @@ const CreatePost = ({ user }) => {
             </div>
           </div>
 
-          {/* Section 5: Bounty & Deadline */}
+          {/* Section 6: Bounty & Deadline */}
           <div className="form-section">
             <div className="section-header">
               <label>Bounty &amp; Deadline</label>
-              <span className="step-label">Step 5 of 5</span>
+              <span className="step-label">Step 6 of 6</span>
             </div>
             <div className="form-grid">
               <div className="form-field">

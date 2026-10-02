@@ -7,6 +7,7 @@ const API_BASE_URL =
 const API = axios.create({ baseURL: API_BASE_URL });
 
 export const fetchUsers = () => API.get("/users");
+export const fetchTeachers = () => API.get('/users/teachers');
 export const fetchUserProfile = (userId) => API.get(`/users/profile/${userId}`);
 export const updateUserProfile = (userId, data) => API.put(`/users/profile/${userId}`, data);
 export const updateUserVerification = (userId, is_verified) => API.patch(`/users/${userId}/verify`, { is_verified });
@@ -21,6 +22,7 @@ export const fetchSessions = () => API.get("/sessions");
 export const createSession = (sessionData) => API.post("/sessions", sessionData);
 
 export const fetchPosts = () => API.get("/posts");
+export const fetchPostById = (postId) => API.get(`/posts/${postId}`);
 export const createPost = (postData) => API.post("/posts", postData);
 export const updatePostStatus = (postId, status) => API.patch(`/posts/${postId}/status`, { status });
 
@@ -35,7 +37,7 @@ export const updateReportStatus = (reportId, status, extra = {}) => API.patch(`/
 export const takedownReportedPost = (reportId, data = {}) => API.post(`/reports/${reportId}/takedown`, data);
 export const batchUpdateReportStatus = (data) => API.patch('/reports/batch-status', data);
 
-export const fetchPostApplications = (postId) => API.get(`/post-applications/post/${postId}`);
+export const fetchPostApplications = (postId, viewerId) => API.get(`/post-applications/post/${postId}`, { params: { viewer_id: viewerId } });
 export const fetchPostApplicationCount = (postId) => API.get(`/post-applications/post/${postId}/count`);
 export const fetchUserPostApplications = (userId) => API.get(`/post-applications/user/${userId}`);
 export const applyToPost = (data) => API.post("/post-applications", data);
@@ -64,6 +66,8 @@ export const fetchTransactions = (userId) => API.get(`/wallet/transactions/${use
 
 // Posts
 export const closePost = (postId, userId) => API.post(`/posts/${postId}/close`, { user_id: userId });
+export const fetchPostComments = (postId) => API.get(`/post-comments/post/${postId}`);
+export const createPostComment = (data) => API.post('/post-comments', data);
 
 // Reviews
 export const submitReview = (data) => API.post('/reviews', data);

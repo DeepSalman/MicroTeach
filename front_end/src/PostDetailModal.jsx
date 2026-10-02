@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchPostApplications, updateApplicationStatus, closePost, checkReviewExists } from './api';
+import { fetchPostApplications, updateApplicationStatus, closePost, checkReviewExists, fetchUserProfile, applyToPost, withdrawApplication } from './api';
 import ConfirmModal from './ConfirmModal';
 import ReviewModal from './ReviewModal';
 import TransactionReportModal from './TransactionReportModal';
+import PostComments from './PostComments';
 import { formatDeadline, avatarStyle } from './utils';
 import './PostDetailModal.css';
 
@@ -16,18 +17,112 @@ const getTimeAgo = (dateStr) => {
   return `${Math.floor(hours / 24)}d ago`;
 };
 
-const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
+const ApplicantProfileModal = ({ applicant, onClose }) => {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchUserProfile(applicant.user_id)
+      .then((response) => {
+        if (isMounted) setProfile(response.data?.user ? response.data : { user: response.data, posts: [] });
+      })
+      .catch(() => {})
+      .finally(() => { if (isMounted) setLoading(false); });
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [applicant.user_id, onClose]);
+
+  const profileUser = profile?.user || applicant;
+  const posts = Array.isArray(profile?.posts) ? profile.posts : [];
+
+  return (
+    <div className="pd-profile-overlay" onMouseDown={onClose}>
+      <section className="pd-profile-modal" role="dialog" aria-modal="true" aria-labelledby="pd-profile-name" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="pd-profile-header">
+          <span>Teacher Profile</span>
+          <button type="button" className="pd-profile-close" onClick={onClose} aria-label="Close teacher profile">&times;</button>
+        </header>
+        <div className="pd-profile-body">
+          <div className="pd-profile-identity">
+            <div className="pd-profile-avatar" style={avatarStyle(profileUser.avatar_color || applicant.applicant_avatar_color)}>
+              {(profileUser.full_name || applicant.applicant_name || '?').charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h4 id="pd-profile-name">{profileUser.full_name || applicant.applicant_name}</h4>
+              <p>{profileUser.department || applicant.applicant_department || 'Department not listed'}</p>
+              <span className="pd-profile-role">Verified teacher</span>
+            </div>
+          </div>
+
+          <div className="pd-profile-rating">
+            <span className="pd-stars">{'★'.repeat(Math.round(Number(applicant.avg_rating) || 0))}{'☆'.repeat(5 - Math.round(Number(applicant.avg_rating) || 0))}</span>
+            <strong>{Number(applicant.avg_rating || 0).toFixed(1)}</strong>
+            <span>{applicant.review_count || 0} reviews</span>
+          </div>
+
+          <section className="pd-profile-section">
+            <h5>About</h5>
+            <p>{loading ? 'Loading profile...' : profileUser.bio || 'No introduction added yet.'}</p>
+          </section>
+
+          <section className="pd-profile-section">
+            <h5>Posts</h5>
+            {loading ? (
+              <p>Loading posts...</p>
+            ) : posts.length === 0 ? (
+              <p>No active posts yet.</p>
+            ) : (
+              <ul className="pd-profile-posts">
+                {posts.slice(0, 5).map((profilePost) => (
+                  <li key={profilePost.post_id}>
+                    <strong>{profilePost.title}</strong>
+                    <span>{profilePost.category}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat, onLoginRequired, onApplyTeacher, canApply, teacherApplicationPending, onApplySuccess, onWithdrawSuccess }) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [applicationMessage, setApplicationMessage] = useState('');
+  const [applicationSubmitting, setApplicationSubmitting] = useState(false);
+  const [applicationError, setApplicationError] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', type: 'info', onConfirm: () => {} });
   const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'info' });
   const [reviewModal, setReviewModal] = useState({ open: false, revieweeId: null, revieweeName: '' });
   const [txDisputeOpen, setTxDisputeOpen] = useState(false);
   const [reviewedApps, setReviewedApps] = useState(new Set());
+  const [postOwnerProfile, setPostOwnerProfile] = useState(null);
+  const [profileApplicant, setProfileApplicant] = useState(null);
+  const isPostOwner = Boolean(user?.user_id && String(user.user_id) === String(post.user_id));
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchUserProfile(post.user_id)
+      .then((response) => {
+        if (isMounted) setPostOwnerProfile(response.data?.user || response.data);
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, [post.user_id]);
 
   const loadApplications = useCallback(() => {
-    return fetchPostApplications(post.post_id)
+    return fetchPostApplications(post.post_id, user?.user_id)
       .then((response) => {
         setApplications(response.data);
         const reviewed = new Set();
@@ -48,8 +143,55 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   }, [post.post_id, user?.user_id]);
 
   useEffect(() => {
-    loadApplications();
-  }, [loadApplications]);
+    if (user?.user_id) {
+      loadApplications();
+    } else {
+      setApplications([]);
+      setLoading(false);
+    }
+  }, [user?.user_id, loadApplications]);
+
+  const myApplication = user?.user_id
+    ? applications.find((application) => String(application.user_id) === String(user.user_id))
+    : null;
+  const canUserApply = canApply ?? ['tutor', 'both'].includes(user?.role);
+
+  const handleApply = async () => {
+    if (!user?.user_id || !canUserApply || isPostOwner || applicationSubmitting) return;
+    setApplicationSubmitting(true);
+    setApplicationError('');
+    try {
+      await applyToPost({
+        post_id: post.post_id,
+        user_id: user.user_id,
+        message: applicationMessage.trim()
+      });
+      setApplicationMessage('');
+      await loadApplications();
+      onApplySuccess?.(post.post_id);
+      onStatusChange?.();
+    } catch (error) {
+      setApplicationError(error.response?.data?.message || 'Could not apply to this post. Please try again.');
+    } finally {
+      setApplicationSubmitting(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!myApplication || applicationSubmitting) return;
+    setApplicationSubmitting(true);
+    setApplicationError('');
+    try {
+      await withdrawApplication(myApplication.application_id);
+      await loadApplications();
+      onWithdrawSuccess?.(post.post_id);
+      onStatusChange?.();
+    } catch (error) {
+      setApplicationError(error.response?.data?.message || 'Could not withdraw this application. Please try again.');
+    } finally {
+      setApplicationSubmitting(false);
+    }
+  };
 
   const handleClosePost = () => {
     setConfirmModal({
@@ -73,7 +215,12 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
   const handleStatusChange = async (applicationId, newStatus, requestedBy) => {
     setActionLoading(applicationId);
     try {
-      await updateApplicationStatus(applicationId, { status: newStatus, owner_id: user?.user_id, requested_by: requestedBy || null });
+      await updateApplicationStatus(applicationId, {
+        status: newStatus,
+        owner_id: post.user_id,
+        actor_id: user?.user_id,
+        requested_by: requestedBy || null
+      });
       loadApplications();
       if (onStatusChange) onStatusChange();
     } catch (err) {
@@ -125,13 +272,30 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
     return badges[status] || badges['pending'];
   };
 
+  const ownerName = postOwnerProfile?.full_name || post.author_name || 'Post owner';
+  const ownerDepartment = postOwnerProfile?.department || post.author_department;
+  const ownerAvatarColor = postOwnerProfile?.avatar_color || post.author_avatar_color;
+  const ownerRole = postOwnerProfile?.role === 'tutor'
+    ? 'Verified teacher'
+    : postOwnerProfile?.role === 'both'
+      ? 'Student and teacher'
+      : 'Student';
+
+  const handleMessageOwner = () => {
+    if (!user?.user_id) {
+      onLoginRequired?.();
+      return;
+    }
+    if (!isPostOwner) onChat?.(post.user_id, post.post_id);
+  };
+
   return (
     <div className="pd-overlay" onClick={onClose}>
       <div className="pd-modal" onClick={(e) => e.stopPropagation()}>
         <div className="pd-header">
           <h3>Post Details</h3>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {post.status !== 'closed' && !isPostSettled && (
+            {isPostOwner && post.status !== 'closed' && !isPostSettled && (
               <button className="pd-close-post" onClick={handleClosePost}>Close Post</button>
             )}
             {isPostSettled && (
@@ -145,7 +309,11 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
           {/* Post Info */}
           <div className="pd-post-info">
             <div className="pd-post-meta">
-              {post.course_code && <span className="pd-course-code">{post.course_code}</span>}
+              {post.course_code && (
+                <span className="pd-course-code">
+                  {post.category === 'University Level' ? 'Course' : 'Subject'}: {post.course_code}
+                </span>
+              )}
               <span className="pd-category">{post.category}</span>
             </div>
             <h4 className="pd-post-title">{post.title}</h4>
@@ -157,8 +325,79 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
             </div>
           </div>
 
+          <section className="pd-post-owner" aria-label="Post owner profile">
+            <div className="pd-post-owner-avatar" style={avatarStyle(ownerAvatarColor)}>
+              {ownerName.charAt(0).toUpperCase()}
+            </div>
+            <div className="pd-post-owner-info">
+              <div className="pd-post-owner-name">{ownerName}</div>
+              <div className="pd-post-owner-details">
+                {ownerDepartment && <span>{ownerDepartment}</span>}
+                <span>{ownerRole}</span>
+              </div>
+              {postOwnerProfile?.bio && <p>{postOwnerProfile.bio}</p>}
+            </div>
+            <div className="pd-post-owner-actions">
+              {isPostOwner ? (
+                <span className="pd-post-owner-self">Your post</span>
+              ) : (
+                <button type="button" className="pd-message-owner" onClick={handleMessageOwner}>
+                  {user?.user_id ? 'Message' : 'Log in to message'}
+                </button>
+              )}
+            </div>
+          </section>
+
+          {!isPostOwner && (
+            <section className="pd-section pd-apply-section">
+              <div className="pd-section-header">
+                <h4>Your Application</h4>
+                {myApplication && <span className={`pd-status-badge ${getStatusBadge(myApplication.status).class}`}>{getStatusBadge(myApplication.status).text}</span>}
+              </div>
+              {loading ? (
+                <div className="pd-loading">Checking your application...</div>
+              ) : myApplication ? (
+                <div className="pd-my-application">
+                  <span>You have applied to this post.</span>
+                </div>
+              ) : !user ? (
+                <p className="pd-apply-notice">Log in to apply for this post.</p>
+              ) : canUserApply ? (
+                <>
+                  <div className="pd-apply-message-heading">
+                    <label className="pd-apply-label" htmlFor={`pd-apply-message-${post.post_id}`}>Message to the student</label>
+                    <span>Optional</span>
+                  </div>
+                  <textarea
+                    id={`pd-apply-message-${post.post_id}`}
+                    className="pd-apply-message"
+                    value={applicationMessage}
+                    onChange={(event) => setApplicationMessage(event.target.value)}
+                    maxLength={1000}
+                    rows={3}
+                    placeholder="Introduce yourself and explain how you can help..."
+                  />
+                  <p className="pd-apply-hint">Your message will be sent with your application.</p>
+                </>
+              ) : teacherApplicationPending ? (
+                <span className="pd-apply-notice">Your teacher application is pending approval.</span>
+              ) : (
+                <div className="pd-apply-requirement">
+                  <span>Only verified teachers can apply to this post.</span>
+                </div>
+              )}
+              {applicationError && <p className="pd-apply-error" role="alert">{applicationError}</p>}
+            </section>
+          )}
+
+          <PostComments
+            postId={post.post_id}
+            user={user}
+            onLoginRequired={onLoginRequired}
+          />
+
           {/* Applied Teachers */}
-          <div className="pd-section">
+          {isPostOwner && <div className="pd-section">
             <div className="pd-section-header">
               <h4>Applied Teachers</h4>
               <span className="pd-count">{applications.length}</span>
@@ -200,7 +439,14 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                             <span className="pd-rating-num">{rating > 0 ? rating.toFixed(1) : '—'}</span>
                             {reviewCount > 0 && <span className="pd-review-count">({reviewCount})</span>}
                           </div>
-                          <span className="pd-view-profile">View Profile</span>
+                          <button
+                            type="button"
+                            className="pd-view-profile"
+                            onClick={() => setProfileApplicant(app)}
+                            aria-haspopup="dialog"
+                          >
+                            View Profile
+                          </button>
                         </div>
                       </div>
 
@@ -217,10 +463,18 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                             </button>
                             <button
                               className="pd-cancel-btn"
-                              onClick={() => handleStatusChange(app.application_id, 'cancellation_requested')}
+                              onClick={() => setConfirmModal({
+                                open: true,
+                                title: 'Cancel this tutoring session?',
+                                message: 'This will cancel the accepted application and refund the post bounty to the student. This action cannot be undone.',
+                                type: 'danger',
+                                confirmText: 'Confirm Cancel',
+                                cancelText: 'Keep Session',
+                                onConfirm: () => handleStatusChange(app.application_id, 'cancelled')
+                              })}
                               disabled={actionLoading === app.application_id}
                             >
-                              {actionLoading === app.application_id ? '...' : 'Request Cancellation'}
+                              {actionLoading === app.application_id ? '...' : 'Cancel'}
                             </button>
                             <button
                               className="pd-dispute-btn"
@@ -288,10 +542,18 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                           <div className="pd-actions">
                             <button
                               className="pd-cancel-btn"
-                              onClick={() => handleStatusChange(app.application_id, 'cancelled')}
+                              onClick={() => setConfirmModal({
+                                open: true,
+                                title: 'Confirm cancellation?',
+                                message: 'This will cancel the tutoring session and refund the bounty to the student. This action cannot be undone.',
+                                type: 'danger',
+                                confirmText: 'Confirm Cancel',
+                                cancelText: 'Keep Tutor',
+                                onConfirm: () => handleStatusChange(app.application_id, 'cancelled')
+                              })}
                               disabled={actionLoading === app.application_id}
                             >
-                              {actionLoading === app.application_id ? '...' : 'Cancel Request'}
+                              {actionLoading === app.application_id ? '...' : 'Confirm Cancel'}
                             </button>
                             <button
                               className="pd-accept-btn"
@@ -332,10 +594,27 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
                 })}
               </div>
             )}
-          </div>
+          </div>}
         </div>
 
         <div className="pd-footer">
+          {!isPostOwner && !loading && (
+            myApplication?.status === 'pending' ? (
+              <button type="button" className="pd-withdraw-btn" onClick={handleWithdraw} disabled={applicationSubmitting}>
+                {applicationSubmitting ? 'Withdrawing...' : 'Withdraw'}
+              </button>
+            ) : !myApplication && !user ? (
+              <button type="button" className="pd-apply-btn" onClick={onLoginRequired}>Log in to apply</button>
+            ) : !myApplication && canUserApply ? (
+              <button type="button" className="pd-apply-btn" onClick={handleApply} disabled={applicationSubmitting}>
+                {applicationSubmitting ? 'Applying...' : 'Apply to this post'}
+              </button>
+            ) : !myApplication && teacherApplicationPending ? (
+              <span className="pd-apply-notice">Application Pending</span>
+            ) : !myApplication ? (
+              <button type="button" className="pd-apply-btn" onClick={onApplyTeacher}>Apply to Teach</button>
+            ) : null
+          )}
           <button className="pd-close-btn" onClick={onClose}>Close</button>
         </div>
       </div>
@@ -349,6 +628,7 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
         message={confirmModal.message}
         type={confirmModal.type}
         confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
       />
 
       {/* Alert Modal */}
@@ -388,6 +668,13 @@ const PostDetailModal = ({ post, user, onClose, onStatusChange, onChat }) => {
             loadApplications();
             if (onStatusChange) onStatusChange();
           }}
+        />
+      )}
+
+      {profileApplicant && (
+        <ApplicantProfileModal
+          applicant={profileApplicant}
+          onClose={() => setProfileApplicant(null)}
         />
       )}
     </div>

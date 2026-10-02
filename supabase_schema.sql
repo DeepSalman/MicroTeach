@@ -16,6 +16,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Clean drop of existing views and tables
 DROP VIEW IF EXISTS public."Messages", public."Conversation_Members", public."Conversations", public."Reviews", public."Transactions", public."Post_Applications", public."Reports", public."Teacher_Application_Documents", public."Teacher_Applications", public."Sessions", public."Posts", public."User_Skills", public."Skills", public."Transaction_Disputes", public."Master_Transaction_Types", public."Users" CASCADE;
 
+DROP TABLE IF EXISTS public.post_comments CASCADE;
 DROP TABLE IF EXISTS public.messages, public."Messages" CASCADE;
 DROP TABLE IF EXISTS public.conversation_members, public."Conversation_Members" CASCADE;
 DROP TABLE IF EXISTS public.conversations, public."Conversations" CASCADE;
@@ -84,7 +85,18 @@ CREATE TABLE public.posts (
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Sessions
+-- 5. Post_Comments
+CREATE TABLE public.post_comments (
+  comment_id SERIAL PRIMARY KEY,
+  post_id INT NOT NULL REFERENCES public.posts(post_id) ON DELETE CASCADE,
+  user_id INT NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
+  parent_comment_id INT REFERENCES public.post_comments(comment_id) ON DELETE CASCADE,
+  content TEXT NOT NULL CHECK (char_length(trim(content)) BETWEEN 1 AND 2000),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_post_comments_post_created ON public.post_comments(post_id, created_at, comment_id);
+
+-- 6. Sessions
 CREATE TABLE public.sessions (
   session_id SERIAL PRIMARY KEY,
   tutor_id INT NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
@@ -144,6 +156,7 @@ CREATE TABLE public.post_applications (
   message TEXT,
   status VARCHAR(30) DEFAULT 'pending',
   completion_requested_by INT NULL,
+  cancelled_by INT NULL REFERENCES public.users(user_id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (post_id, user_id)
 );

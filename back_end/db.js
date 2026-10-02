@@ -6,10 +6,8 @@ dotenv.config({ path: path.join(process.cwd(), 'back_end', '.env') });
 
 const { randomAvatarColor } = require('./avatarColors');
 
-const SUPABASE_FALLBACK_URL = "postgresql://postgres.tdbflvjdjrjzomywuxqg:thereisaverystrongpasswordwhichis%40123@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true";
-
-// Determine effective database connection string
-const rawDbUrl = process.env.DATABASE_URL || (process.env.VERCEL || process.env.NODE_ENV === 'production' ? SUPABASE_FALLBACK_URL : null);
+// PostgreSQL is used only when explicitly configured; otherwise use local MySQL.
+const rawDbUrl = process.env.DATABASE_URL || null;
 
 const isPostgres = Boolean(
   rawDbUrl &&
@@ -195,6 +193,11 @@ const initSchema = (async () => {
     try {
       const [rows] = await dbInterface.query('SELECT NOW() as current_time');
       console.log('Successfully connected to PostgreSQL (Supabase) database! Server time:', rows[0]?.current_time);
+      await dbInterface.query(`
+        ALTER TABLE post_applications
+        ADD COLUMN IF NOT EXISTS cancelled_by INT NULL REFERENCES users(user_id) ON DELETE SET NULL
+      `);
+      console.log('Post application cancellation tracking verified');
     } catch (err) {
       console.error('Error connecting to PostgreSQL:', err.message);
     }
@@ -212,6 +215,12 @@ const initSchema = (async () => {
   }
 
   try {
+    try {
+      await connection.query('ALTER TABLE Post_Applications ADD COLUMN cancelled_by INT NULL AFTER completion_requested_by');
+    } catch (err) {
+      if (err.errno !== 1060) throw err;
+    }
+
     try {
       await connection.query('ALTER TABLE Users ADD COLUMN avatar_color VARCHAR(7) NULL');
     } catch (err) {

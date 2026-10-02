@@ -26,7 +26,7 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
   const isTeacher = user && (user.role === 'both' || user.role === 'tutor');
 
   const loadApplications = useCallback(() => {
-    return fetchPostApplications(post.post_id)
+    return fetchPostApplications(post.post_id, user?.user_id)
       .then((res) => { setApplications(res.data); })
       .catch((err) => { console.error('Failed to load applications:', err); })
       .finally(() => { setLoading(false); });
@@ -117,7 +117,11 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
           {/* Post Info */}
           <div className="apply-post-info">
             <div className="apply-post-meta">
-              {post.course_code && <span className="apply-course-code">{post.course_code}</span>}
+              {post.course_code && (
+                <span className="apply-course-code">
+                  {post.category === 'University Level' ? 'Course' : 'Subject'}: {post.course_code}
+                </span>
+              )}
               <span className="apply-category">{post.category}</span>
             </div>
             <h4 className="apply-post-title">{post.title}</h4>
@@ -144,14 +148,14 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
           {/* Applied Teachers */}
           <div className="apply-section">
             <div className="apply-section-header">
-              <h4>Applied Teachers</h4>
+              <h4>{isOwnPost ? 'Applied Teachers' : 'Your Application'}</h4>
               <span className="apply-count">{applications.length}</span>
             </div>
 
             {loading ? (
               <div className="apply-loading">Loading applications...</div>
             ) : applications.length === 0 ? (
-              <div className="apply-empty">No applications yet. Be the first to apply!</div>
+              <div className="apply-empty">{isOwnPost ? 'No applications yet.' : "You haven't applied to this post yet."}</div>
             ) : (
               <div className="apply-list">
                 {applications.map((app) => {

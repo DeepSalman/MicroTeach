@@ -78,7 +78,8 @@
   font-weight: 600;
   background: var(--color-primary-soft);
   color: var(--color-ink);
-  font-family: var(--font-mono);
+  font-family: var(--font-primary);
+  overflow-wrap: anywhere;
 }
 
 .apply-category {

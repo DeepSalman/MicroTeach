@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd front_end && npm install && npm run build"
+    "build": "cd front_end && npm install && npm run build",
+    "local:db": "npm --prefix back_end run setup:db",
+    "local:api": "npm --prefix back_end start",
+    "local:web": "npm --prefix front_end run dev"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

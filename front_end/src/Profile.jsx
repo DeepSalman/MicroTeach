@@ -288,9 +288,15 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const completedPosts = allPosts.filter(isPostFinished);
   const visiblePosts = postedFilter === 'completed' ? completedPosts : activePosts;
   const isAppliedFinished = (a) => a.status === 'completed' || a.post_status === 'completed' || Boolean(a.is_completed);
-  const activeApplications = postApplications.filter((a) => !isAppliedFinished(a));
+  const isAppliedIncomplete = (a) => a.status === 'cancelled' || a.status === 'rejected';
+  const activeApplications = postApplications.filter((a) => !isAppliedFinished(a) && !isAppliedIncomplete(a));
+  const incompleteApplications = postApplications.filter(isAppliedIncomplete);
   const completedApplications = postApplications.filter(isAppliedFinished);
-  const visibleApplications = appliedFilter === 'completed' ? completedApplications : activeApplications;
+  const visibleApplications = appliedFilter === 'completed'
+    ? completedApplications
+    : appliedFilter === 'incomplete'
+      ? incompleteApplications
+      : activeApplications;
 
   const pageSize = Math.max(1, cardsPerRow);
   const postedTotalPages = Math.max(1, Math.ceil(visiblePosts.length / pageSize));
@@ -666,6 +672,12 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                   Active <span className="filter-count">{activeApplications.length}</span>
                 </button>
                 <button
+                  className={`filter-pill ${appliedFilter === 'incomplete' ? 'is-active' : ''}`}
+                  onClick={() => { setAppliedFilter('incomplete'); setAppliedPage(1); }}
+                >
+                  Incomplete <span className="filter-count">{incompleteApplications.length}</span>
+                </button>
+                <button
                   className={`filter-pill ${appliedFilter === 'completed' ? 'is-active' : ''}`}
                   onClick={() => { setAppliedFilter('completed'); setAppliedPage(1); }}
                 >
@@ -766,7 +778,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                           <div className="post-card-actions">
                             <button className="btn-complete-sm" onClick={async () => {
                               const callerId = effectiveUserId || app.user_id;
-                              await updateApplicationStatus(app.application_id, { status: 'completion_requested', owner_id: app.post_author_id, requested_by: callerId });
+                              await updateApplicationStatus(app.application_id, { status: 'completion_requested', owner_id: app.post_author_id, actor_id: callerId, requested_by: callerId });
                               loadPostApplications();
                             }}>
                               Mark Complete
@@ -787,13 +799,13 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                         <div className="post-card-footer-bottom">
                           <div className="post-card-actions">
                             <button className="btn-complete-sm" onClick={async () => {
-                              await updateApplicationStatus(app.application_id, { status: 'completed', owner_id: app.post_author_id });
+                              await updateApplicationStatus(app.application_id, { status: 'completed', owner_id: app.post_author_id, actor_id: effectiveUserId });
                               loadPostApplications();
                             }}>
                               Accept Completion
                             </button>
                             <button className="btn-keep-sm" onClick={async () => {
-                              await updateApplicationStatus(app.application_id, { status: 'accepted', owner_id: app.post_author_id });
+                              await updateApplicationStatus(app.application_id, { status: 'accepted', owner_id: app.post_author_id, actor_id: effectiveUserId });
                               loadPostApplications();
                             }}>
                               Not Yet
@@ -829,14 +841,26 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                       {isCancelRequested && (
                         <div className="post-card-footer-bottom">
                           <div className="post-card-actions">
-                            <button className="btn-confirm-cancel-sm" onClick={async () => {
-                              await updateApplicationStatus(app.application_id, { status: 'cancelled', owner_id: app.post_author_id });
-                              loadPostApplications();
-                            }}>
-                              Confirm Cancellation
+                            <button className="btn-confirm-cancel-sm" onClick={() => setConfirmModal({
+                              open: true,
+                              title: 'Confirm cancellation?',
+                              message: 'This will cancel the tutoring session and refund the bounty to the student. This action cannot be undone.',
+                              type: 'danger',
+                              confirmText: 'Confirm Cancel',
+                              cancelText: 'Keep Tutoring',
+                              onConfirm: async () => {
+                                try {
+                                  await updateApplicationStatus(app.application_id, { status: 'cancelled', owner_id: app.post_author_id, actor_id: effectiveUserId });
+                                  await loadPostApplications();
+                                } catch (error) {
+                                  setAlertModal({ open: true, title: 'Error', message: error.response?.data?.message || 'Could not cancel this session.', type: 'danger' });
+                                }
+                              }
+                            })}>
+                              Confirm Cancel
                             </button>
                             <button className="btn-keep-sm" onClick={async () => {
-                              await updateApplicationStatus(app.application_id, { status: 'accepted', owner_id: app.post_author_id });
+                              await updateApplicationStatus(app.application_id, { status: 'accepted', owner_id: app.post_author_id, actor_id: effectiveUserId });
                               loadPostApplications();
                             }}>
                               Keep Tutoring
@@ -859,7 +883,11 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
               })
               ) : (
                 <div className="empty-state">
-                  <p>{appliedFilter === 'completed' ? 'No completed applications yet — finished sessions will show up here.' : 'No active applications right now.'}</p>
+                  <p>{appliedFilter === 'completed'
+                    ? 'No completed applications yet — finished sessions will show up here.'
+                    : appliedFilter === 'incomplete'
+                      ? 'No cancelled or rejected applications.'
+                      : 'No active applications right now.'}</p>
                 </div>
               )}
             </div>
@@ -956,6 +984,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
         <PostDetailModal
           post={detailModalPost}
           user={user}
+          onLoginRequired={() => navigate('/login')}
           onClose={() => setDetailModalPost(null)}
           onStatusChange={() => {
             loadProfile();
@@ -986,6 +1015,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
         message={confirmModal.message}
         type={confirmModal.type}
         confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
       />
 
       {/* Alert Modal */}

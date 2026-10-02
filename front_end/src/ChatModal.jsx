@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchInbox, fetchMessages, sendMessage, markAsRead, startConversation } from './api';
+import { fetchInbox, fetchMessages, sendMessage, markAsRead, startConversation, updateApplicationStatus } from './api';
 import { avatarStyle } from './utils';
+import ConfirmModal from './ConfirmModal';
+import TransactionReportModal from './TransactionReportModal';
 import './ChatModal.css';
 
 const API_BASE =
@@ -23,13 +25,13 @@ const formatFileSize = (bytes) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-// Deduplicate inbox so each user appears strictly ONCE (single chat per person)
+// Keep distinct post-context conversations while dropping duplicate rows.
 const dedupeInbox = (data) => {
   if (!Array.isArray(data)) return [];
   const seen = new Set();
   const unique = [];
   for (const item of data) {
-    const key = String(item.other_user_id);
+    const key = `${item.other_user_id}:${item.post_id || 'direct'}`;
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(item);
@@ -38,7 +40,7 @@ const dedupeInbox = (data) => {
   return unique;
 };
 
-const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
+const ChatModal = ({ user, onClose, onViewPost, startWithUserId, startWithPostId }) => {
   const [inbox, setInbox] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -52,6 +54,10 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [transactionReportOpen, setTransactionReportOpen] = useState(false);
+  const [sessionActionLoading, setSessionActionLoading] = useState(false);
+  const [sessionActionError, setSessionActionError] = useState('');
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -76,8 +82,13 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
       }
 
       if (startWithUserId) {
-        // Find existing single chat with this person
-        const existing = inboxList.find(c => String(c.other_user_id) === String(startWithUserId));
+        const hasMatchingContext = (conversation) => (
+          String(conversation.other_user_id) === String(startWithUserId) &&
+          (startWithPostId
+            ? String(conversation.post_id) === String(startWithPostId)
+            : !conversation.post_id)
+        );
+        const existing = inboxList.find(hasMatchingContext);
         if (existing) {
           if (isMounted) setSelectedConv(existing);
         } else {
@@ -92,9 +103,8 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
             if (isMounted) {
               setInbox(dedupedUpdated);
               const targetId = res.data?.conversation_id;
-              const conv = dedupedUpdated.find(
-                c => c.conversation_id === targetId || String(c.other_user_id) === String(startWithUserId)
-              );
+              const conv = dedupedUpdated.find(c => String(c.conversation_id) === String(targetId))
+                || dedupedUpdated.find(hasMatchingContext);
               if (conv) setSelectedConv(conv);
             }
           } catch (err) {
@@ -159,6 +169,30 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
       setInbox(dedupeInbox(response.data));
     } catch (err) {
       console.error('Failed to reload inbox:', err);
+    }
+  };
+
+  const handleSessionStatusChange = async (status) => {
+    if (!selectedConv?.application_id || sessionActionLoading) return;
+    setSessionActionLoading(true);
+    setSessionActionError('');
+    try {
+      await updateApplicationStatus(selectedConv.application_id, {
+        status,
+        actor_id: user.user_id,
+        owner_id: selectedConv.post_owner_id,
+        requested_by: status === 'completion_requested' ? user.user_id : null
+      });
+      setSelectedConv((current) => ({
+        ...current,
+        application_status: status,
+        completion_requested_by: status === 'completion_requested' ? user.user_id : null
+      }));
+      await loadInbox();
+    } catch (error) {
+      setSessionActionError(error.response?.data?.message || 'Could not update this session. Please try again.');
+    } finally {
+      setSessionActionLoading(false);
     }
   };
 
@@ -332,9 +366,26 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
   const filteredInbox = searchQuery.trim()
     ? inbox.filter(c =>
         c.other_user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.course_code?.toLowerCase().includes(searchQuery.toLowerCase())
+        c.course_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.post_category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.post_title?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : inbox;
+  const isTeacherOnPost = Boolean(
+    selectedConv?.post_id &&
+    ['tutor', 'both'].includes(user?.role) &&
+    String(user.user_id) !== String(selectedConv.post_owner_id)
+  );
+  const isPostOwner = Boolean(selectedConv?.post_owner_id && String(user?.user_id) === String(selectedConv.post_owner_id));
+  const isSessionTracked = Boolean(
+    selectedConv?.application_id &&
+    ['accepted', 'completion_requested', 'cancellation_requested', 'cancelled'].includes(selectedConv.application_status)
+  );
+  const isSessionParticipant = Boolean(
+    isSessionTracked &&
+    (isPostOwner || String(selectedConv?.accepted_tutor_id || '') === String(user?.user_id || ''))
+  );
+  const completionWasRequestedByMe = String(selectedConv?.completion_requested_by || '') === String(user?.user_id || '');
 
   return (
     <div className="chat-overlay" onClick={onClose}>
@@ -405,7 +456,11 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
                       <span className="chat-conv-time">{formatTime(conv.last_message_at)}</span>
                     </div>
                     <div className="chat-conv-preview">{conv.last_message_preview || 'No messages yet'}</div>
-                    {conv.course_code && <div className="chat-conv-course">{conv.course_code}</div>}
+                    {(conv.course_code || conv.post_category) && (
+                      <div className="chat-conv-course" title={conv.post_title || ''}>
+                        {conv.course_code || conv.post_category}
+                      </div>
+                    )}
                   </div>
                   {conv.unread_count > 0 && (
                     <span className="chat-conv-badge">{conv.unread_count}</span>
@@ -429,22 +484,118 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
             <>
               {/* Header */}
               <div className="chat-main-header">
-                <div className="chat-main-avatar-wrap">
-                  <div className="chat-main-avatar" style={avatarStyle(selectedConv.other_user_avatar_color)}>
-                    {selectedConv.other_user_name?.charAt(0).toUpperCase()}
+                <div className="chat-main-top">
+                  <div className="chat-main-avatar-wrap">
+                    <div className="chat-main-avatar" style={avatarStyle(selectedConv.other_user_avatar_color)}>
+                      {selectedConv.other_user_name?.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="chat-online-indicator" title="Active on MicroTeach" />
                   </div>
-                  <span className="chat-online-indicator" title="Active on MicroTeach" />
+                  <div className="chat-main-info">
+                    <div className="chat-main-name">{selectedConv.other_user_name}</div>
+                    <div className="chat-main-dept">{selectedConv.other_user_department || 'Student / Tutor'}</div>
+                  </div>
+                  {isTeacherOnPost && (
+                    <button
+                      type="button"
+                      className="chat-view-post-btn"
+                      onClick={() => onViewPost?.(selectedConv.post_id)}
+                    >
+                      View Post
+                    </button>
+                  )}
                 </div>
-                <div className="chat-main-info">
-                  <div className="chat-main-name">{selectedConv.other_user_name}</div>
-                  <div className="chat-main-dept">{selectedConv.other_user_department || 'Student / Tutor'}</div>
+
+                <div className="chat-main-bottom">
+                  {(selectedConv.course_code || selectedConv.post_category) && (
+                    <span className="chat-main-course" title={`Session Context: ${selectedConv.post_title || selectedConv.course_code}`}>
+                      {selectedConv.course_code || selectedConv.post_category}
+                    </span>
+                  )}
+                  {isSessionTracked && (
+                    <div className="chat-session-actions">
+                      {selectedConv.application_status === 'cancelled' && (
+                        <span className="chat-session-status chat-session-status--cancelled">Cancelled</span>
+                      )}
+                      {selectedConv.application_status === 'accepted' && (
+                        <>
+                          <button
+                            type="button"
+                            className="chat-session-btn chat-session-btn--complete"
+                            onClick={() => handleSessionStatusChange('completion_requested')}
+                            disabled={sessionActionLoading}
+                          >
+                            Mark Complete
+                          </button>
+                          <button
+                            type="button"
+                            className="chat-session-btn chat-session-btn--cancel"
+                            onClick={() => setCancelConfirmOpen(true)}
+                            disabled={sessionActionLoading}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                      {selectedConv.application_status === 'completion_requested' && (
+                        completionWasRequestedByMe ? (
+                          <span className="chat-session-waiting">Waiting for confirmation</span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="chat-session-btn chat-session-btn--complete"
+                              onClick={() => handleSessionStatusChange('completed')}
+                              disabled={sessionActionLoading}
+                            >
+                              Accept Complete
+                            </button>
+                            <button
+                              type="button"
+                              className="chat-session-btn"
+                              onClick={() => handleSessionStatusChange('accepted')}
+                              disabled={sessionActionLoading}
+                            >
+                              Not Yet
+                            </button>
+                          </>
+                        )
+                      )}
+                      {selectedConv.application_status === 'cancellation_requested' && (
+                        <>
+                          <button
+                            type="button"
+                            className="chat-session-btn chat-session-btn--cancel"
+                            onClick={() => setCancelConfirmOpen(true)}
+                            disabled={sessionActionLoading}
+                          >
+                            Confirm Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="chat-session-btn"
+                            onClick={() => handleSessionStatusChange('accepted')}
+                            disabled={sessionActionLoading}
+                          >
+                            {isPostOwner ? 'Keep Tutor' : 'Keep Tutoring'}
+                          </button>
+                        </>
+                      )}
+                      {isSessionParticipant && (
+                        <button
+                          type="button"
+                          className="chat-session-btn chat-session-btn--report"
+                          onClick={() => setTransactionReportOpen(true)}
+                        >
+                          Report Escrow
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {selectedConv.course_code && (
-                  <span className="chat-main-course" title={`Session Context: ${selectedConv.post_title || selectedConv.course_code}`}>
-                    {selectedConv.course_code}
-                  </span>
-                )}
               </div>
+
+              {sessionActionError && <div className="chat-session-error" role="alert">{sessionActionError}</div>}
 
               {/* Drag overlay hint */}
               {isDragging && (
@@ -697,6 +848,36 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
             </div>
           </div>
         </div>
+      )}
+
+      <ConfirmModal
+        isOpen={cancelConfirmOpen}
+        onClose={() => setCancelConfirmOpen(false)}
+        onConfirm={() => handleSessionStatusChange('cancelled')}
+        title="Cancel this tutoring session?"
+        message="This will cancel the accepted application and refund the bounty to the student. This action cannot be undone."
+        type="danger"
+        confirmText="Confirm Cancel"
+        cancelText="Keep Session"
+      />
+
+      {transactionReportOpen && selectedConv && (
+        <TransactionReportModal
+          post={{
+            post_id: selectedConv.post_id,
+            course_code: selectedConv.course_code,
+            title: selectedConv.post_title,
+            bounty: selectedConv.post_bounty,
+            user_id: selectedConv.post_owner_id,
+            post_author_id: selectedConv.post_owner_id,
+            status: selectedConv.post_status,
+            is_completed: selectedConv.application_status === 'completed'
+          }}
+          user={user}
+          isOpen={transactionReportOpen}
+          onClose={() => setTransactionReportOpen(false)}
+          onSuccess={() => setTransactionReportOpen(false)}
+        />
       )}
     </div>
   );

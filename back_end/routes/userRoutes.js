@@ -29,6 +29,51 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Public directory of verified teachers with rating and completion totals
+router.get('/teachers', async (req, res) => {
+  try {
+    const query = `
+      SELECT
+        u.user_id,
+        u.full_name,
+        u.role,
+        u.department,
+        u.bio,
+        u.avatar_color,
+        COALESCE(review_stats.avg_rating, 0) AS avg_rating,
+        COALESCE(review_stats.review_count, 0) AS review_count,
+        COALESCE(session_stats.completed_sessions, 0) AS completed_sessions,
+        COALESCE(gig_stats.completed_gigs, 0) AS completed_gigs
+      FROM Users u
+      LEFT JOIN (
+        SELECT reviewee_id, ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS review_count
+        FROM Reviews
+        GROUP BY reviewee_id
+      ) review_stats ON review_stats.reviewee_id = u.user_id
+      LEFT JOIN (
+        SELECT tutor_id, COUNT(*) AS completed_sessions
+        FROM Sessions
+        WHERE status = 'completed'
+        GROUP BY tutor_id
+      ) session_stats ON session_stats.tutor_id = u.user_id
+      LEFT JOIN (
+        SELECT user_id, COUNT(*) AS completed_gigs
+        FROM Post_Applications
+        WHERE status = 'completed'
+        GROUP BY user_id
+      ) gig_stats ON gig_stats.user_id = u.user_id
+      WHERE u.is_verified = 1
+        AND u.role IN ('tutor', 'both')
+        AND COALESCE(u.is_admin, 0) = 0
+      ORDER BY u.full_name ASC
+    `;
+    const [rows] = await db.query(query);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 2. Register a new user
 router.post('/register', async (req, res) => {
   const { full_name, email, password, role, department } = req.body;
@@ -94,6 +139,7 @@ router.get('/profile/:userId', async (req, res) => {
     const postsQuery = `
       SELECT
         p.post_id,
+        p.user_id,
         p.category,
         p.course_code,
         p.title,

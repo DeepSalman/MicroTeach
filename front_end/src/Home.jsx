@@ -1,31 +1,53 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchPosts, reportPost, fetchUserPostApplications, fetchPostApplicationCount, fetchWalletBalance, fetchUserProfile, fetchUserApplications } from './api';
-import ApplyModal from './ApplyModal';
+import { fetchPosts, fetchPostById, reportPost, fetchUserPostApplications, fetchPostApplicationCount, fetchWalletBalance, fetchUserProfile, fetchUserApplications } from './api';
 import PostDetailModal from './PostDetailModal';
 import ChatModal from './ChatModal';
 import WalletModal from './WalletModal';
 import ApplyTeacherModal from './ApplyTeacherModal';
 import TransactionReportModal from './TransactionReportModal';
-import { formatDeadline } from './utils';
+import TeacherDirectory from './TeacherDirectory';
+import { formatDeadline, formatTimeRemaining, parseDeadline } from './utils';
 import './Home.css';
+
+const POSTS_PER_PAGE = 10;
+
+const getPaginationItems = (totalPages, currentPage) => {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+
+  let start = Math.max(2, currentPage - 1);
+  let end = Math.min(totalPages - 1, currentPage + 1);
+  if (currentPage <= 3) end = Math.min(totalPages - 1, 4);
+  if (currentPage >= totalPages - 2) start = Math.max(2, totalPages - 3);
+
+  const pages = [1];
+  if (start > 2) pages.push('start-ellipsis');
+  for (let page = start; page <= end; page += 1) pages.push(page);
+  if (end < totalPages - 1) pages.push('end-ellipsis');
+  pages.push(totalPages);
+  return pages;
+};
 
 const Home = ({ user, onLogout, onProfileUpdate }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('posts');
+  const [postLevel, setPostLevel] = useState('all');
+  const [postsPage, setPostsPage] = useState(1);
+  const [currentTime, setCurrentTime] = useState(Date.now);
   const [loading, setLoading] = useState(true);
   const [reportModal, setReportModal] = useState({ open: false, postId: null, postTitle: '' });
   const [reportReason, setReportReason] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
-  const [applyModalPost, setApplyModalPost] = useState(null);
   const [txDisputeModalPost, setTxDisputeModalPost] = useState(null);
   const [appliedPostIds, setAppliedPostIds] = useState(new Set());
   const [postApplicantCounts, setPostApplicantCounts] = useState({});
   const [detailModalPost, setDetailModalPost] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatStartUser, setChatStartUser] = useState(null);
+  const [chatStartPost, setChatStartPost] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [applyTeacherOpen, setApplyTeacherOpen] = useState(false);
@@ -34,6 +56,11 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
   const [showApprovedBanner, setShowApprovedBanner] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => window.clearInterval(timerId);
+  }, []);
 
   // Reset session-scoped state safely when the signed-in user changes
   useEffect(() => {
@@ -155,6 +182,16 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
     if (onLogout) onLogout();
   };
 
+  const openPostConversation = (otherUserId, postId) => {
+    if (!user?.user_id) {
+      navigate('/login');
+      return;
+    }
+    setChatStartUser(otherUserId);
+    setChatStartPost(postId);
+    setChatOpen(true);
+  };
+
   const openReportModal = (post) => {
     if (!user) { navigate('/login'); return; }
     setReportModal({ open: true, postId: post.post_id, postTitle: post.title });
@@ -207,13 +244,25 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
   };
 
   const query = searchQuery.trim().toLowerCase();
-  const filteredPosts = query
-    ? posts.filter((post) =>
-        [post.title, post.course_code, post.category, post.author_name, post.description]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(query))
-      )
-    : posts;
+  const filteredPosts = posts.filter((post) => {
+    const matchesLevel = postLevel === 'all' || post.category === postLevel;
+    const matchesSearch = !query || [post.title, post.course_code, post.category, post.author_name, post.description]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query));
+    return matchesLevel && matchesSearch;
+  });
+  const totalPostPages = Math.max(1, Math.ceil(filteredPosts.length / POSTS_PER_PAGE));
+  const visiblePosts = filteredPosts.slice((postsPage - 1) * POSTS_PER_PAGE, postsPage * POSTS_PER_PAGE);
+  const paginationItems = getPaginationItems(totalPostPages, postsPage);
+  const isTeacherApproved = teacherAppStatus === 'approved' || dbUserRole === 'tutor' || dbUserRole === 'both';
+
+  useEffect(() => {
+    setPostsPage(1);
+  }, [activeTab, searchQuery, postLevel]);
+
+  useEffect(() => {
+    setPostsPage((page) => Math.min(page, totalPostPages));
+  }, [totalPostPages]);
 
   return (
     <div className="home-page">
@@ -234,8 +283,8 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Escape') setSearchQuery(''); }}
-            placeholder="Search posts, courses, or tutors..."
-            aria-label="Search posts"
+            placeholder={activeTab === 'posts' ? 'Search posts, courses, or tutors...' : 'Search teachers by name, department, or bio...'}
+            aria-label={activeTab === 'posts' ? 'Search posts' : 'Search teachers'}
           />
           {searchQuery && (
             <button className="search-clear" type="button" aria-label="Clear search" onClick={() => setSearchQuery('')}>
@@ -248,11 +297,22 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
         </div>
 
         <div className="header-actions">
-          {user && (dbUserRole === 'student' && user.role === 'student' && teacherAppStatus !== 'approved') && (
-            <button className="btn-become-tutor-nav" onClick={() => setApplyTeacherOpen(true)}>
-              Apply to Teach
+          {user && isTeacherApproved ? (
+            <span className="teacher-status-nav" role="status" aria-label="Verified teacher">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m5 12 4 4L19 6" />
+              </svg>
+              Teacher
+            </span>
+          ) : user && dbUserRole === 'student' && user.role === 'student' && teacherAppStatus !== 'approved' ? (
+            <button
+              className={`btn-become-tutor-nav${teacherAppStatus === 'pending' ? ' btn-become-tutor-nav--pending' : ''}`}
+              onClick={() => setApplyTeacherOpen(true)}
+              disabled={teacherAppStatus === 'pending'}
+            >
+              {teacherAppStatus === 'pending' ? 'Application Pending' : 'Apply to Teach'}
             </button>
-          )}
+          ) : null}
 
           {user && (
             <button className="wallet-balance-btn" onClick={() => setWalletOpen(true)} title="Open wallet">
@@ -312,8 +372,12 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
                       </button>
                     )}
                     {user.role === 'student' && dbUserRole === 'student' && teacherAppStatus !== 'approved' && (
-                      <button className="dropdown-item" onClick={() => { setDropdownOpen(false); setApplyTeacherOpen(true); }}>
-                        🎓 Apply to Teach
+                      <button
+                        className="dropdown-item"
+                        onClick={() => { setDropdownOpen(false); setApplyTeacherOpen(true); }}
+                        disabled={teacherAppStatus === 'pending'}
+                      >
+                        {teacherAppStatus === 'pending' ? 'Application Pending' : 'Apply to Teach'}
                       </button>
                     )}
                     <button className="dropdown-item logout" onClick={handleLogout}>
@@ -377,10 +441,10 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
         )}
         <div className="main-header">
           <div>
-            <h1>All posts</h1>
-            <p className="subtitle">Manage live peer-tutoring calls, pending solution pitches, and milestone payouts.</p>
+            <h1>{activeTab === 'posts' ? 'All posts' : 'Teachers'}</h1>
+            <p className="subtitle">{activeTab === 'posts' ? 'Manage live peer-tutoring calls, pending solution pitches, and milestone payouts.' : 'Find verified teachers by department, ratings, and completed work.'}</p>
           </div>
-          {user && (
+          {user && activeTab === 'posts' && (
             <button className="create-post-btn" onClick={() => navigate('/create-post')}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19" strokeLinecap="round" strokeLinejoin="round"/>
@@ -391,25 +455,83 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
           )}
         </div>
 
-        <div className="cards">
+        <div className="home-tabs" role="tablist" aria-label="Browse MicroTeach">
+          <button
+            type="button"
+            role="tab"
+            id="posts-tab"
+            aria-selected={activeTab === 'posts'}
+            aria-controls="posts-panel"
+            className={activeTab === 'posts' ? 'home-tab home-tab--active' : 'home-tab'}
+            onClick={() => setActiveTab('posts')}
+          >
+            Posts
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="teachers-tab"
+            aria-selected={activeTab === 'teachers'}
+            aria-controls="teachers-panel"
+            className={activeTab === 'teachers' ? 'home-tab home-tab--active' : 'home-tab'}
+            onClick={() => setActiveTab('teachers')}
+          >
+            Teachers
+          </button>
+        </div>
+
+        {activeTab === 'posts' ? (
+        <>
+        <div className="posts-filter-row">
+          <label htmlFor="post-level-filter">Study level</label>
+          <select id="post-level-filter" value={postLevel} onChange={(event) => setPostLevel(event.target.value)}>
+            <option value="all">All levels</option>
+            <option value="University Level">University Level</option>
+            <option value="HSC Level">HSC Level</option>
+            <option value="SSC Level">SSC Level</option>
+          </select>
+          <span aria-live="polite">{filteredPosts.length} post{filteredPosts.length === 1 ? '' : 's'}</span>
+        </div>
+        <div className="cards" id="posts-panel" role="tabpanel" aria-labelledby="posts-tab">
           {loading ? (
             <div className="loading-message">Loading posts...</div>
           ) : filteredPosts.length === 0 ? (
             <div className="empty-message">
-              {query ? (
+              {query || postLevel !== 'all' ? (
                 <>
-                  <strong>No posts match &ldquo;{searchQuery.trim()}&rdquo;</strong>
-                  <span className="empty-hint">Try a different topic, level, or tutor name.</span>
+                  <strong>No posts match the selected filters.</strong>
+                  <span className="empty-hint">Try another study level or search term.</span>
                 </>
               ) : (
                 'No posts yet. Create the first one!'
               )}
             </div>
           ) : (
-            filteredPosts.map((post) => {
+            visiblePosts.map((post) => {
               const isOwnPost = user && String(post.user_id) === String(user.user_id);
+              const isCancelledByOwner = Boolean(
+                user?.user_id &&
+                post.cancelled_tutor_id &&
+                String(post.cancelled_tutor_id) === String(user.user_id) &&
+                String(post.cancelled_by) === String(post.user_id)
+              );
+              const acceptedTutorId = post.accepted_tutor_id;
+              const hasActiveTutor = Boolean(acceptedTutorId);
+              const isAcceptedTutor = Boolean(user?.user_id && acceptedTutorId && String(user.user_id) === String(acceptedTutorId));
+              const isActiveParty = Boolean(hasActiveTutor && (isOwnPost || isAcceptedTutor));
+              const countdown = formatTimeRemaining(post.deadline, currentTime);
+              const deadlineTimestamp = parseDeadline(post.deadline)?.getTime();
+              const isDeadlineOverdue = countdown === 'Overdue';
+              const isDeadlineSoon = !isDeadlineOverdue && deadlineTimestamp && deadlineTimestamp - currentTime <= 24 * 60 * 60 * 1000;
               return (
-                <div key={post.post_id} className="card">
+                <div
+                  key={post.post_id}
+                  className={`card${isActiveParty ? ' card--active-session' : ''}`}
+                  onClick={(event) => {
+                    if (event.target.closest('button, a, .report-btn')) return;
+                    setDetailModalPost(post);
+                  }}
+                >
                   <div className="card-header">
                     <div className="card-header-main">
                       {post.is_urgent ? (
@@ -417,16 +539,20 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
                           <span className="meta-chip urgent-chip">High Urgency</span>
                         </div>
                       ) : null}
-                      <h3 className="card-title">{post.title}</h3>
+                      <h3 className="card-title">
+                        <button className="card-title-button" type="button" onClick={() => setDetailModalPost(post)}>
+                          {post.title}
+                        </button>
+                      </h3>
                     </div>
                     <div className="card-header-actions">
-                      <span className="report-btn" title="Report Content" onClick={() => openReportModal(post)}>
+                      <span className="report-btn" title="Report Content" onClick={(event) => { event.stopPropagation(); openReportModal(post); }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
                           <line x1="4" y1="22" x2="4" y2="15"/>
                         </svg>
                       </span>
-                      {post.status !== 'closed' && post.status !== 'resolved' && post.status !== 'completed' && !post.is_completed && (
+                      {isActiveParty && (
                         <span className="report-btn tx-dispute-btn" title="Report Transaction / Escrow Issue" onClick={(e) => { e.stopPropagation(); if (!user) { navigate('/login'); return; } setTxDisputeModalPost(post); }}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
@@ -437,10 +563,22 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
                   </div>
 
                   <div className="card-subject">{post.category}</div>
+                  {post.course_code && (
+                    <div className="card-course-name">
+                      <span>{post.category === 'University Level' ? 'Course' : 'Subject'}</span>
+                      {post.course_code}
+                    </div>
+                  )}
 
                   <div className="card-meta">
                     <span className="meta-chip">{getDeliveryLabel(post.delivery_format)}</span>
-                    <span className="meta-chip funded">100% Funded</span>
+                    {isActiveParty && <span className="meta-chip active-session-chip">Active</span>}
+                    {hasActiveTutor && !isActiveParty && <span className="meta-chip in-progress-chip">In Progress</span>}
+                    {countdown && (
+                      <span className={`meta-chip countdown-chip${isDeadlineSoon ? ' countdown-chip--soon' : ''}${isDeadlineOverdue ? ' countdown-chip--overdue' : ''}`}>
+                        {countdown}
+                      </span>
+                    )}
                     {post.deadline && <span className="meta-chip due-chip">Due {formatDeadline(post.deadline)}</span>}
                   </div>
 
@@ -461,19 +599,30 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
                         <strong>৳{post.bounty}</strong>
                       </div>
                       <div className="card-cta">
-                        {isOwnPost ? (
+                        {isCancelledByOwner ? (
+                          <span className="cancelled-owner-label" role="status">Cancelled by owner</span>
+                        ) : isActiveParty ? (
+                          <button
+                            className="active-session-message-btn"
+                            onClick={() => openPostConversation(isOwnPost ? acceptedTutorId : post.user_id, post.post_id)}
+                          >
+                            Message
+                          </button>
+                        ) : hasActiveTutor ? (
+                          <span className="active-session-other-label">Tutor accepted</span>
+                        ) : isOwnPost ? (
                           <button className="view-details-btn" onClick={() => setDetailModalPost(post)}>View Details</button>
                         ) : user ? (
                           (dbUserRole === 'both' || dbUserRole === 'tutor' || teacherAppStatus === 'approved') ? (
                             appliedPostIds.has(post.post_id) ? (
-                              <button className="apply-btn applied-btn" onClick={() => setApplyModalPost(post)}>
+                              <button className="apply-btn applied-btn" onClick={() => setDetailModalPost(post)}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
                                   <polyline points="20 6 9 17 4 12"/>
                                 </svg>
                                 Applied
                               </button>
                             ) : (
-                              <button className="apply-btn" onClick={() => setApplyModalPost(post)}>Apply Now</button>
+                              <button className="apply-btn" onClick={() => setDetailModalPost(post)}>Apply Now</button>
                             )
                           ) : teacherAppStatus === 'pending' ? (
                             <button
@@ -504,13 +653,58 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
             })
           )}
         </div>
+        </>
+        ) : (
+          <div id="teachers-panel" role="tabpanel" aria-labelledby="teachers-tab">
+            <TeacherDirectory searchQuery={searchQuery} />
+          </div>
+        )}
 
-        {/* Show More */}
-        <div className="show-more">
-          <p>Continue exploring tutoring opportunities</p>
-          <button className="show-more-btn">Show More Applications &amp; Bounties</button>
-          <div className="count">Showing 4 of 7 active pitches &amp; tutoring sessions</div>
-        </div>
+        {activeTab === 'posts' && !loading && filteredPosts.length > 0 && (
+          <nav className="posts-pagination" aria-label="Post pages">
+            <span className="posts-pagination-summary">
+              Showing {(postsPage - 1) * POSTS_PER_PAGE + 1} - {Math.min(postsPage * POSTS_PER_PAGE, filteredPosts.length)} of {filteredPosts.length} posts
+            </span>
+            {totalPostPages > 1 && (
+              <div className="posts-pagination-controls">
+                <button
+                  type="button"
+                  className="posts-page-button posts-page-arrow"
+                  onClick={() => setPostsPage((page) => Math.max(1, page - 1))}
+                  disabled={postsPage === 1}
+                  aria-label="Previous page"
+                >
+                  Previous
+                </button>
+                {paginationItems.map((page) => (
+                  typeof page === 'string' ? (
+                    <span className="posts-page-ellipsis" key={page} aria-hidden="true">...</span>
+                  ) : (
+                    <button
+                      type="button"
+                      key={page}
+                      className={`posts-page-button${postsPage === page ? ' posts-page-button--active' : ''}`}
+                      onClick={() => setPostsPage(page)}
+                      aria-label={`Page ${page}`}
+                      aria-current={postsPage === page ? 'page' : undefined}
+                    >
+                      {page}
+                    </button>
+                  )
+                ))}
+                <button
+                  type="button"
+                  className="posts-page-button posts-page-arrow"
+                  onClick={() => setPostsPage((page) => Math.min(totalPostPages, page + 1))}
+                  disabled={postsPage === totalPostPages}
+                  aria-label="Next page"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </nav>
+        )}
       </main>
 
       {/* Footer */}
@@ -607,47 +801,49 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
         </div>
       )}
 
-      {/* Apply Modal */}
-      {applyModalPost && (
-        <ApplyModal
-          post={applyModalPost}
-          user={{ ...user, role: dbUserRole }}
-          onClose={() => setApplyModalPost(null)}
-          onOpenTeacherModal={() => {
-            setApplyModalPost(null);
-            setApplyTeacherOpen(true);
-          }}
-          onApplySuccess={() => {
-            setAppliedPostIds(prev => new Set([...prev, applyModalPost.post_id]));
-          }}
-          onWithdrawSuccess={() => {
-            setAppliedPostIds(prev => {
-              const next = new Set(prev);
-              next.delete(applyModalPost.post_id);
-              return next;
-            });
-          }}
-        />
-      )}
-
       {/* Post Detail Modal (for post owners) */}
       {detailModalPost && (
         <PostDetailModal
           post={detailModalPost}
           user={user}
+          canApply={dbUserRole === 'both' || dbUserRole === 'tutor' || teacherAppStatus === 'approved'}
+          teacherApplicationPending={teacherAppStatus === 'pending'}
+          onApplyTeacher={() => setApplyTeacherOpen(true)}
           onClose={() => setDetailModalPost(null)}
-          onStatusChange={() => loadApplicantCounts(posts)}
-          onChat={(otherUserId) => {
+          onStatusChange={loadPosts}
+          onLoginRequired={() => navigate('/login')}
+          onApplySuccess={(postId) => setAppliedPostIds((previous) => new Set([...previous, postId]))}
+          onWithdrawSuccess={(postId) => setAppliedPostIds((previous) => {
+            const next = new Set(previous);
+            next.delete(postId);
+            return next;
+          })}
+          onChat={(otherUserId, postId) => {
             setDetailModalPost(null);
-            setChatStartUser(otherUserId);
-            setChatOpen(true);
+            openPostConversation(otherUserId, postId);
           }}
         />
       )}
 
       {/* Chat Modal */}
       {chatOpen && user && (
-        <ChatModal user={user} onClose={() => { setChatOpen(false); setChatStartUser(null); }} startWithUserId={chatStartUser} />
+        <ChatModal
+          user={user}
+          onClose={() => { setChatOpen(false); setChatStartUser(null); setChatStartPost(null); }}
+          onViewPost={async (postId) => {
+            try {
+              const response = await fetchPostById(postId);
+              setChatOpen(false);
+              setChatStartUser(null);
+              setChatStartPost(null);
+              setDetailModalPost(response.data);
+            } catch (error) {
+              console.error('Failed to open conversation post:', error);
+            }
+          }}
+          startWithUserId={chatStartUser}
+          startWithPostId={chatStartPost}
+        />
       )}
 
       {/* Transaction Dispute / Report Modal */}

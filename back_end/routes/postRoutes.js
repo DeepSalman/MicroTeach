@@ -19,6 +19,28 @@ router.get('/', async (req, res) => {
         p.is_urgent,
         p.status,
         p.created_at,
+        (
+          SELECT pa.user_id
+          FROM Post_Applications pa
+          WHERE pa.post_id = p.post_id
+            AND pa.status IN ('accepted', 'cancellation_requested', 'completion_requested')
+          ORDER BY pa.created_at DESC
+          LIMIT 1
+        ) AS accepted_tutor_id,
+        (
+          SELECT pa.user_id
+          FROM Post_Applications pa
+          WHERE pa.post_id = p.post_id AND pa.status = 'cancelled'
+          ORDER BY pa.created_at DESC
+          LIMIT 1
+        ) AS cancelled_tutor_id,
+        (
+          SELECT pa.cancelled_by
+          FROM Post_Applications pa
+          WHERE pa.post_id = p.post_id AND pa.status = 'cancelled'
+          ORDER BY pa.created_at DESC
+          LIMIT 1
+        ) AS cancelled_by,
         u.full_name AS author_name,
         u.department AS author_department,
         u.avatar_color AS author_avatar_color
@@ -64,6 +86,41 @@ router.get('/user/:userId', async (req, res) => {
     `;
     const [rows] = await db.query(query, [req.params.userId]);
     res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 3. Get one post for reopening from a conversation context
+router.get('/:postId', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        p.post_id,
+        p.user_id,
+        p.category,
+        p.course_code,
+        p.title,
+        p.description,
+        p.delivery_format,
+        p.bounty,
+        p.deadline,
+        p.is_urgent,
+        p.status,
+        p.created_at,
+        u.full_name AS author_name,
+        u.department AS author_department,
+        u.avatar_color AS author_avatar_color,
+        EXISTS(
+          SELECT 1 FROM Post_Applications pa
+          WHERE pa.post_id = p.post_id AND pa.status = 'completed'
+        ) AS is_completed
+      FROM Posts p
+      JOIN Users u ON u.user_id = p.user_id
+      WHERE p.post_id = ?
+    `, [req.params.postId]);
+    if (rows.length === 0) return res.status(404).json({ message: 'Post not found.' });
+    res.json(rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

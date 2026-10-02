@@ -2,6 +2,7 @@ node_modules/
 .DS_Store
 dist/
 *.log
+**/.env
 
 # Runtime uploads
 back_end/uploads/chat_attachments/

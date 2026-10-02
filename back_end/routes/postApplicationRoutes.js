@@ -4,6 +4,11 @@ const db = require('../db');
 
 // 1. Get all applications for a post (with applicant info + avg rating)
 router.get('/post/:postId', async (req, res) => {
+  const viewerId = Number(req.query.viewer_id);
+  if (!Number.isInteger(viewerId) || viewerId < 1) {
+    return res.status(400).json({ message: 'Viewer ID is required.' });
+  }
+
   try {
     const query = `
       SELECT
@@ -29,9 +34,16 @@ router.get('/post/:postId', async (req, res) => {
         GROUP BY reviewee_id
       ) r ON r.reviewee_id = pa.user_id
       WHERE pa.post_id = ?
+        AND (
+          pa.user_id = ?
+          OR EXISTS (
+            SELECT 1 FROM Posts p
+            WHERE p.post_id = pa.post_id AND p.user_id = ?
+          )
+        )
       ORDER BY pa.created_at DESC
     `;
-    const [rows] = await db.query(query, [req.params.postId]);
+    const [rows] = await db.query(query, [req.params.postId, viewerId, viewerId]);
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -105,7 +117,7 @@ router.post('/', async (req, res) => {
     if (userRows.length === 0) {
       return res.status(404).json({ message: 'User not found.' });
     }
-    if (userRows[0].role !== 'both' && userRows[0].role !== 'tutor') {
+    if ((userRows[0].role !== 'both' && userRows[0].role !== 'tutor') || Number(userRows[0].is_verified) !== 1) {
       return res.status(403).json({ 
         message: 'Only verified tutors/teachers can apply for tutoring gigs. Please apply to become a teacher first.' 
       });
@@ -134,7 +146,7 @@ router.delete('/:id', async (req, res) => {
 
 // 5. Update application status (post owner only)
 router.patch('/:id/status', async (req, res) => {
-  const { status, owner_id, requested_by } = req.body;
+  const { status, actor_id } = req.body;
   const validStatuses = ['pending', 'accepted', 'rejected', 'cancellation_requested', 'cancelled', 'completion_requested', 'completed'];
 
   if (!validStatuses.includes(status)) {
@@ -144,7 +156,8 @@ router.patch('/:id/status', async (req, res) => {
   try {
     // Verify application and participants
     const [app] = await db.query(
-      `SELECT pa.post_id, pa.user_id AS applicant_id, p.user_id AS post_owner_id
+            `SELECT pa.post_id, pa.user_id AS applicant_id, pa.status AS application_status,
+              pa.completion_requested_by, p.user_id AS post_owner_id
        FROM Post_Applications pa
        JOIN Posts p ON pa.post_id = p.post_id
        WHERE pa.application_id = ?`,
@@ -154,17 +167,29 @@ router.patch('/:id/status', async (req, res) => {
       return res.status(404).json({ message: 'Application not found.' });
     }
 
-    const postOwnerId = app[0].post_owner_id;
-    const applicantId = app[0].applicant_id;
+    const postOwnerId = String(app[0].post_owner_id);
+    const applicantId = String(app[0].applicant_id);
+    const actorId = String(actor_id || '');
+    const isPostOwner = actorId === postOwnerId;
+    const isApplicant = actorId === applicantId;
 
-    // Both post owner and applicant are legitimate participants in the gig lifecycle
-    if (owner_id && String(postOwnerId) !== String(owner_id) && String(applicantId) !== String(owner_id)) {
+    if (!actorId || (!isPostOwner && !isApplicant)) {
       return res.status(403).json({ message: 'Unauthorized to update application status.' });
     }
 
+    const mayRestoreAcceptedStatus = status === 'accepted' &&
+      ['cancellation_requested', 'completion_requested'].includes(app[0].application_status);
+    if ((status === 'rejected' || status === 'pending' || (status === 'accepted' && !mayRestoreAcceptedStatus)) && !isPostOwner) {
+      return res.status(403).json({ message: 'Only the post owner can accept or reject applicants.' });
+    }
+
+    if (status === 'completed' && app[0].completion_requested_by && String(app[0].completion_requested_by) === actorId) {
+      return res.status(403).json({ message: 'The other participant must confirm completion.' });
+    }
+
     if (status === 'completion_requested') {
-      const requesterId = requested_by || owner_id || applicantId;
-      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = ? WHERE application_id = ?', [status, requesterId, req.params.id]);
+      const requesterId = actorId;
+      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = ?, cancelled_by = NULL WHERE application_id = ?', [status, requesterId, req.params.id]);
     } else if (status === 'completed') {
       // Use DB transaction to ensure poster deduction and tutor credit are atomic
       const conn = await db.getConnection();
@@ -172,7 +197,7 @@ router.patch('/:id/status', async (req, res) => {
         await conn.beginTransaction();
 
         // Mark application as completed
-        await conn.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
+        await conn.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL, cancelled_by = NULL WHERE application_id = ?', [status, req.params.id]);
 
         // Mark the post as completed in Posts table
         await conn.query("UPDATE Posts SET status = 'completed' WHERE post_id = ?", [app[0].post_id]);
@@ -229,7 +254,7 @@ router.patch('/:id/status', async (req, res) => {
       try {
         await conn.beginTransaction();
 
-        await conn.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
+        await conn.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL, cancelled_by = ? WHERE application_id = ?', [status, actorId, req.params.id]);
 
         const [post] = await conn.query(
           `SELECT p.bounty, p.user_id AS poster_id
@@ -276,9 +301,9 @@ router.patch('/:id/status', async (req, res) => {
         conn.release();
       }
     } else if (status === 'accepted') {
-      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
+      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL, cancelled_by = NULL WHERE application_id = ?', [status, req.params.id]);
     } else {
-      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL WHERE application_id = ?', [status, req.params.id]);
+      await db.query('UPDATE Post_Applications SET status = ?, completion_requested_by = NULL, cancelled_by = NULL WHERE application_id = ?', [status, req.params.id]);
     }
     res.json({ message: 'Application status updated!' });
   } catch (error) {

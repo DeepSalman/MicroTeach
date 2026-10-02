@@ -131,6 +131,14 @@ router.get('/inbox/:userId', async (req, res) => {
         COALESCE(lm.max_seq, 0) - cm.last_read_seq AS unread_count,
         p.title AS post_title,
         p.course_code,
+        p.bounty AS post_bounty,
+        p.status AS post_status,
+        p.category AS post_category,
+        p.user_id AS post_owner_id,
+        pa.application_id,
+        pa.user_id AS accepted_tutor_id,
+        pa.status AS application_status,
+        pa.completion_requested_by,
         other_user.user_id AS other_user_id,
         other_user.full_name AS other_user_name,
         other_user.department AS other_user_department,
@@ -140,6 +148,13 @@ router.get('/inbox/:userId', async (req, res) => {
       LEFT JOIN Posts p ON c.post_id = p.post_id
       JOIN Conversation_Members other_cm
         ON other_cm.conversation_id = c.conversation_id AND other_cm.user_id != cm.user_id
+      LEFT JOIN Post_Applications pa
+        ON pa.post_id = c.post_id
+        AND pa.status IN ('accepted', 'cancellation_requested', 'completion_requested', 'cancelled')
+        AND (
+          (pa.user_id = cm.user_id AND p.user_id = other_cm.user_id)
+          OR (pa.user_id = other_cm.user_id AND p.user_id = cm.user_id)
+        )
       JOIN Users other_user ON other_cm.user_id = other_user.user_id
       LEFT JOIN (
         SELECT conversation_id, MAX(seq) AS max_seq
@@ -150,17 +165,7 @@ router.get('/inbox/:userId', async (req, res) => {
       ORDER BY c.last_message_at DESC, c.conversation_id DESC
     `, [req.params.userId]);
 
-    // Ensure 1 unique conversation per other user
-    const seen = new Set();
-    const uniqueRows = [];
-    for (const row of rows) {
-      const otherId = String(row.other_user_id);
-      if (!seen.has(otherId)) {
-        seen.add(otherId);
-        uniqueRows.push(row);
-      }
-    }
-    res.json(uniqueRows);
+    res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -346,36 +351,43 @@ router.patch('/:conversationId/read', async (req, res) => {
 
 // 5. Start or get existing conversation between two users about a post
 router.post('/start', async (req, res) => {
-  const { user_id, other_user_id, post_id } = req.body;
+  const { user_id, other_user_id } = req.body;
+  const postId = req.body.post_id ? Number(req.body.post_id) : null;
 
   if (!user_id || !other_user_id) {
     return res.status(400).json({ message: 'user_id and other_user_id are required.' });
   }
+  if (String(user_id) === String(other_user_id)) {
+    return res.status(400).json({ message: 'You cannot start a conversation with yourself.' });
+  }
+  if (req.body.post_id && (!Number.isInteger(postId) || postId < 1)) {
+    return res.status(400).json({ message: 'Invalid post ID.' });
+  }
 
   try {
-    // Check if conversation already exists between these two users (single chat per user pair)
+    const contextFilter = postId === null ? 'AND c.post_id IS NULL' : 'AND c.post_id = ?';
+    const existingParams = [user_id, other_user_id];
+    if (postId !== null) existingParams.push(postId);
+
+    // Keep a separate conversation for each post context between the same users.
     const [existing] = await db.query(`
       SELECT c.conversation_id, c.post_id
       FROM Conversations c
       JOIN Conversation_Members cm1 ON c.conversation_id = cm1.conversation_id AND cm1.user_id = ?
       JOIN Conversation_Members cm2 ON c.conversation_id = cm2.conversation_id AND cm2.user_id = ?
+      ${contextFilter}
       ORDER BY c.last_message_at DESC, c.conversation_id DESC
       LIMIT 1
-    `, [user_id, other_user_id]);
+    `, existingParams);
 
     if (existing.length > 0) {
-      const convId = existing[0].conversation_id;
-      // If a post_id is provided and the conversation has no post_id or a different one, update context
-      if (post_id && (!existing[0].post_id || existing[0].post_id !== post_id)) {
-        await db.query('UPDATE Conversations SET post_id = ? WHERE conversation_id = ?', [post_id, convId]);
-      }
-      return res.json({ conversation_id: convId, message: 'Existing conversation found.' });
+      return res.json({ conversation_id: existing[0].conversation_id, message: 'Existing conversation found.' });
     }
 
     // Create new conversation
     const [result] = await db.query(
       'INSERT INTO Conversations (post_id) VALUES (?)',
-      [post_id || null]
+      [postId]
     );
     const convId = result.insertId;
 

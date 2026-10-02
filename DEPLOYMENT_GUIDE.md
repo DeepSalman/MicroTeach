@@ -124,10 +124,12 @@ If you prefer keeping Express running as a persistent long-running daemon (e.g. 
 ## Local Development vs Production
 
 The backend database adapter in [`back_end/db.js`](./back_end/db.js) is **dual-mode**:
-- If `DATABASE_URL` is set with a PostgreSQL URL: Connects to **Supabase**.
-- If `DATABASE_URL` is not set: Automatically falls back to **Local MySQL** (`DB_HOST`, `DB_NAME`).
+- If `DATABASE_URL` is set to a PostgreSQL URL: Connects to **Supabase**.
+- If `DATABASE_URL` is not set: Connects to **MySQL** using `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
 
-You can seamlessly test with Supabase locally by putting your `DATABASE_URL` in `back_end/.env`:
+To run locally with XAMPP, leave `DATABASE_URL` unset and configure the MySQL values in `back_end/.env`. Run `npm run local:db`, then start the app with `npm run local:api` and `npm run local:web` in separate terminals. See [`instructions.md`](./instructions.md) for the full steps. The `supabase_schema.sql` file is PostgreSQL-only; `back_end/seed.js` creates the MySQL schema.
+
+To test with Supabase locally, put your `DATABASE_URL` in `back_end/.env`:
 ```env
 DATABASE_URL=postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true
 ```

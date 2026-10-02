@@ -81,6 +81,19 @@ const TABLES = {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
     )`,
+  Post_Comments: `
+    CREATE TABLE IF NOT EXISTS Post_Comments (
+      comment_id INT AUTO_INCREMENT PRIMARY KEY,
+      post_id INT NOT NULL,
+      user_id INT NOT NULL,
+      parent_comment_id INT NULL,
+      content TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_post_comments_post_created (post_id, created_at, comment_id),
+      FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_comment_id) REFERENCES Post_Comments(comment_id) ON DELETE CASCADE
+    )`,
   Sessions: `
     CREATE TABLE IF NOT EXISTS Sessions (
       session_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -128,6 +141,7 @@ const TABLES = {
       message TEXT,
       status ENUM('pending','accepted','rejected','cancellation_requested','cancelled','completion_requested','completed') DEFAULT 'pending',
       completion_requested_by INT NULL,
+      cancelled_by INT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY unique_application (post_id, user_id),
       FOREIGN KEY (post_id) REFERENCES Posts(post_id) ON DELETE CASCADE,
@@ -199,7 +213,7 @@ const TABLES = {
 
 // Children before parents so foreign keys never block a drop/truncate
 const DROP_ORDER = [
-  'Messages', 'Conversation_Members', 'Conversations',
+  'Messages', 'Conversation_Members', 'Conversations', 'Post_Comments',
   'Reviews', 'Transactions',
   'Post_Applications', 'Reports', 'Teacher_Applications',
   'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users'
