@@ -65,23 +65,80 @@ const AdminPanel = ({ user }) => {
   const pendingReports = useMemo(() => reports.filter(r => r.status === 'pending' || !r.status), [reports]);
   const totalActionItems = pendingTeacherApps.length + pendingDisputes.length + pendingReports.length;
 
-  // Category Breakdown
+  // ─── 3 Platform Academic Categories ───
+  const ACADEMIC_CATEGORIES = [
+    {
+      id: 'undergrad',
+      name: 'Undergrad Level',
+      shortCode: 'UG',
+      level: 'University',
+      color: '#6366f1',
+      bgSoft: 'rgba(99, 102, 241, 0.12)',
+      borderSoft: 'rgba(99, 102, 241, 0.25)',
+      gradient: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%)',
+      shadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
+      matcher: (cat) => {
+        const l = String(cat || '').toLowerCase().trim();
+        return !l.includes('hsc') && !l.includes('ssc');
+      }
+    },
+    {
+      id: 'hsc',
+      name: 'HSC Level',
+      shortCode: 'HSC',
+      level: 'College (11-12)',
+      color: '#0284c7',
+      bgSoft: 'rgba(2, 132, 199, 0.12)',
+      borderSoft: 'rgba(2, 132, 199, 0.25)',
+      gradient: 'linear-gradient(90deg, #0284c7 0%, #06b6d4 100%)',
+      shadow: '0 2px 8px rgba(2, 132, 199, 0.35)',
+      matcher: (cat) => {
+        const l = String(cat || '').toLowerCase().trim();
+        return l.includes('hsc') || l.includes('higher secondary');
+      }
+    },
+    {
+      id: 'ssc',
+      name: 'SSC Level',
+      shortCode: 'SSC',
+      level: 'School (9-10)',
+      color: '#f59e0b',
+      bgSoft: 'rgba(245, 158, 11, 0.12)',
+      borderSoft: 'rgba(245, 158, 11, 0.25)',
+      gradient: 'linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)',
+      shadow: '0 2px 8px rgba(245, 158, 11, 0.35)',
+      matcher: (cat) => {
+        const l = String(cat || '').toLowerCase().trim();
+        return l.includes('ssc') || l.includes('secondary school');
+      }
+    }
+  ];
+
+  // Dynamic Category Breakdown across 3 Categories
   const categoryStats = useMemo(() => {
-    const counts = {};
-    posts.forEach(p => {
-      const cat = p.category || 'General';
-      counts[cat] = (counts[cat] || 0) + 1;
-    });
-    const total = posts.length || 1;
-    return Object.entries(counts)
-      .map(([name, count]) => ({
-        name,
+    const totalPosts = posts.length || 0;
+    return ACADEMIC_CATEGORIES.map(category => {
+      const catPosts = posts.filter(p => category.matcher(p.category));
+      const count = catPosts.length;
+      const bounty = catPosts.reduce((sum, p) => sum + (parseFloat(p.bounty) || 0), 0);
+      const activeCount = catPosts.filter(p => p.status === 'active' || (!p.status && !p.is_completed)).length;
+      const completedCount = catPosts.filter(p => p.status === 'completed' || p.is_completed).length;
+      const percent = totalPosts > 0 ? Math.round((count / totalPosts) * 100) : 0;
+      return {
+        ...category,
         count,
-        percent: Math.round((count / total) * 100)
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+        bounty,
+        activeCount,
+        completedCount,
+        percent
+      };
+    });
   }, [posts]);
+
+  // Leading Demand Category
+  const leadingCategory = useMemo(() => {
+    return [...categoryStats].sort((a, b) => b.count - a.count)[0];
+  }, [categoryStats]);
 
   // Format Helper
   const getDeliveryLabel = (format) => {
@@ -458,23 +515,98 @@ const AdminPanel = ({ user }) => {
           {/* Category Distribution */}
           <div className="dash-card">
             <div className="dash-card-header">
-              <h3 className="dash-card-title">Subject Demand</h3>
-              <span className="dash-card-subtitle">Distribution by academic category</span>
+              <div>
+                <h3 className="dash-card-title">Subject Demand</h3>
+                <span className="dash-card-subtitle">Real-time demand across 3 academic categories</span>
+              </div>
+              <span className="dash-demand-pill">{posts.length} Total Posts</span>
             </div>
 
             <div className="dash-cat-breakdown">
               {categoryStats.map(cat => (
-                <div key={cat.name} className="dash-cat-row">
-                  <div className="dash-cat-row-info">
-                    <span className="dash-cat-name">{cat.name}</span>
-                    <span className="dash-cat-count">{cat.count} posts ({cat.percent}%)</span>
+                <div key={cat.id} className="dash-cat-card">
+                  <div className="dash-cat-header-row">
+                    <div className="dash-cat-identity">
+                      <span
+                        className="dash-cat-badge"
+                        style={{
+                          backgroundColor: cat.bgSoft,
+                          color: cat.color,
+                          borderColor: cat.borderSoft
+                        }}
+                      >
+                        {cat.shortCode}
+                      </span>
+                      <div className="dash-cat-names">
+                        <span className="dash-cat-name">{cat.name}</span>
+                        <span className="dash-cat-sublevel">{cat.level}</span>
+                      </div>
+                    </div>
+                    <div className="dash-cat-metrics-right">
+                      <span className="dash-cat-count-bold">
+                        {cat.count} <span className="dash-cat-count-unit">posts</span>
+                      </span>
+                      <span
+                        className="dash-cat-pct-chip"
+                        style={{
+                          backgroundColor: cat.bgSoft,
+                          color: cat.color
+                        }}
+                      >
+                        {cat.percent}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="dash-cat-bar-bg">
-                    <div className="dash-cat-bar-fill" style={{ width: `${cat.percent}%` }}></div>
+
+                  {/* Dynamic Progress Bar */}
+                  <div
+                    className="dash-cat-bar-bg"
+                    role="progressbar"
+                    aria-label={`${cat.name} demand`}
+                    aria-valuenow={cat.percent}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <div
+                      className="dash-cat-bar-fill"
+                      style={{
+                        width: cat.count > 0 ? `${Math.max(cat.percent, 4)}%` : '0%',
+                        background: cat.gradient,
+                        boxShadow: cat.count > 0 ? cat.shadow : 'none'
+                      }}
+                    ></div>
+                  </div>
+
+                  <div className="dash-cat-footer-row">
+                    <span className="dash-cat-stat">
+                      <span className="dash-cat-dot" style={{ backgroundColor: cat.color }}></span>
+                      {cat.activeCount} Active · {cat.completedCount} Completed
+                    </span>
+                    <span className="dash-cat-bounty">
+                      ৳{cat.bounty.toLocaleString()} Escrow
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* Demand Summary Footer */}
+            {leadingCategory && posts.length > 0 && (
+              <div className="dash-cat-summary-strip">
+                <div className="dash-cat-summary-item">
+                  <span className="dash-cat-summary-label">Highest Demand</span>
+                  <span className="dash-cat-summary-val" style={{ color: leadingCategory.color }}>
+                    {leadingCategory.name} ({leadingCategory.percent}%)
+                  </span>
+                </div>
+                <div className="dash-cat-summary-item" style={{ textAlign: 'right' }}>
+                  <span className="dash-cat-summary-label">Category Escrow</span>
+                  <span className="dash-cat-summary-val">
+                    ৳{categoryStats.reduce((sum, c) => sum + c.bounty, 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Quick Management Shortcuts */}
