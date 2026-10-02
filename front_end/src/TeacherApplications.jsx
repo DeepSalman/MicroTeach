@@ -426,30 +426,40 @@ const TeacherApplications = ({ user }) => {
                                   <span className="ta-block-label">IDENTITY &amp; VERIFICATION DOCUMENTS</span>
                                   {docsCount > 0 ? (
                                     <div className="ta-docs-grid">
-                                      {app.documents.map((doc) => (
-                                        <button
-                                          key={doc.document_id}
-                                          type="button"
-                                          className="ta-doc-item-btn"
-                                          onClick={() => setPreviewDoc({
-                                            url: `${BASE_URL}/${doc.file_path}`,
-                                            label: docLabel(doc.document_type)
-                                          })}
-                                          title={`Click to view ${docLabel(doc.document_type)}`}
-                                        >
-                                          <div className="ta-doc-preview-thumb">
-                                            <img
-                                              src={`${BASE_URL}/${doc.file_path}`}
-                                              alt={docLabel(doc.document_type)}
-                                              onError={(e) => { e.target.style.display = 'none'; }}
-                                            />
-                                          </div>
-                                          <div className="ta-doc-meta">
-                                            <span className="ta-doc-name">{docLabel(doc.document_type)}</span>
-                                            <span className="ta-doc-zoom">🔍 View Full Size</span>
-                                          </div>
-                                        </button>
-                                      ))}
+                                       {app.documents.map((doc) => {
+                                         const docUrl = doc.file_data || (doc.document_id ? `${BASE_URL}/api/teacher-applications/documents/${doc.document_id}/file` : `${BASE_URL}/${doc.file_path}`);
+                                         return (
+                                           <button
+                                             key={doc.document_id}
+                                             type="button"
+                                             className="ta-doc-item-btn"
+                                             onClick={() => setPreviewDoc({
+                                               url: docUrl,
+                                               label: docLabel(doc.document_type)
+                                             })}
+                                             title={`Click to view ${docLabel(doc.document_type)}`}
+                                           >
+                                             <div className="ta-doc-preview-thumb">
+                                               <img
+                                                 src={docUrl}
+                                                 alt={docLabel(doc.document_type)}
+                                                 onError={(e) => {
+                                                   if (doc.document_id && !e.target.dataset.triedFallback) {
+                                                     e.target.dataset.triedFallback = 'true';
+                                                     e.target.src = `${BASE_URL}/api/teacher-applications/documents/${doc.document_id}/file`;
+                                                   } else {
+                                                     e.target.style.opacity = '0.4';
+                                                   }
+                                                 }}
+                                               />
+                                             </div>
+                                             <div className="ta-doc-meta">
+                                               <span className="ta-doc-name">{docLabel(doc.document_type)}</span>
+                                               <span className="ta-doc-zoom">🔍 View Full Size</span>
+                                             </div>
+                                           </button>
+                                         );
+                                       })}
                                     </div>
                                   ) : (
                                     <div className="ta-no-docs-card">

@@ -21,9 +21,14 @@ try {
   console.warn('[teacherApplicationRoutes] Upload dir creation warning:', err.message);
 }
 
-// ── Auto-create Teacher_Application_Documents table ──
+// ── Auto-create / migrate Teacher_Application_Documents table ──
 (async () => {
-  if (db.isPostgres) return;
+  if (db.isPostgres) {
+    try {
+      await db.query('ALTER TABLE Teacher_Application_Documents ADD COLUMN IF NOT EXISTS file_data TEXT');
+    } catch (_) {}
+    return;
+  }
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS Teacher_Application_Documents (
@@ -34,6 +39,7 @@ try {
         file_name     VARCHAR(255) NOT NULL,
         file_size     INT NOT NULL,
         mime_type     VARCHAR(100) NOT NULL,
+        file_data     LONGTEXT NULL,
         created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (application_id) REFERENCES Teacher_Applications(application_id) ON DELETE CASCADE
       )
@@ -42,6 +48,10 @@ try {
     const [cols] = await db.query(`SHOW COLUMNS FROM Teacher_Applications LIKE 'student_id'`);
     if (cols.length === 0) {
       await db.query(`ALTER TABLE Teacher_Applications ADD COLUMN student_id VARCHAR(50) AFTER user_id`);
+    }
+    const [docCols] = await db.query(`SHOW COLUMNS FROM Teacher_Application_Documents LIKE 'file_data'`);
+    if (docCols.length === 0) {
+      await db.query(`ALTER TABLE Teacher_Application_Documents ADD COLUMN file_data LONGTEXT NULL`);
     }
   } catch (e) {
     console.error('[teacherApplicationRoutes] Schema init error:', e.message);
@@ -186,18 +196,28 @@ router.post('/', (req, res) => {
         applicationId = recent[0]?.application_id;
       }
 
-      // Insert documents
+      // Insert documents (with base64 data URI for reliable display across serverless/local environments)
       const docsToInsert = [
         { type: 'student_id_card', file: studentIdCardFile },
         { type: 'nid_card',        file: nidCardFile }
       ];
       for (const { type, file } of docsToInsert) {
+        let fileDataUri = null;
+        try {
+          if (file && file.path && fs.existsSync(file.path)) {
+            const buf = fs.readFileSync(file.path);
+            fileDataUri = `data:${file.mimetype || 'image/jpeg'};base64,${buf.toString('base64')}`;
+          }
+        } catch (e) {
+          console.warn('[teacherApplicationRoutes] Error reading uploaded file into base64:', e.message);
+        }
+
         const relativePath = path.join('uploads', 'teacher_documents', file.filename);
         await conn.query(
           `INSERT INTO Teacher_Application_Documents
-           (application_id, document_type, file_path, file_name, file_size, mime_type)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [applicationId, type, relativePath, file.originalname, file.size, file.mimetype]
+           (application_id, document_type, file_path, file_name, file_size, mime_type, file_data)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [applicationId, type, relativePath, file.originalname, file.size, file.mimetype, fileDataUri]
         );
       }
 
@@ -255,6 +275,36 @@ router.put('/:id/review', async (req, res) => {
     res.status(500).json({ error: error.message });
   } finally {
     conn.release();
+  }
+});
+
+
+// ── GET document file directly by documentId ──
+router.get('/documents/:documentId/file', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT document_type, file_path, file_name, mime_type, file_data FROM Teacher_Application_Documents WHERE document_id = ?',
+      [req.params.documentId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).send('Document not found');
+    }
+    const doc = rows[0];
+    if (doc.file_data && doc.file_data.startsWith('data:')) {
+      const parts = doc.file_data.split(',');
+      const mime = parts[0].split(':')[1].split(';')[0];
+      const imgBuf = Buffer.from(parts[1], 'base64');
+      res.setHeader('Content-Type', mime || doc.mime_type || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(imgBuf);
+    }
+    const diskPath = path.join(__dirname, '..', doc.file_path);
+    if (fs.existsSync(diskPath)) {
+      return res.sendFile(diskPath);
+    }
+    res.status(404).send('File not found');
+  } catch (err) {
+    res.status(500).send(err.message);
   }
 });
 
