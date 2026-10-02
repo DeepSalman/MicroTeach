@@ -19,10 +19,10 @@
      Scarlet Rush / Muted Teal / Lemon Chiffon / Light Bronze
      ============================================================ */
 
-  /* Brand — primary (Scarlet Rush) */
-  --color-primary: #df2935;
-  --color-primary-dark: #b81d28;
-  --color-primary-soft: #fadedb;
+  /* Brand — primary (Modern Minimalist Indigo / Sapphire) */
+  --color-primary: #3b5bf5;
+  --color-primary-dark: #2547d0;
+  --color-primary-soft: #eff4fe;
 
   /* Brand — secondary (Muted Teal) */
   --color-secondary: #86ba90;
@@ -30,30 +30,30 @@
   --color-secondary-ink: #3d7a57;
   --color-secondary-soft: #e4f2e8;
 
-  /* Brand — surface (Lemon Chiffon) */
-  --color-surface: #f5f3bb;
-  --color-surface-soft: #fbfae6;
-  --color-surface-strong: #f0ea8f;
+  /* Brand — surface */
+  --color-surface: #f1f5f9;
+  --color-surface-soft: #f8fafc;
+  --color-surface-strong: #e2e8f0;
 
-  /* Brand — accent (Light Bronze) */
-  --color-accent: #dfa06e;
-  --color-accent-dark: #c9854f;
-  --color-accent-ink: #96602f;
-  --color-accent-soft: #f5e3d3;
+  /* Brand — accent */
+  --color-accent: #6366f1;
+  --color-accent-dark: #4f46e5;
+  --color-accent-ink: #3730a3;
+  --color-accent-soft: #e0e7ff;
 
   /* Feedback */
-  --color-danger: #b42318;
-  --color-danger-soft: #fdeae8;
+  --color-danger: #ef4444;
+  --color-danger-soft: #fef2f2;
 
   /* Text */
-  --color-ink: #1a1a2e;
-  --color-ink-muted: #6b6b76;
-  --color-ink-faint: #9b9ba7;
+  --color-ink: #0f172a;
+  --color-ink-muted: #475569;
+  --color-ink-faint: #94a3b8;
 
   /* Surfaces & lines */
-  --color-bg: #faf9f3;
-  --color-surface-alt: #f1f0e7;
-  --color-border: #e6e4da;
+  --color-bg: #f8fafc;
+  --color-surface-alt: #f1f5f9;
+  --color-border: #e2e8f0;
   --color-card: #ffffff;
 
   /* Secondary text (body, labels, UI) — neo-grotesque sans-serif */

@@ -4,12 +4,28 @@ import './WalletModal.css';
 
 const PRESET_AMOUNTS = [200, 500, 1000, 2000];
 
-const WalletModal = ({ isOpen, onClose, user, onBalanceUpdate }) => {
-  const [balance, setBalance] = useState(0);
+const WalletModal = ({ isOpen, onClose, user, initialBalance, onBalanceUpdate }) => {
+  const [balance, setBalance] = useState(() => {
+    if (initialBalance !== undefined && initialBalance !== null && !isNaN(Number(initialBalance))) {
+      return Number(initialBalance);
+    }
+    if (user?.wallet_balance !== undefined && user?.wallet_balance !== null && !isNaN(Number(user.wallet_balance))) {
+      return Number(user.wallet_balance);
+    }
+    return 0;
+  });
   const [transactions, setTransactions] = useState([]);
   const [topUpAmount, setTopUpAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (initialBalance !== undefined && initialBalance !== null && !isNaN(Number(initialBalance))) {
+      setBalance(Number(initialBalance));
+    } else if (user?.wallet_balance !== undefined && user?.wallet_balance !== null && !isNaN(Number(user.wallet_balance))) {
+      setBalance(Number(user.wallet_balance));
+    }
+  }, [initialBalance, user?.wallet_balance, isOpen]);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -18,15 +34,28 @@ const WalletModal = ({ isOpen, onClose, user, onBalanceUpdate }) => {
   }, [isOpen, user]);
 
   const loadWalletData = async () => {
+    const userId = user?.user_id || user?.id;
+    if (!userId) return;
+
     try {
-      const [balRes, txRes] = await Promise.all([
-        fetchWalletBalance(user.user_id),
-        fetchTransactions(user.user_id)
-      ]);
-      setBalance(balRes.data.balance || 0);
-      setTransactions(txRes.data || []);
+      const balRes = await fetchWalletBalance(userId);
+      const rawBal = balRes.data?.balance;
+      if (rawBal !== undefined && rawBal !== null) {
+        const parsed = Number(rawBal);
+        if (!isNaN(parsed)) {
+          setBalance(parsed);
+          if (onBalanceUpdate) onBalanceUpdate(parsed);
+        }
+      }
     } catch (error) {
-      console.error('Failed to load wallet:', error);
+      console.error('Failed to load wallet balance:', error);
+    }
+
+    try {
+      const txRes = await fetchTransactions(userId);
+      setTransactions(Array.isArray(txRes.data) ? txRes.data : []);
+    } catch (error) {
+      console.error('Failed to load transactions:', error);
     }
   };
 
@@ -129,7 +158,7 @@ const WalletModal = ({ isOpen, onClose, user, onBalanceUpdate }) => {
         {/* Header */}
         <div className="wallet-modal-header">
           <div className="wallet-header-info">
-            <h2>Campus Wallet</h2>
+            <h2>Wallet</h2>
             <span className="wallet-status-chip">
               <span className="wallet-status-dot"></span>
               Escrow Active
@@ -153,7 +182,7 @@ const WalletModal = ({ isOpen, onClose, user, onBalanceUpdate }) => {
           <div className="wallet-card-middle">
             <span className="wallet-card-currency">৳</span>
             <span className="wallet-card-amount">
-              {Number(balance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {Number(balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="wallet-card-bottom">

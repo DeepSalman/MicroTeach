@@ -41,3 +41,47 @@ export const formatDeadline = (value) => {
   const day = date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
   return `${day}, ${time}`;
 };
+
+export const isValidEmailDomain = (email) => {
+  if (!email || typeof email !== 'string') return false;
+  const trimmed = email.trim().toLowerCase();
+  const parts = trimmed.split('@');
+  if (parts.length !== 2) return false;
+  const [local, domain] = parts;
+  if (!local || !domain) return false;
+
+  const domainParts = domain.split('.');
+  if (domainParts.length < 2) return false;
+
+  const mainDomain = domainParts[0];
+
+  // Educational / institutional domains
+  const isEduDomain = domain.endsWith('.ac.bd') ||
+                      domain.endsWith('.edu.bd') ||
+                      domain.endsWith('.edu') ||
+                      domain.endsWith('.org.bd');
+
+  if (isEduDomain) {
+    return mainDomain.length >= 2;
+  }
+
+  // Common legitimate email providers
+  const allowedGeneralProviders = [
+    'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
+    'icloud.com', 'live.com', 'msn.com', 'proton.me', 'protonmail.com',
+    'aol.com', 'zoho.com', 'yandex.com', 'mail.com'
+  ];
+
+  if (allowedGeneralProviders.includes(domain)) {
+    return true;
+  }
+
+  // Disallow anomaly/throwaway domains with main domain length < 3 (e.g. g.com, he.com)
+  const tld = domainParts[domainParts.length - 1];
+  if (mainDomain.length >= 3 && tld.length >= 2) {
+    return true;
+  }
+
+  return false;
+};
+

@@ -161,30 +161,44 @@
 /* ── Search ── */
 .home-page .search-bar {
   width: 100%;
-  max-width: 560px;
+  max-width: 680px;
   min-width: 280px;
   margin: 0 auto;
   justify-self: center;
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 42px;
-  padding: 0 8px 0 15px;
-  background: var(--color-surface-alt);
-  border: 1.5px solid transparent;
+  gap: 12px;
+  height: 48px;
+  padding: 0 10px 0 20px;
+  background: var(--color-card, #ffffff);
+  border: 1.5px solid var(--color-border);
   border-radius: 999px;
-  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-page .search-bar:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .home-page .search-bar:focus-within {
-  background: #fff;
-  border-color: var(--color-ink);
-  box-shadow: 0 0 0 4px rgba(26, 26, 46, 0.08);
+  background: #ffffff;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-soft), 0 4px 16px rgba(59, 91, 245, 0.08);
 }
 
 .home-page .search-bar .search-icon {
   flex-shrink: 0;
   color: var(--color-ink-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-page .search-bar .search-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .home-page .search-bar input {
@@ -194,18 +208,20 @@
   border: none;
   outline: none;
   background: transparent;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
   color: var(--color-ink);
 }
 
 .home-page .search-bar input::placeholder {
   color: var(--color-ink-faint);
+  font-size: 14.5px;
 }
 
 .home-page .search-clear {
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: 50%;
   background: var(--color-surface-alt);
@@ -1035,7 +1051,7 @@
   color: #fff;
   border-color: var(--color-primary);
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(223, 41, 53, 0.28);
+  box-shadow: 0 2px 8px rgba(59, 91, 245, 0.28);
 }
 
 .home-page-ellipsis {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchPostApplications, applyToPost, withdrawApplication } from './api';
+import { fetchPostApplications, applyToPost, withdrawApplication, fetchUserProfile, fetchUserRating, fetchUserReviews } from './api';
 import { formatDeadline, avatarStyle } from './utils';
 import './ApplyModal.css';
 
@@ -20,6 +20,31 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showStudentProfile, setShowStudentProfile] = useState(false);
+  const [studentProfileData, setStudentProfileData] = useState(null);
+  const [studentRating, setStudentRating] = useState(null);
+  const [studentReviews, setStudentReviews] = useState([]);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  const handleOpenStudentProfile = async () => {
+    if (!post?.user_id) return;
+    setShowStudentProfile(true);
+    setLoadingProfile(true);
+    try {
+      const [profileRes, ratingRes, reviewsRes] = await Promise.all([
+        fetchUserProfile(post.user_id),
+        fetchUserRating(post.user_id),
+        fetchUserReviews(post.user_id)
+      ]);
+      setStudentProfileData(profileRes.data?.user || profileRes.data || null);
+      setStudentRating(ratingRes.data || null);
+      setStudentReviews(Array.isArray(reviewsRes.data) ? reviewsRes.data : []);
+    } catch (err) {
+      console.error('Failed to load student profile:', err);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   const myApplication = user ? applications.find(a => String(a.user_id) === String(user.user_id)) : null;
   const isOwnPost = user && String(post.user_id) === String(user.user_id);
@@ -130,7 +155,7 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
           </div>
 
           {/* Poster Info */}
-          <div className="apply-poster">
+          <div className="apply-poster" onClick={handleOpenStudentProfile} style={{ cursor: 'pointer' }}>
             <div className={`apply-poster-avatar tone-${getAvatarTone(post.author_name)}`} style={avatarStyle(post.author_avatar_color)}>
               {post.author_name ? post.author_name.charAt(0).toUpperCase() : '?'}
             </div>
@@ -138,7 +163,17 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
               <div className="apply-poster-name">{post.author_name}</div>
               <div className="apply-poster-dept">{post.author_department || 'Department'}</div>
             </div>
-            <span className="apply-poster-link">View Profile</span>
+            <button
+              type="button"
+              className="apply-poster-link"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenStudentProfile();
+              }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              View Profile
+            </button>
           </div>
 
           {/* Applied Teachers */}
@@ -254,6 +289,92 @@ const ApplyModal = ({ post, user, onClose, onApplySuccess, onWithdrawSuccess, on
           )}
         </div>
       </div>
+
+      {/* Student Profile Popup Modal */}
+      {showStudentProfile && (
+        <div className="student-profile-overlay" onClick={() => setShowStudentProfile(false)}>
+          <div className="student-profile-popup" onClick={(e) => e.stopPropagation()}>
+            <div className="student-popup-header">
+              <h4>Student Profile</h4>
+              <button className="student-popup-close" onClick={() => setShowStudentProfile(false)}>&times;</button>
+            </div>
+            
+            {loadingProfile ? (
+              <div className="student-popup-loading">
+                <div className="student-popup-spinner"></div>
+                <p>Loading profile details...</p>
+              </div>
+            ) : (
+              <div className="student-popup-body">
+                {/* Hero / Avatar & Basic Info */}
+                <div className="student-popup-hero">
+                  <div
+                    className={`student-popup-avatar tone-${getAvatarTone(studentProfileData?.name || post.author_name)}`}
+                    style={avatarStyle(studentProfileData?.avatar_color || post.author_avatar_color)}
+                  >
+                    {(studentProfileData?.name || post.author_name || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="student-popup-details">
+                    <h3 className="student-popup-name">{studentProfileData?.name || post.author_name}</h3>
+                    <div className="student-popup-badges">
+                      <span className="student-popup-dept">
+                        {studentProfileData?.department || post.author_department || 'Student'}
+                      </span>
+                      {studentProfileData?.institution && (
+                        <span className="student-popup-inst">{studentProfileData.institution}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rating Bar */}
+                <div className="student-popup-rating-bar">
+                  <div className="student-rating-stat">
+                    <span className="student-star">★</span>
+                    <span className="student-avg-score">
+                      {studentRating?.average_rating ? Number(studentRating.average_rating).toFixed(1) : 'No ratings'}
+                    </span>
+                    {studentRating?.total_reviews > 0 && (
+                      <span className="student-review-count">({studentRating.total_reviews} reviews)</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bio / About */}
+                {studentProfileData?.bio && (
+                  <div className="student-popup-bio">
+                    <span className="student-popup-section-title">About</span>
+                    <p>{studentProfileData.bio}</p>
+                  </div>
+                )}
+
+                {/* Reviews Section */}
+                <div className="student-popup-reviews-section">
+                  <span className="student-popup-section-title">Reviews</span>
+                  {studentReviews.length === 0 ? (
+                    <div className="student-no-reviews">No reviews recorded yet for this student.</div>
+                  ) : (
+                    <div className="student-reviews-list">
+                      {studentReviews.map((rev, idx) => (
+                        <div key={rev.review_id || idx} className="student-review-card">
+                          <div className="student-rev-header">
+                            <span className="student-rev-name">{rev.reviewer_name || 'Anonymous User'}</span>
+                            <div className="student-rev-stars">
+                              {'★'.repeat(rev.rating || 5)}{'☆'.repeat(Math.max(0, 5 - (rev.rating || 5)))}
+                            </div>
+                          </div>
+                          {rev.comment && <p className="student-rev-comment">{rev.comment}</p>}
+                          <span className="student-rev-time">{getTimeAgo(rev.created_at)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

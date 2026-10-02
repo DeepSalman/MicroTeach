@@ -163,7 +163,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
   };
 
   const loadMessages = async (convId, silent = false) => {
-    if (!silent) setLoadingMessages(true);
+    if (!silent && messages.length === 0) setLoadingMessages(true);
     try {
       const response = await fetchMessages(convId);
       setMessages(response.data);
@@ -175,7 +175,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
     } catch (err) {
       console.error('Failed to load messages:', err);
     } finally {
-      if (!silent) setLoadingMessages(false);
+      setLoadingMessages(false);
     }
   };
 
@@ -244,6 +244,19 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
     const clientMsgId = crypto.randomUUID();
     const currentFile = selectedFile;
 
+    // Optimistically show message immediately so there is zero lag or reload feeling
+    const optimisticMsg = {
+      message_id: clientMsgId,
+      sender_id: user.user_id,
+      body: bodyText,
+      created_at: new Date().toISOString(),
+      kind: currentFile ? currentFile.type : 'text',
+      attachment_url: currentFile?.previewUrl || null,
+      attachment_name: currentFile?.name || null,
+      attachment_size: currentFile?.size || null,
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
     setNewMessage('');
     setShowEmojiPicker(false);
     clearSelectedFile();
@@ -264,10 +277,12 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
           client_msg_id: clientMsgId,
         });
       }
-      await loadMessages(selectedConv.conversation_id);
+      await loadMessages(selectedConv.conversation_id, true);
       loadInbox();
     } catch (err) {
       console.error('Failed to send message:', err);
+      // Roll back optimistic message on failure
+      setMessages(prev => prev.filter(m => m.message_id !== clientMsgId));
       setNewMessage(bodyText);
       if (currentFile) setSelectedFile(currentFile);
       alert(err.response?.data?.message || 'Failed to send message.');
@@ -458,7 +473,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
 
               {/* Messages Container */}
               <div className="chat-messages">
-                {loadingMessages ? (
+                {loadingMessages && messages.length === 0 ? (
                   <div className="chat-loading">
                     <div className="chat-loading-pulse">Loading messages...</div>
                   </div>

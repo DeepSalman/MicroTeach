@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { registerUser } from './api';
+import { isValidEmailDomain } from './utils';
 import './Register.css';
 
 const Register = () => {
@@ -37,6 +38,11 @@ const Register = () => {
 
     if (!name || !email || !password) {
       setError('Full name, email, and password are required.');
+      return;
+    }
+
+    if (!isValidEmailDomain(email)) {
+      setError('Please enter a valid academic email (e.g. @uiu.ac.bd, @bracu.ac.bd) or standard provider (e.g. @gmail.com).');
       return;
     }
 
@@ -161,7 +167,7 @@ const Register = () => {
                 type="email"
                 id="email"
                 name="email"
-                placeholder="name@example.com"
+                placeholder="you@uiu.ac.bd"
                 value={formData.email}
                 onChange={handleChange}
                 required

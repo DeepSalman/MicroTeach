@@ -976,7 +976,13 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
       )}
 
       {/* Wallet Modal */}
-      <WalletModal isOpen={walletOpen} onClose={() => setWalletOpen(false)} user={user} onBalanceUpdate={(bal) => setWalletBalance(bal)} />
+      <WalletModal
+        isOpen={walletOpen}
+        onClose={() => setWalletOpen(false)}
+        user={user}
+        initialBalance={walletBalance}
+        onBalanceUpdate={(bal) => setWalletBalance(bal)}
+      />
 
       {/* Confirm Modal */}
       <ConfirmModal

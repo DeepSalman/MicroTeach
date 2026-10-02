@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { loginUser } from './api';
+import { isValidEmailDomain } from './utils';
 import BookAnimation from './BookAnimation';
 import ErrorBoundary from './ErrorBoundary';
 import './Login.css';
@@ -18,12 +19,18 @@ const Login = ({ onLogin }) => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setMessage('');
     setSuccessNotice('');
 
+    if (!isValidEmailDomain(email)) {
+      setMessage('Please enter a valid academic email (e.g. @uiu.ac.bd, @bracu.ac.bd) or standard provider (e.g. @gmail.com).');
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      const response = await loginUser({ email, password });
+      const response = await loginUser({ email: email.trim(), password });
       const user = response.data.user;
       
       if (onLogin) onLogin(user);
@@ -84,7 +91,7 @@ const Login = ({ onLogin }) => {
                   id="email"
                   className="form-input"
                   type="email"
-                  placeholder="you@bracu.ac.bd"
+                  placeholder="you@uiu.ac.bd"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
