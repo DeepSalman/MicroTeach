@@ -37,26 +37,16 @@ const db = require('../db');
     ];
 
     for (const t of defaultTypes) {
-      const sql = db.isPostgres ? `
-        INSERT INTO Master_Transaction_Types
-        (type_code, name, direction, category, accounting_treatment, is_disputable, is_reversible, trigger_method, min_amount, max_amount, description, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT (type_code) DO UPDATE SET
-        name = EXCLUDED.name,
-        direction = EXCLUDED.direction,
-        category = EXCLUDED.category,
-        accounting_treatment = EXCLUDED.accounting_treatment
-      ` : `
+      await db.query(`
         INSERT INTO Master_Transaction_Types
         (type_code, name, direction, category, accounting_treatment, is_disputable, is_reversible, trigger_method, min_amount, max_amount, description, is_active)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
-        name = VALUES(name),
-        direction = VALUES(direction),
-        category = VALUES(category),
-        accounting_treatment = VALUES(accounting_treatment)
-      `;
-      await db.query(sql, t);
+        name=VALUES(name),
+        direction=VALUES(direction),
+        category=VALUES(category),
+        accounting_treatment=VALUES(accounting_treatment)
+      `, t);
     }
 
     console.log('[masterDataRoutes] Master_Transaction_Types verified & synchronized');
@@ -131,23 +121,7 @@ router.post('/transaction-types', async (req, res) => {
   }
 
   try {
-    const query = db.isPostgres ? `
-      INSERT INTO Master_Transaction_Types
-      (type_code, name, direction, category, accounting_treatment, is_disputable, is_reversible, trigger_method, min_amount, max_amount, description, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT (type_code) DO UPDATE SET
-      name = EXCLUDED.name,
-      direction = EXCLUDED.direction,
-      category = EXCLUDED.category,
-      accounting_treatment = EXCLUDED.accounting_treatment,
-      is_disputable = EXCLUDED.is_disputable,
-      is_reversible = EXCLUDED.is_reversible,
-      trigger_method = EXCLUDED.trigger_method,
-      min_amount = EXCLUDED.min_amount,
-      max_amount = EXCLUDED.max_amount,
-      description = EXCLUDED.description,
-      is_active = EXCLUDED.is_active
-    ` : `
+    const query = `
       INSERT INTO Master_Transaction_Types
       (type_code, name, direction, category, accounting_treatment, is_disputable, is_reversible, trigger_method, min_amount, max_amount, description, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
