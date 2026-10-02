@@ -185,7 +185,7 @@
 .home-page .search-bar:focus-within {
   background: #ffffff;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px var(--color-primary-soft), 0 4px 16px rgba(59, 91, 245, 0.08);
+  box-shadow: 0 0 0 4px var(--color-primary-soft), 0 4px 16px rgba(223, 41, 53, 0.08);
 }
 
 .home-page .search-bar .search-icon {
@@ -1051,7 +1051,7 @@
   color: #fff;
   border-color: var(--color-primary);
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(59, 91, 245, 0.28);
+  box-shadow: 0 2px 8px rgba(223, 41, 53, 0.28);
 }
 
 .home-page-ellipsis {
