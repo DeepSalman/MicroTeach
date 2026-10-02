@@ -152,19 +152,6 @@ const WalletModal = ({ isOpen, onClose, user, initialBalance, onBalanceUpdate })
 
   if (!isOpen) return null;
 
-  const displayBalance = (() => {
-    if (balance !== undefined && balance !== null && !isNaN(Number(balance))) {
-      return Number(balance);
-    }
-    if (initialBalance !== undefined && initialBalance !== null && !isNaN(Number(initialBalance))) {
-      return Number(initialBalance);
-    }
-    if (user?.wallet_balance !== undefined && user?.wallet_balance !== null && !isNaN(Number(user.wallet_balance))) {
-      return Number(user.wallet_balance);
-    }
-    return 0;
-  })();
-
   return (
     <div className="wallet-modal-overlay" onClick={onClose}>
       <div className="wallet-modal" onClick={(e) => e.stopPropagation()}>
@@ -185,13 +172,26 @@ const WalletModal = ({ isOpen, onClose, user, initialBalance, onBalanceUpdate })
           </button>
         </div>
 
-        {/* Clean Minimal Balance Box */}
-        <div className="wallet-balance-box">
-          <span className="wallet-balance-label">Available Balance</span>
-          <div className="wallet-balance-amount">
-            <span className="wallet-balance-currency">৳</span>
-            <span className="wallet-balance-value">
-              {displayBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {/* Balance Card */}
+        <div className="wallet-card">
+          <div className="wallet-card-gloss"></div>
+          <div className="wallet-card-top">
+            <span className="wallet-card-label">AVAILABLE BALANCE</span>
+            <span className="wallet-card-chip">BDT</span>
+          </div>
+          <div className="wallet-card-middle">
+            <span className="wallet-card-currency">৳</span>
+            <span className="wallet-card-amount">
+              {Number(balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="wallet-card-bottom">
+            <span className="wallet-card-holder">{user?.full_name || user?.email || 'Account Holder'}</span>
+            <span className="wallet-secure-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+              </svg>
+              Protected
             </span>
           </div>
         </div>

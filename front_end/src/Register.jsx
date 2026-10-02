@@ -109,23 +109,6 @@ const Register = () => {
           <p className="register-subtitle">Join your campus peer learning &amp; micro-tutoring network</p>
         </div>
 
-        {/* SSO Button */}
-        <div className="register-sso-section">
-          <button type="button" className="register-sso-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3L1 9l11 6l9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" />
-            </svg>
-            <span>Sign up with University / Work Email</span>
-          </button>
-        </div>
-
-        {/* Divider */}
-        <div className="register-divider">
-          <div className="register-divider-line"></div>
-          <span className="register-divider-text">Or register with email</span>
-          <div className="register-divider-line"></div>
-        </div>
-
         {error && <div className="register-error-message">{error}</div>}
 
         {/* Registration Form */}
