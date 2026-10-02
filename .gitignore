@@ -2,3 +2,8 @@ node_modules/
 .DS_Store
 dist/
 *.log
+
+# Runtime uploads
+back_end/uploads/chat_attachments/
+back_end/uploads/teacher_documents/*
+!back_end/uploads/teacher_documents/.gitkeep
