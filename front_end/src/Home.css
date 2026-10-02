@@ -939,37 +939,121 @@
   background: var(--color-primary-dark);
 }
 
-/* Show More */
-.show-more {
-  text-align: center;
-  padding: 32px 0 16px;
+/* ─── Pagination Bar ─── */
+.home-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px 0 12px;
+  margin-top: 20px;
+  border-top: 1px solid var(--color-border);
 }
 
-.show-more p {
-  font-size: 14px;
+.home-pagination-info {
+  font-size: 13.5px;
   color: var(--color-ink-muted);
-  margin-bottom: 14px;
 }
 
-.show-more-btn {
-  padding: 12px 32px;
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
+.home-pagination-info strong {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.home-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-page-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-ink);
+  border-radius: 9px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 
-.show-more-btn:hover {
-  background: var(--color-primary-dark);
+.home-page-nav-btn:hover:not(:disabled) {
+  border-color: var(--color-ink-muted);
+  background: var(--color-surface-alt);
+  transform: translateY(-1px);
 }
 
-.show-more .count {
+.home-page-nav-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.home-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-page-num-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 6px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-ink-muted);
   font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.home-page-num-btn:hover:not(.active) {
+  background: var(--color-surface-alt);
+  color: var(--color-ink);
+}
+
+.home-page-num-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(223, 41, 53, 0.28);
+}
+
+.home-page-ellipsis {
+  min-width: 24px;
+  text-align: center;
   color: var(--color-ink-faint);
-  margin-top: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  user-select: none;
+}
+
+@media (max-width: 600px) {
+  .home-pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .home-pagination-controls {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
 }
 
 /* Footer */

@@ -10,10 +10,13 @@ import TransactionReportModal from './TransactionReportModal';
 import { formatDeadline } from './utils';
 import './Home.css';
 
+const POSTS_PER_PAGE = 8;
+
 const Home = ({ user, onLogout, onProfileUpdate }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [reportModal, setReportModal] = useState({ open: false, postId: null, postTitle: '' });
   const [reportReason, setReportReason] = useState('');
@@ -34,6 +37,11 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
   const [showApprovedBanner, setShowApprovedBanner] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+
+  // Reset pagination when searching
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   // Reset session-scoped state safely when the signed-in user changes
   useEffect(() => {
@@ -215,6 +223,20 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
       )
     : posts;
 
+  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE) || 1;
+  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const startIndex = (safeCurrentPage - 1) * POSTS_PER_PAGE;
+  const pagedPosts = filteredPosts.slice(startIndex, startIndex + POSTS_PER_PAGE);
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    const el = document.getElementById('posts-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <div className="home-page">
 
@@ -375,7 +397,7 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
             </div>
           </div>
         )}
-        <div className="main-header">
+        <div className="main-header" id="posts-section">
           <div>
             <h1>All posts</h1>
             <p className="subtitle">Manage live peer-tutoring calls, pending solution pitches, and milestone payouts.</p>
@@ -406,7 +428,7 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
               )}
             </div>
           ) : (
-            filteredPosts.map((post) => {
+            pagedPosts.map((post) => {
               const isOwnPost = user && String(post.user_id) === String(user.user_id);
               return (
                 <div key={post.post_id} className="card">
@@ -505,12 +527,72 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
           )}
         </div>
 
-        {/* Show More */}
-        <div className="show-more">
-          <p>Continue exploring tutoring opportunities</p>
-          <button className="show-more-btn">Show More Applications &amp; Bounties</button>
-          <div className="count">Showing 4 of 7 active pitches &amp; tutoring sessions</div>
-        </div>
+        {/* Pagination Bar */}
+        {filteredPosts.length > 0 && (
+          <div className="home-pagination-bar">
+            <div className="home-pagination-info">
+              Showing <strong>{startIndex + 1}</strong>–<strong>{Math.min(startIndex + POSTS_PER_PAGE, filteredPosts.length)}</strong> of <strong>{filteredPosts.length}</strong> posts
+            </div>
+
+            {totalPages > 1 && (
+              <div className="home-pagination-controls">
+                <button
+                  type="button"
+                  className="home-page-nav-btn"
+                  onClick={() => handlePageChange(safeCurrentPage - 1)}
+                  disabled={safeCurrentPage <= 1}
+                  aria-label="Previous Page"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                  <span>Prev</span>
+                </button>
+
+                <div className="home-page-numbers">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                    if (
+                      p === 1 ||
+                      p === totalPages ||
+                      (p >= safeCurrentPage - 1 && p <= safeCurrentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          className={`home-page-num-btn ${p === safeCurrentPage ? 'active' : ''}`}
+                          onClick={() => handlePageChange(p)}
+                        >
+                          {p}
+                        </button>
+                      );
+                    }
+                    if (
+                      (p === 2 && safeCurrentPage > 3) ||
+                      (p === totalPages - 1 && safeCurrentPage < totalPages - 2)
+                    ) {
+                      return <span key={p} className="home-page-ellipsis">…</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  className="home-page-nav-btn"
+                  onClick={() => handlePageChange(safeCurrentPage + 1)}
+                  disabled={safeCurrentPage >= totalPages}
+                  aria-label="Next Page"
+                >
+                  <span>Next</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Footer */}
