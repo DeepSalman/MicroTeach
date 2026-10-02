@@ -3,8 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "server": "node back_end/server.js",
-    "client": "npm --prefix front_end run dev",
     "build": "cd front_end && npm install && npm run build"
   },
   "dependencies": {

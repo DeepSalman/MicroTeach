@@ -33,13 +33,23 @@ if (isPostgres) {
   });
 
   // Convert MySQL '?' syntax to PostgreSQL '$1, $2...' & handle array expansion
-  function formatPgQuery(sql, params = []) {
+  function formatPgQuery(rawSql, params = []) {
+    // Normalize MySQL NOW(3) -> NOW() for PostgreSQL compatibility
+    const sql = rawSql.replace(/NOW\s*\(\s*\d+\s*\)/gi, 'NOW()');
     if (!params || params.length === 0) return { sql, params: [] };
+
     let pIdx = 1;
+    let rawParamIdx = 0;
     const flatParams = [];
     let inSingle = false;
     let inDouble = false;
     let newSql = '';
+
+    const normalizeVal = (val) => {
+      if (val === true) return 1;
+      if (val === false) return 0;
+      return val;
+    };
 
     for (let i = 0; i < sql.length; i++) {
       const char = sql[i];
@@ -47,7 +57,7 @@ if (isPostgres) {
       else if (char === '"' && (i === 0 || sql[i - 1] !== '\\')) inDouble = !inDouble;
 
       if (char === '?' && !inSingle && !inDouble) {
-        const paramVal = params[flatParams.length];
+        const paramVal = params[rawParamIdx++];
         if (Array.isArray(paramVal)) {
           if (paramVal.length === 0) {
             newSql += 'NULL';
@@ -55,11 +65,11 @@ if (isPostgres) {
           } else {
             const placeholders = paramVal.map(() => `$${pIdx++}`).join(', ');
             newSql += placeholders;
-            flatParams.push(...paramVal);
+            flatParams.push(...paramVal.map(normalizeVal));
           }
         } else {
           newSql += `$${pIdx++}`;
-          flatParams.push(paramVal);
+          flatParams.push(normalizeVal(paramVal));
         }
       } else {
         newSql += char;
