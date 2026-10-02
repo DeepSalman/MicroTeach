@@ -115,123 +115,51 @@
   color: var(--color-ink);
 }
 
-/* ─── Premium Red Brand Wallet Card ─── */
-.wallet-card {
-  margin: 18px 24px 16px 24px;
-  padding: 24px 26px;
-  background: linear-gradient(135deg, #df2935 0%, #c41c27 45%, #96121b 100%);
-  border-radius: 20px;
-  color: #ffffff;
-  position: relative;
-  overflow: hidden;
-  box-shadow:
-    0 16px 36px -8px rgba(223, 41, 53, 0.45),
-    0 4px 12px rgba(184, 29, 40, 0.3),
-    inset 0 1px 1px rgba(255, 255, 255, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.wallet-card-gloss {
-  position: absolute;
-  top: -60px;
-  right: -50px;
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 70%);
-  pointer-events: none;
-}
-
-.wallet-card-top {
+/* ─── Clean Minimal Balance Box ─── */
+.wallet-balance-box {
+  margin: 20px 24px 18px 24px;
+  padding: 22px 20px;
+  background: var(--color-surface-alt, #f1f0e7);
+  border: 1.5px solid var(--color-border, #e6e4da);
+  border-radius: 14px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  position: relative;
-  z-index: 2;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
 }
 
-.wallet-card-label {
-  font-size: 11px;
+.wallet-balance-label {
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 1.2px;
-  color: rgba(255, 255, 255, 0.9);
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-}
-
-.wallet-card-chip {
-  font-size: 11px;
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.22);
-  color: #ffffff;
-  padding: 3px 10px;
-  border-radius: 8px;
+  color: var(--color-ink-muted, #6b6b76);
   letter-spacing: 0.8px;
-  font-family: var(--font-mono);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(4px);
+  text-transform: uppercase;
+  font-family: var(--font-mono, monospace);
 }
 
-.wallet-card-middle {
+.wallet-balance-amount {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-bottom: 18px;
-  position: relative;
-  z-index: 2;
+  justify-content: center;
+  gap: 6px;
 }
 
-.wallet-card-currency {
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: #ffffff;
+.wallet-balance-currency {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-primary, #df2935);
   line-height: 1;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.wallet-card-amount {
-  font-size: 3rem;
+.wallet-balance-value {
+  font-size: 2.6rem;
   font-weight: 800;
   font-family: var(--font-heading, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
-  letter-spacing: -1.2px;
-  color: #ffffff !important;
+  color: var(--color-ink, #1a1a2e);
+  letter-spacing: -0.6px;
   line-height: 1;
-  display: inline-block;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.3);
-}
-
-.wallet-card-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.22);
-  padding-top: 14px;
-  font-size: 12px;
-  position: relative;
-  z-index: 2;
-}
-
-.wallet-card-holder {
-  color: #ffffff;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.wallet-secure-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 10.5px;
-  font-weight: 600;
-}
-
-.wallet-secure-badge svg {
-  color: #ffffff;
 }
 
 /* ─── Top Up Section ─── */
@@ -633,13 +561,13 @@
     padding: 16px 18px 12px 18px;
   }
 
-  .wallet-card {
+  .wallet-balance-box {
     margin: 14px 18px 12px 18px;
-    padding: 18px 20px;
+    padding: 16px 14px;
   }
 
-  .wallet-card-amount {
-    font-size: 1.85rem;
+  .wallet-balance-value {
+    font-size: 2.2rem;
   }
 
   .wallet-topup-section {
