@@ -448,202 +448,38 @@ router.post('/adjust-balance', async (req, res) => {
   }
 });
 
-// Helper to resolve target users
-function buildTargetFilter(target, user_ids) {
-  let whereClause = '';
-  let params = [];
-
-  switch (target) {
-    case 'student':
-      whereClause = "WHERE role = 'student' AND (is_admin = 0 OR is_admin IS NULL)";
-      break;
-    case 'tutor':
-      whereClause = "WHERE role = 'tutor' AND (is_admin = 0 OR is_admin IS NULL)";
-      break;
-    case 'both':
-      whereClause = "WHERE role = 'both' AND (is_admin = 0 OR is_admin IS NULL)";
-      break;
-    case 'all_users':
-      whereClause = "WHERE (is_admin = 0 OR is_admin IS NULL)";
-      break;
-    case 'admin':
-      whereClause = "WHERE is_admin = 1";
-      break;
-    case 'specific':
-      if (Array.isArray(user_ids) && user_ids.length > 0) {
-        whereClause = "WHERE user_id IN (?)";
-        params.push(user_ids);
-      } else {
-        whereClause = "WHERE 1 = 0";
-      }
-      break;
-    case 'all':
-    default:
-      whereClause = "WHERE 1 = 1";
-      break;
-  }
-  return { whereClause, params };
-}
-
-// 8. Preview Batch Balance Adjustment
-router.post('/preview-batch-adjustment', async (req, res) => {
-  const { target, user_ids, action, calc_mode, value, floor_zero = true } = req.body;
-  const numVal = parseFloat(value);
-
-  if (isNaN(numVal) || numVal <= 0) {
-    return res.status(400).json({ message: 'A positive numeric value is required.' });
-  }
-  if (!['credit', 'debit'].includes(action)) {
-    return res.status(400).json({ message: 'Action must be credit or debit.' });
-  }
-  if (!['fixed', 'percentage'].includes(calc_mode)) {
-    return res.status(400).json({ message: 'Calculation mode must be fixed or percentage.' });
-  }
-
+// 7. Academic Catalog Master Data (Departments & Course stats)
+router.get('/academic-catalog', async (req, res) => {
   try {
-    const { whereClause, params } = buildTargetFilter(target, user_ids);
-    const sql = `SELECT user_id, full_name, email, role, student_id, department, wallet_balance, is_admin FROM Users ${whereClause} ORDER BY full_name ASC`;
-    const [users] = await db.query(sql, params);
+    const [deptRows] = await db.query(`
+      SELECT
+        department,
+        COUNT(DISTINCT user_id) AS student_count,
+        SUM(CASE WHEN role IN ('tutor', 'both') THEN 1 ELSE 0 END) AS tutor_count
+      FROM Users
+      WHERE department IS NOT NULL AND department != ''
+      GROUP BY department
+      ORDER BY student_count DESC
+    `);
 
-    let totalCurrentBalance = 0;
-    let totalAdjustmentAmount = 0;
-
-    const previewList = users.map(u => {
-      const curBal = parseFloat(u.wallet_balance) || 0;
-      totalCurrentBalance += curBal;
-
-      const adj = calc_mode === 'percentage'
-        ? Math.round((curBal * (numVal / 100)) * 100) / 100
-        : Math.round(numVal * 100) / 100;
-
-      let actualAdj = adj;
-      let newBal = curBal;
-
-      if (action === 'debit') {
-        if (floor_zero) {
-          actualAdj = Math.min(curBal, adj);
-          newBal = Math.max(0, Math.round((curBal - actualAdj) * 100) / 100);
-        } else {
-          newBal = Math.round((curBal - adj) * 100) / 100;
-        }
-      } else {
-        newBal = Math.round((curBal + adj) * 100) / 100;
-      }
-
-      totalAdjustmentAmount += actualAdj;
-
-      return {
-        user_id: u.user_id,
-        full_name: u.full_name,
-        email: u.email,
-        role: u.is_admin ? 'admin' : u.role,
-        student_id: u.student_id,
-        department: u.department,
-        current_balance: curBal,
-        adjustment_amount: actualAdj,
-        new_balance: newBal
-      };
-    });
+    const [courseRows] = await db.query(`
+      SELECT
+        course_code,
+        COUNT(*) AS post_count,
+        COALESCE(SUM(bounty), 0) AS total_bounty_volume,
+        MAX(created_at) AS last_active
+      FROM Posts
+      WHERE course_code IS NOT NULL AND course_code != ''
+      GROUP BY course_code
+      ORDER BY post_count DESC
+    `);
 
     res.json({
-      target_type: target,
-      action,
-      calc_mode,
-      value: numVal,
-      total_users: users.length,
-      total_current_balance: Math.round(totalCurrentBalance * 100) / 100,
-      total_adjustment_amount: Math.round(totalAdjustmentAmount * 100) / 100,
-      preview: previewList
+      departments: deptRows,
+      courses: courseRows
     });
   } catch (error) {
-    console.error('Preview error:', error);
     res.status(500).json({ error: error.message });
-  }
-});
-
-// 9. Execute Batch Balance Adjustment
-router.post('/batch-adjust-balance', async (req, res) => {
-  const { target, user_ids, action, calc_mode, value, reason, admin_id, floor_zero = true } = req.body;
-  const numVal = parseFloat(value);
-
-  if (isNaN(numVal) || numVal <= 0) {
-    return res.status(400).json({ message: 'A positive numeric value is required.' });
-  }
-  if (!['credit', 'debit'].includes(action)) {
-    return res.status(400).json({ message: 'Action must be credit or debit.' });
-  }
-  if (!['fixed', 'percentage'].includes(calc_mode)) {
-    return res.status(400).json({ message: 'Calculation mode must be fixed or percentage.' });
-  }
-  if (!reason || !reason.trim()) {
-    return res.status(400).json({ message: 'An audit reason/memo is required for batch balance operations.' });
-  }
-
-  const conn = await db.getConnection();
-  try {
-    await conn.beginTransaction();
-
-    const { whereClause, params } = buildTargetFilter(target, user_ids);
-    const sql = `SELECT user_id, full_name, email, role, wallet_balance, is_admin FROM Users ${whereClause} FOR UPDATE`;
-    const [users] = await conn.query(sql, params);
-
-    if (users.length === 0) {
-      await conn.rollback();
-      return res.status(400).json({ message: 'No eligible users found for this target selection.' });
-    }
-
-    let affectedCount = 0;
-    let totalAdjusted = 0;
-
-    const opLabel = action === 'credit' ? 'CREDIT' : 'DEBIT';
-    const ruleDetail = calc_mode === 'percentage' ? `${numVal}% of balance` : `৳${numVal.toFixed(2)}`;
-
-    for (const u of users) {
-      const curBal = parseFloat(u.wallet_balance) || 0;
-      const adj = calc_mode === 'percentage'
-        ? Math.round((curBal * (numVal / 100)) * 100) / 100
-        : Math.round(numVal * 100) / 100;
-
-      let actualAdj = adj;
-      let newBal = curBal;
-
-      if (action === 'debit') {
-        if (floor_zero) {
-          actualAdj = Math.min(curBal, adj);
-          newBal = Math.max(0, Math.round((curBal - actualAdj) * 100) / 100);
-        } else {
-          newBal = Math.round((curBal - adj) * 100) / 100;
-        }
-      } else {
-        newBal = Math.round((curBal + adj) * 100) / 100;
-      }
-
-      if (actualAdj > 0 || calc_mode === 'fixed') {
-        await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBal, u.user_id]);
-
-        const desc = `Batch ${opLabel} (${ruleDetail}): ${reason.trim()} (Authorized by #${admin_id || 'System'})`;
-        await conn.query(
-          `INSERT INTO Transactions (user_id, type, amount, balance_after, description) VALUES (?, 'admin_adjustment', ?, ?, ?)`,
-          [u.user_id, actualAdj, newBal, desc]
-        );
-
-        affectedCount++;
-        totalAdjusted += actualAdj;
-      }
-    }
-
-    await conn.commit();
-    res.json({
-      message: `Successfully processed ${opLabel} on ${affectedCount} accounts. Total adjusted: ৳${totalAdjusted.toFixed(2)}.`,
-      affected_count: affectedCount,
-      total_adjusted: totalAdjusted
-    });
-  } catch (error) {
-    await conn.rollback();
-    console.error('Batch adjustment error:', error);
-    res.status(500).json({ error: error.message });
-  } finally {
-    conn.release();
   }
 });
 
