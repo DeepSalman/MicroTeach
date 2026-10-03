@@ -19,28 +19,26 @@ const DIRECTION_META = {
 };
 
 const MasterData = ({ user }) => {
-  // Navigation tabs — default to Global Transactions Ledger
-  const [activeTab, setActiveTab] = useState('ledger'); // 'ledger' | 'types' | 'reconciliation' | 'academic'
+  // Navigation tabs
+  const [activeTab, setActiveTab] = useState('types'); // 'types' | 'ledger' | 'reconciliation' | 'academic'
 
-  // Tab 1: Global Ledger (Transactions)
-  const [transactions, setTransactions] = useState([]);
-  const [loadingLedger, setLoadingLedger] = useState(false);
-  const [ledgerPage, setLedgerPage] = useState(1);
-  const [ledgerPageSize, setLedgerPageSize] = useState(25);
-  const [ledgerTotal, setLedgerTotal] = useState(0);
-  const [ledgerTypeFilter, setLedgerTypeFilter] = useState('all');
-  const [ledgerDirectionFilter, setLedgerDirectionFilter] = useState('all');
-  const [ledgerSearch, setLedgerSearch] = useState('');
-  const [ledgerSort, setLedgerSort] = useState('newest');
-  const [ledgerTelemetry, setLedgerTelemetry] = useState({});
-  const [expandedTxId, setExpandedTxId] = useState(null);
-
-  // Tab 2: Transaction Types Registry
+  // Tab 1: Transaction Types Registry
   const [types, setTypes] = useState([]);
   const [loadingTypes, setLoadingTypes] = useState(true);
   const [typeSearch, setTypeSearch] = useState('');
   const [typeCategoryFilter, setTypeCategoryFilter] = useState('all');
-  const [typesViewMode, setTypesViewMode] = useState('table'); // 'table' | 'cards'
+
+  // Tab 2: Global Ledger
+  const [transactions, setTransactions] = useState([]);
+  const [loadingLedger, setLoadingLedger] = useState(false);
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const [ledgerPageSize, setLedgerPageSize] = useState(15);
+  const [ledgerTotal, setLedgerTotal] = useState(0);
+  const [ledgerTypeFilter, setLedgerTypeFilter] = useState('all');
+  const [ledgerSearch, setLedgerSearch] = useState('');
+  const [ledgerSort, setLedgerSort] = useState('newest');
+  const [ledgerTelemetry, setLedgerTelemetry] = useState({});
+  const [expandedTxId, setExpandedTxId] = useState(null);
 
   // Tab 3: Reconciliation
   const [reconciliation, setReconciliation] = useState(null);
@@ -58,16 +56,14 @@ const MasterData = ({ user }) => {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    loadLedger();
     loadTypes();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'ledger') loadLedger();
-    if (activeTab === 'types') loadTypes();
     if (activeTab === 'reconciliation') loadReconciliation();
     if (activeTab === 'academic') loadAcademicCatalog();
-  }, [activeTab, ledgerPage, ledgerPageSize, ledgerTypeFilter, ledgerDirectionFilter, ledgerSort]);
+  }, [activeTab, ledgerPage, ledgerPageSize, ledgerTypeFilter, ledgerSort]);
 
   useEffect(() => {
     if (feedback) {
@@ -97,7 +93,6 @@ const MasterData = ({ user }) => {
         page: ledgerPage,
         limit: ledgerPageSize,
         type: ledgerTypeFilter,
-        direction: ledgerDirectionFilter,
         search: ledgerSearch,
         sortBy: ledgerSort
       };
@@ -384,21 +379,21 @@ const MasterData = ({ user }) => {
       {/* ── Navigation Tabs ── */}
       <div className="md-tab-nav">
         <button
-          className={`md-nav-btn ${activeTab === 'ledger' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ledger')}
-        >
-          <span className="md-tab-icon">📜</span>
-          All Transactions Ledger
-          <span className="md-tab-badge">{ledgerTotal || stats.totalTxCount}</span>
-        </button>
-
-        <button
           className={`md-nav-btn ${activeTab === 'types' ? 'active' : ''}`}
           onClick={() => setActiveTab('types')}
         >
           <span className="md-tab-icon">🗂️</span>
-          Transaction Types &amp; Policies
+          Transaction Types Registry
           <span className="md-tab-badge">{types.length}</span>
+        </button>
+
+        <button
+          className={`md-nav-btn ${activeTab === 'ledger' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ledger')}
+        >
+          <span className="md-tab-icon">📜</span>
+          Global Financial Journal
+          <span className="md-tab-badge">{ledgerTotal || stats.totalTxCount}</span>
         </button>
 
         <button
@@ -406,7 +401,7 @@ const MasterData = ({ user }) => {
           onClick={() => setActiveTab('reconciliation')}
         >
           <span className="md-tab-icon">⚖️</span>
-          Solvency &amp; Reconciliation
+          Ledger Solvency &amp; Reconciliation
         </button>
 
         <button
@@ -414,342 +409,12 @@ const MasterData = ({ user }) => {
           onClick={() => setActiveTab('academic')}
         >
           <span className="md-tab-icon">🏛️</span>
-          Academic Catalog
+          University Academic Catalog
         </button>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════
-          TAB 1: ALL TRANSACTIONS LEDGER (CLEAN ROW TYPE UI)
-         ══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'ledger' && (
-        <div className="md-tab-content">
-          {/* Ledger Filter Strip */}
-          <div className="md-filter-bar ledger">
-            <div className="md-search-box">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search user, email, student ID, ref #, or notes..."
-                value={ledgerSearch}
-                onChange={(e) => { setLedgerSearch(e.target.value); setLedgerPage(1); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') loadLedger(); }}
-              />
-              {ledgerSearch && (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => { setLedgerSearch(''); setTimeout(loadLedger, 50); }}
-                >
-                  &times;
-                </button>
-              )}
-            </div>
-
-            <div className="md-select-wrap">
-              <label>Type:</label>
-              <select
-                value={ledgerTypeFilter}
-                onChange={(e) => { setLedgerTypeFilter(e.target.value); setLedgerPage(1); }}
-              >
-                <option value="all">All Types</option>
-                {types.map(t => (
-                  <option key={t.type_code} value={t.type_code}>{t.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="md-select-wrap">
-              <label>Flow:</label>
-              <select
-                value={ledgerDirectionFilter}
-                onChange={(e) => { setLedgerDirectionFilter(e.target.value); setLedgerPage(1); }}
-              >
-                <option value="all">All Flows</option>
-                <option value="credit">Credits (+ Inflows)</option>
-                <option value="debit">Debits (- Outflows)</option>
-                <option value="escrow_hold">Escrow Holds (🔒)</option>
-              </select>
-            </div>
-
-            <div className="md-select-wrap">
-              <label>Sort:</label>
-              <select
-                value={ledgerSort}
-                onChange={(e) => { setLedgerSort(e.target.value); setLedgerPage(1); }}
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="amount_desc">Highest Amount</option>
-                <option value="amount_asc">Lowest Amount</option>
-              </select>
-            </div>
-
-            <div className="md-select-wrap">
-              <label>Show:</label>
-              <select
-                value={ledgerPageSize}
-                onChange={(e) => { setLedgerPageSize(Number(e.target.value)); setLedgerPage(1); }}
-              >
-                <option value="15">15 / page</option>
-                <option value="25">25 / page</option>
-                <option value="50">50 / page</option>
-                <option value="100">100 / page</option>
-              </select>
-            </div>
-
-            <button className="md-btn-refresh" onClick={loadLedger} disabled={loadingLedger}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className={loadingLedger ? 'md-spin' : ''}>
-                <polyline points="23 4 23 10 17 10"></polyline>
-                <polyline points="1 20 1 14 7 14"></polyline>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-              </svg>
-              {loadingLedger ? 'Querying...' : 'Refresh'}
-            </button>
-          </div>
-
-          {/* Clean Row-Type Ledger Table */}
-          <div className="md-table-wrap">
-            <table className="md-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '90px' }}>TX ID</th>
-                  <th style={{ width: '130px' }}>TIMESTAMP</th>
-                  <th>ACCOUNT USER</th>
-                  <th>FLOW &amp; TYPE</th>
-                  <th style={{ width: '95px' }}>REFERENCE</th>
-                  <th style={{ width: '120px', textAlign: 'right' }}>AMOUNT</th>
-                  <th style={{ width: '120px', textAlign: 'right' }}>BALANCE AFTER</th>
-                  <th>AUDIT MEMO</th>
-                  <th style={{ width: '60px', textAlign: 'center' }}>DETAILS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loadingLedger ? (
-                  <tr>
-                    <td colSpan="9" className="md-empty-td">
-                      <div className="md-table-loader">
-                        <span className="md-spin-dot"></span>
-                        Loading global transactions from ledger database...
-                      </div>
-                    </td>
-                  </tr>
-                ) : transactions.length === 0 ? (
-                  <tr>
-                    <td colSpan="9" className="md-empty-td">
-                      No transaction records found matching your filters.
-                    </td>
-                  </tr>
-                ) : (
-                  transactions.map(t => {
-                    const dirMeta = DIRECTION_META[t.direction] || DIRECTION_META.neutral;
-                    const amt = parseFloat(t.amount || 0);
-                    const bal = parseFloat(t.balance_after || 0);
-                    const isCredit = t.direction === 'credit';
-                    const isDebit = t.direction === 'debit';
-                    const isExpanded = expandedTxId === t.transaction_id;
-
-                    return (
-                      <React.Fragment key={t.transaction_id}>
-                        <tr
-                          className={`md-row ${isExpanded ? 'expanded' : ''}`}
-                          onClick={() => setExpandedTxId(isExpanded ? null : t.transaction_id)}
-                        >
-                          <td className="md-td-id">
-                            <span className="md-id-badge">#TX-{String(t.transaction_id).padStart(4, '0')}</span>
-                          </td>
-                          <td className="md-td-date">
-                            <div className="md-date-stack">
-                              <span className="md-date-main">
-                                {new Date(t.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                              </span>
-                              <span className="md-date-time">
-                                {new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="md-td-user">
-                            <div className="md-user-cell">
-                              <div className="md-user-avatar">
-                                {t.full_name ? t.full_name.charAt(0).toUpperCase() : 'U'}
-                              </div>
-                              <div className="md-user-meta">
-                                <span className="md-user-name" title={t.full_name}>{t.full_name}</span>
-                                <div className="md-user-sub">
-                                  {t.student_id ? (
-                                    <span className="md-id-pill">#{t.student_id}</span>
-                                  ) : (
-                                    <span className="md-email-pill">{t.email}</span>
-                                  )}
-                                  {t.department && <span className="md-dept-pill">{t.department}</span>}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="md-td-type">
-                            <span className={`md-dir-pill ${dirMeta.class}`}>
-                              <span className="md-dir-icon">{dirMeta.icon}</span>
-                              <span className="md-dir-text">{t.type_name || t.type}</span>
-                            </span>
-                          </td>
-                          <td className="md-td-ref">
-                            {t.reference_id ? (
-                              <span className="md-ref-badge" title={`Post Reference #${t.reference_id}`}>
-                                Post #{t.reference_id}
-                              </span>
-                            ) : (
-                              <span className="md-ref-general">General</span>
-                            )}
-                          </td>
-                          <td className="md-td-amount">
-                            <span className={`md-amt ${isCredit ? 'credit' : isDebit ? 'debit' : 'neutral'}`}>
-                              {isCredit ? '+' : isDebit ? '-' : ''}৳{amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </td>
-                          <td className="md-td-bal">
-                            <span className="md-bal-val">৳{bal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                          </td>
-                          <td className="md-td-desc">
-                            <span className="md-desc-text" title={t.description || 'No description recorded'}>
-                              {t.description || '—'}
-                            </span>
-                          </td>
-                          <td className="md-td-actions" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              className={`md-expand-btn ${isExpanded ? 'active' : ''}`}
-                              onClick={() => setExpandedTxId(isExpanded ? null : t.transaction_id)}
-                              title={isExpanded ? 'Collapse transaction details' : 'Inspect transaction details'}
-                              aria-label="Inspect transaction"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points={isExpanded ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}></polyline>
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-
-                        {isExpanded && (
-                          <tr className="md-drawer-row">
-                            <td colSpan="9" className="md-drawer-td">
-                              <div className="md-ledger-drawer">
-                                <div className="md-ld-col">
-                                  <div className="md-ld-col-header">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                                    <h4>Transaction Metadata</h4>
-                                  </div>
-                                  <div className="md-ld-grid">
-                                    <div><label>Journal ID:</label> <code>#TX-{String(t.transaction_id).padStart(4, '0')}</code></div>
-                                    <div><label>Rule Code:</label> <code>{t.type}</code></div>
-                                    <div><label>Accounting Category:</label> <span>{t.category}</span></div>
-                                    <div><label>Flow Direction:</label> <strong className={dirMeta.class}>{dirMeta.label}</strong></div>
-                                    <div><label>Timestamp:</label> <span>{new Date(t.created_at).toLocaleString()}</span></div>
-                                    <div><label>Reference Entity:</label> <span>{t.reference_id ? `Post #${t.reference_id}` : 'Platform Direct / Wallet'}</span></div>
-                                  </div>
-                                </div>
-
-                                <div className="md-ld-col">
-                                  <div className="md-ld-col-header">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                    <h4>Account Participant</h4>
-                                  </div>
-                                  <div className="md-ld-grid">
-                                    <div><label>Full Name:</label> <strong>{t.full_name}</strong></div>
-                                    <div><label>Campus Email:</label> <span>{t.email}</span></div>
-                                    <div><label>Student ID:</label> <span>{t.student_id ? `#${t.student_id}` : 'N/A'}</span></div>
-                                    <div><label>Academic Unit:</label> <span>{t.department || t.role || 'N/A'}</span></div>
-                                    <div><label>Current Wallet Balance:</label> <strong className="text-balance">৳{parseFloat(t.current_user_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></div>
-                                  </div>
-                                  <button
-                                    className="md-action-chat-btn"
-                                    onClick={() => setChatUser({ user_id: t.user_id, full_name: t.full_name })}
-                                  >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                                    Message User in Admin Chat
-                                  </button>
-                                </div>
-
-                                <div className="md-ld-col">
-                                  <div className="md-ld-col-header">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                    <h4>Audit &amp; Balance Impact</h4>
-                                  </div>
-                                  <div className="md-ld-desc-box">
-                                    <span className="md-ld-desc-label">Audit Memo:</span>
-                                    <p>{t.description || 'No description memo provided for this journal entry.'}</p>
-                                  </div>
-                                  <div className="md-bal-impact">
-                                    <span>Balance After Transaction:</span>
-                                    <strong>৳{bal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                                  </div>
-                                  <button
-                                    className="md-adjust-btn"
-                                    onClick={() => setAdjustModal({ user_id: t.user_id, name: t.full_name, balance: t.current_user_balance, amount: '', direction: 'credit', reason: '' })}
-                                  >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    Adjust Balance (Admin Override)
-                                  </button>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Clean Pagination Bar */}
-          <div className="md-pagination">
-            <div className="md-page-info">
-              Showing <strong>{transactions.length === 0 ? 0 : (ledgerPage - 1) * ledgerPageSize + 1}</strong>–
-              <strong>{Math.min(ledgerPage * ledgerPageSize, ledgerTotal)}</strong> of{' '}
-              <strong>{ledgerTotal}</strong> records
-            </div>
-
-            <div className="md-page-btns">
-              <button
-                className="md-page-btn"
-                disabled={ledgerPage <= 1}
-                onClick={() => setLedgerPage(1)}
-                title="First Page"
-              >
-                &laquo;
-              </button>
-              <button
-                className="md-page-btn"
-                disabled={ledgerPage <= 1}
-                onClick={() => setLedgerPage(prev => Math.max(prev - 1, 1))}
-              >
-                &larr; Prev
-              </button>
-              <span className="md-page-current">Page {ledgerPage} of {Math.max(1, Math.ceil(ledgerTotal / ledgerPageSize))}</span>
-              <button
-                className="md-page-btn"
-                disabled={ledgerPage * ledgerPageSize >= ledgerTotal}
-                onClick={() => setLedgerPage(prev => prev + 1)}
-              >
-                Next &rarr;
-              </button>
-              <button
-                className="md-page-btn"
-                disabled={ledgerPage * ledgerPageSize >= ledgerTotal}
-                onClick={() => setLedgerPage(Math.ceil(ledgerTotal / ledgerPageSize))}
-                title="Last Page"
-              >
-                &raquo;
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════
-          TAB 2: TRANSACTION TYPES & POLICIES REGISTRY
+          TAB 1: TRANSACTION TYPES REGISTRY
          ══════════════════════════════════════════════════════════════ */}
       {activeTab === 'types' && (
         <div className="md-tab-content">
@@ -782,114 +447,16 @@ const MasterData = ({ user }) => {
               </select>
             </div>
 
-            {/* View Mode Switcher */}
-            <div className="md-view-toggle">
-              <button
-                className={`md-view-btn ${typesViewMode === 'table' ? 'active' : ''}`}
-                onClick={() => setTypesViewMode('table')}
-                title="Table Row View"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                Rows
-              </button>
-              <button
-                className={`md-view-btn ${typesViewMode === 'cards' ? 'active' : ''}`}
-                onClick={() => setTypesViewMode('cards')}
-                title="Cards Grid View"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                Cards
-              </button>
-            </div>
-
             <span className="md-type-count-text">
-              Showing {filteredTypes.length} of {types.length} Master Rules
+              Showing {filteredTypes.length} of {types.length} Master Types
             </span>
           </div>
 
-          {/* Types Content: Clean Row Table vs Cards */}
+          {/* Cards Grid */}
           {loadingTypes ? (
             <div className="md-loading-box">Loading master transaction types...</div>
           ) : filteredTypes.length === 0 ? (
             <div className="md-empty-box">No transaction types matching your query.</div>
-          ) : typesViewMode === 'table' ? (
-            <div className="md-table-wrap">
-              <table className="md-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '130px' }}>TYPE CODE</th>
-                    <th>RULE NAME &amp; CATEGORY</th>
-                    <th>FLOW DIRECTION</th>
-                    <th>ACCOUNTING TREATMENT</th>
-                    <th>TRIGGER METHOD</th>
-                    <th style={{ textAlign: 'right' }}>PERMITTED BOUNDS</th>
-                    <th style={{ textAlign: 'right' }}>USAGE COUNT</th>
-                    <th style={{ textAlign: 'right' }}>RECORDED VOLUME</th>
-                    <th style={{ textAlign: 'center', width: '70px' }}>ACTIVE</th>
-                    <th style={{ textAlign: 'right', width: '90px' }}>ACTION</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTypes.map(t => {
-                    const dirMeta = DIRECTION_META[t.direction] || DIRECTION_META.neutral;
-                    const volume = parseFloat(t.total_volume || 0);
-                    const count = parseInt(t.tx_count || 0, 10);
-
-                    return (
-                      <tr key={t.type_code} className={`md-row ${!t.is_active ? 'inactive-row' : ''}`}>
-                        <td className="md-td-id">
-                          <code className="md-type-code">{t.type_code}</code>
-                        </td>
-                        <td>
-                          <div className="md-user-info">
-                            <span className="md-user-name">{t.name}</span>
-                            <span className="md-category-tag">{t.category}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`md-dir-pill ${dirMeta.class}`}>
-                            {dirMeta.icon} {dirMeta.label}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="md-treatment-text">{t.accounting_treatment}</span>
-                        </td>
-                        <td>
-                          <span className="md-trigger-text">{t.trigger_method}</span>
-                        </td>
-                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono, monospace)', fontSize: '11px' }}>
-                          ৳{parseFloat(t.min_amount).toFixed(0)} – ৳{parseFloat(t.max_amount).toFixed(0)}
-                        </td>
-                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono, monospace)', fontWeight: 600 }}>
-                          {count}
-                        </td>
-                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, color: 'var(--color-ink)' }}>
-                          ৳{volume.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                        <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                          <label className="md-switch" title={t.is_active ? 'Active on platform' : 'Deactivated'}>
-                            <input
-                              type="checkbox"
-                              checked={Boolean(t.is_active)}
-                              onChange={() => handleToggleType(t.type_code)}
-                            />
-                            <span className="md-slider"></span>
-                          </label>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button
-                            className="md-edit-btn"
-                            onClick={() => setEditTypeModal(t)}
-                          >
-                            Edit &rarr;
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
           ) : (
             <div className="md-types-grid">
               {filteredTypes.map(t => {
@@ -984,6 +551,242 @@ const MasterData = ({ user }) => {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          TAB 2: GLOBAL TRANSACTION JOURNAL
+         ══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'ledger' && (
+        <div className="md-tab-content">
+          {/* Ledger Filter Strip */}
+          <div className="md-filter-bar ledger">
+            <div className="md-search-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search user, email, student ID, post #ref, or description..."
+                value={ledgerSearch}
+                onChange={(e) => { setLedgerSearch(e.target.value); setLedgerPage(1); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') loadLedger(); }}
+              />
+              {ledgerSearch && <button onClick={() => { setLedgerSearch(''); setTimeout(loadLedger, 50); }}>&times;</button>}
+            </div>
+
+            <div className="md-select-wrap">
+              <label>Type:</label>
+              <select
+                value={ledgerTypeFilter}
+                onChange={(e) => { setLedgerTypeFilter(e.target.value); setLedgerPage(1); }}
+              >
+                <option value="all">All Transaction Types</option>
+                {types.map(t => (
+                  <option key={t.type_code} value={t.type_code}>{t.name} ({t.type_code})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md-select-wrap">
+              <label>Sort:</label>
+              <select
+                value={ledgerSort}
+                onChange={(e) => { setLedgerSort(e.target.value); setLedgerPage(1); }}
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="amount_desc">Highest Amount</option>
+                <option value="amount_asc">Lowest Amount</option>
+              </select>
+            </div>
+
+            <button className="md-btn-refresh" onClick={loadLedger} disabled={loadingLedger}>
+              {loadingLedger ? 'Querying...' : 'Filter Ledger'}
+            </button>
+          </div>
+
+          {/* Ledger Table */}
+          <div className="md-table-wrap">
+            <table className="md-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '80px' }}>ID</th>
+                  <th style={{ width: '130px' }}>Date</th>
+                  <th>Account User</th>
+                  <th>Transaction Type</th>
+                  <th style={{ width: '90px' }}>Reference</th>
+                  <th style={{ width: '110px', textAlign: 'right' }}>Amount</th>
+                  <th style={{ width: '110px', textAlign: 'right' }}>Balance After</th>
+                  <th>Audit Description</th>
+                  <th style={{ width: '60px', textAlign: 'center' }}>Inspect</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loadingLedger ? (
+                  <tr>
+                    <td colSpan="9" className="md-empty-td">Loading ledger records from database...</td>
+                  </tr>
+                ) : transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="md-empty-td">No transactions found matching criteria.</td>
+                  </tr>
+                ) : (
+                  transactions.map(t => {
+                    const dirMeta = DIRECTION_META[t.direction] || DIRECTION_META.neutral;
+                    const amt = parseFloat(t.amount || 0);
+                    const bal = parseFloat(t.balance_after || 0);
+                    const isCredit = t.direction === 'credit';
+                    const isDebit = t.direction === 'debit';
+                    const isExpanded = expandedTxId === t.transaction_id;
+
+                    return (
+                      <React.Fragment key={t.transaction_id}>
+                        <tr
+                          className={`md-row ${isExpanded ? 'expanded' : ''}`}
+                          onClick={() => setExpandedTxId(isExpanded ? null : t.transaction_id)}
+                        >
+                          <td className="md-td-id">#TX-{String(t.transaction_id).padStart(4, '0')}</td>
+                          <td className="md-td-date">
+                            <span className="md-date-main">
+                              {new Date(t.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            </span>
+                            <span className="md-date-time">
+                              {new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </td>
+                          <td className="md-td-user">
+                            <div className="md-user-info">
+                              <span className="md-user-name">{t.full_name}</span>
+                              <div className="md-user-sub">
+                                {t.student_id && <span className="md-id-pill">#{t.student_id}</span>}
+                                <span className="md-dept-pill">{t.department || t.role}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="md-td-type">
+                            <span className={`md-dir-pill ${dirMeta.class}`}>
+                              {dirMeta.icon} {t.type_name || t.type}
+                            </span>
+                          </td>
+                          <td className="md-td-ref">
+                            {t.reference_id ? (
+                              <span className="md-ref-badge" title={`Post #${t.reference_id}`}>
+                                Post #{t.reference_id}
+                              </span>
+                            ) : (
+                              <span className="md-muted">—</span>
+                            )}
+                          </td>
+                          <td className="md-td-amount">
+                            <span className={`md-amt ${isCredit ? 'credit' : isDebit ? 'debit' : 'neutral'}`}>
+                              {isCredit ? '+' : isDebit ? '-' : ''}৳{amt.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="md-td-bal">
+                            <span className="md-bal-val">৳{bal.toFixed(2)}</span>
+                          </td>
+                          <td className="md-td-desc">
+                            <span className="md-desc-text" title={t.description}>{t.description}</span>
+                          </td>
+                          <td className="md-td-actions" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="md-chevron-btn"
+                              onClick={() => setExpandedTxId(isExpanded ? null : t.transaction_id)}
+                            >
+                              {isExpanded ? '▲' : '▼'}
+                            </button>
+                          </td>
+                        </tr>
+
+                        {isExpanded && (
+                          <tr className="md-drawer-row">
+                            <td colSpan="9" className="md-drawer-td">
+                              <div className="md-ledger-drawer">
+                                <div className="md-ld-col">
+                                  <h4>Transaction Metadata</h4>
+                                  <div className="md-ld-grid">
+                                    <div><label>Entry Identifier:</label> <code>#{t.transaction_id}</code></div>
+                                    <div><label>System Code:</label> <code>{t.type}</code></div>
+                                    <div><label>Direction / Flow:</label> <strong>{dirMeta.label}</strong></div>
+                                    <div><label>Accounting Category:</label> <span>{t.category}</span></div>
+                                    <div><label>Timestamp:</label> <span>{new Date(t.created_at).toLocaleString()}</span></div>
+                                    <div><label>Reference Entity:</label> <span>{t.reference_id ? `Post #${t.reference_id}` : 'General / Wallet'}</span></div>
+                                  </div>
+                                </div>
+
+                                <div className="md-ld-col">
+                                  <h4>Account Participant</h4>
+                                  <div className="md-ld-grid">
+                                    <div><label>User Name:</label> <strong>{t.full_name}</strong></div>
+                                    <div><label>Campus Email:</label> <span>{t.email}</span></div>
+                                    <div><label>Campus Student ID:</label> <span>#{t.student_id || 'N/A'}</span></div>
+                                    <div><label>Academic Unit:</label> <span>{t.department || 'N/A'}</span></div>
+                                    <div><label>Current Wallet Balance:</label> <strong className="text-success">৳{parseFloat(t.current_user_balance || 0).toFixed(2)}</strong></div>
+                                  </div>
+                                  <button
+                                    className="md-action-chat-btn"
+                                    onClick={() => setChatUser({ user_id: t.user_id, full_name: t.full_name })}
+                                  >
+                                    💬 Message User in Admin Chat
+                                  </button>
+                                </div>
+
+                                <div className="md-ld-col">
+                                  <h4>Audit Log &amp; Balance Impact</h4>
+                                  <div className="md-ld-desc-box">
+                                    <p>{t.description}</p>
+                                  </div>
+                                  <div className="md-bal-impact">
+                                    <span>Balance After Transaction:</span>
+                                    <strong>৳{bal.toFixed(2)}</strong>
+                                  </div>
+                                  <button
+                                    className="md-adjust-btn"
+                                    onClick={() => setAdjustModal({ user_id: t.user_id, name: t.full_name, balance: t.current_user_balance, amount: '', direction: 'credit', reason: '' })}
+                                  >
+                                    ⚖️ Adjust Balance (Admin Override)
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="md-pagination">
+            <div className="md-page-info">
+              Showing <strong>{transactions.length === 0 ? 0 : (ledgerPage - 1) * ledgerPageSize + 1}</strong>–
+              <strong>{Math.min(ledgerPage * ledgerPageSize, ledgerTotal)}</strong> of{' '}
+              <strong>{ledgerTotal}</strong> records
+            </div>
+
+            <div className="md-page-btns">
+              <button
+                className="md-page-btn"
+                disabled={ledgerPage <= 1}
+                onClick={() => setLedgerPage(prev => Math.max(prev - 1, 1))}
+              >
+                &larr; Prev
+              </button>
+              <span className="md-page-current">Page {ledgerPage}</span>
+              <button
+                className="md-page-btn"
+                disabled={ledgerPage * ledgerPageSize >= ledgerTotal}
+                onClick={() => setLedgerPage(prev => prev + 1)}
+              >
+                Next &rarr;
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

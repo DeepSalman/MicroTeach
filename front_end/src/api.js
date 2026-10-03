@@ -23,6 +23,7 @@ export const createSession = (sessionData) => API.post("/sessions", sessionData)
 export const fetchPosts = () => API.get("/posts");
 export const createPost = (postData) => API.post("/posts", postData);
 export const updatePostStatus = (postId, status) => API.patch(`/posts/${postId}/status`, { status });
+export const deletePost = (postId) => API.delete(`/posts/${postId}`);
 
 export const fetchTeacherApplications = () => API.get("/teacher-applications");
 export const fetchUserApplications = (userId) => API.get(`/teacher-applications/user/${userId}`);

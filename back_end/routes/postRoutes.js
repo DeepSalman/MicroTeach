@@ -229,4 +229,62 @@ router.post('/:postId/close', async (req, res) => {
   }
 });
 
+// 6. Delete / Remove post (Admin Content Moderation)
+router.delete('/:postId', async (req, res) => {
+  const { postId } = req.params;
+
+  try {
+    const [posts] = await db.query('SELECT * FROM Posts WHERE post_id = ?', [postId]);
+    if (posts.length === 0) {
+      return res.status(404).json({ message: 'Post not found.' });
+    }
+
+    const post = posts[0];
+    const bounty = parseFloat(post.bounty) || 0;
+    const authorId = post.user_id;
+
+    // Check if any application is completed
+    const [apps] = await db.query(
+      'SELECT status FROM Post_Applications WHERE post_id = ?',
+      [postId]
+    );
+    const hasCompleted = apps.some(a => a.status === 'completed');
+
+    // Refund escrow bounty if not completed and not already refunded
+    if (bounty > 0 && !hasCompleted && post.status !== 'closed') {
+      const [existingRefund] = await db.query(
+        "SELECT transaction_id FROM Transactions WHERE user_id = ? AND reference_id = ? AND type = 'refund'",
+        [authorId, postId]
+      );
+      if (existingRefund.length === 0) {
+        const [heldTx] = await db.query(
+          "SELECT transaction_id FROM Transactions WHERE user_id = ? AND type = 'bounty_held' AND (reference_id = ? OR (reference_id IS NULL AND amount = ?)) LIMIT 1",
+          [authorId, postId, bounty]
+        );
+        if (heldTx.length > 0) {
+          const [userRows] = await db.query('SELECT wallet_balance FROM Users WHERE user_id = ?', [authorId]);
+          if (userRows.length > 0) {
+            const currentBalance = parseFloat(userRows[0].wallet_balance) || 0;
+            const newBalance = currentBalance + bounty;
+            await db.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBalance, authorId]);
+            await db.query(
+              'INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description) VALUES (?, ?, ?, ?, ?, ?)',
+              [authorId, 'refund', bounty, newBalance, postId, `Refunded ৳${bounty} bounty for removed post #${postId}`]
+            );
+          }
+        }
+      }
+    }
+
+    // Delete post (cascades cleanly to applications, reports, reviews, disputes)
+    await db.query('DELETE FROM Posts WHERE post_id = ?', [postId]);
+
+    res.json({ message: 'Post removed successfully.' });
+  } catch (error) {
+    console.error('Failed to remove post:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
+
