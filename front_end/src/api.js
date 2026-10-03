@@ -85,4 +85,6 @@ export const toggleTransactionType = (typeCode) => API.patch(`/master-data/trans
 export const fetchMasterTransactions = (params) => API.get("/master-data/transactions", { params });
 export const fetchLedgerReconciliation = () => API.get("/master-data/reconciliation");
 export const adjustUserBalance = (data) => API.post("/master-data/adjust-balance", data);
-export const fetchAcademicCatalog = () => API.get("/master-data/academic-catalog");
+export const previewBatchAdjustment = (data) => API.post("/master-data/preview-batch-adjustment", data);
+export const executeBatchAdjustment = (data) => API.post("/master-data/batch-adjust-balance", data);
+

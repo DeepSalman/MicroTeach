@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  fetchMasterTransactionTypes,
-  createOrUpdateTransactionType,
-  toggleTransactionType,
   fetchMasterTransactions,
+  adjustUserBalance,
+  previewBatchAdjustment,
+  executeBatchAdjustment,
   fetchLedgerReconciliation,
-  adjustUserBalance
+  fetchUsers
 } from './api';
 import ChatModal from './ChatModal';
 import './MasterData.css';
@@ -18,10 +18,10 @@ const DIRECTION_META = {
 };
 
 const MasterData = ({ user }) => {
-  // Navigation tabs: 'ledger' | 'types' | 'reconciliation'
+  // Navigation tabs: 'ledger' | 'batch_adjust' | 'reconciliation'
   const [activeTab, setActiveTab] = useState('ledger');
 
-  // Tab 1: Global Ledger
+  // ── Tab 1: Global Ledger ──
   const [transactions, setTransactions] = useState([]);
   const [loadingLedger, setLoadingLedger] = useState(false);
   const [ledgerPage, setLedgerPage] = useState(1);
@@ -30,38 +30,57 @@ const MasterData = ({ user }) => {
   const [ledgerTypeFilter, setLedgerTypeFilter] = useState('all');
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [ledgerSort, setLedgerSort] = useState('newest');
-  const [ledgerTelemetry, setLedgerTelemetry] = useState({});
   const [expandedTxId, setExpandedTxId] = useState(null);
 
-  // Tab 2: Transaction Types Registry
-  const [types, setTypes] = useState([]);
-  const [loadingTypes, setLoadingTypes] = useState(true);
-  const [typeSearch, setTypeSearch] = useState('');
-  const [typeCategoryFilter, setTypeCategoryFilter] = useState('all');
-  const [expandedTypeId, setExpandedTypeId] = useState(null);
+  // ── Tab 2: Batch / Targeted Balance Tool ──
+  const [allUsersList, setAllUsersList] = useState([]);
+  const [batchAction, setBatchAction] = useState('debit'); // 'debit' | 'credit'
+  const [batchTarget, setBatchTarget] = useState('student'); // 'student' | 'tutor' | 'both' | 'all_users' | 'admin' | 'specific'
+  const [batchCalcMode, setBatchCalcMode] = useState('percentage'); // 'fixed' | 'percentage'
+  const [batchValue, setBatchValue] = useState(5); // e.g. 5% or ৳50
+  const [batchReason, setBatchReason] = useState('');
+  const [batchFloorZero, setBatchFloorZero] = useState(true);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
 
-  // Tab 3: Solvency Reconciliation
+  // Preview state
+  const [previewData, setPreviewData] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [confirmBatchModal, setConfirmBatchModal] = useState(false);
+  const [executingBatch, setExecutingBatch] = useState(false);
+
+  // ── Tab 3: Solvency Reconciliation ──
   const [reconciliation, setReconciliation] = useState(null);
   const [loadingReconciliation, setLoadingReconciliation] = useState(false);
   const [reconSearch, setReconSearch] = useState('');
   const [reconFilter, setReconFilter] = useState('all'); // 'all' | 'discrepancy' | 'balanced'
 
   // Modals & Action States
-  const [editTypeModal, setEditTypeModal] = useState(null);
-  const [adjustModal, setAdjustModal] = useState(null);
+  const [adjustModal, setAdjustModal] = useState(null); // single user adjust
   const [chatUser, setChatUser] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    loadTypes();
+    loadLedger();
+    loadUsers();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'ledger') loadLedger();
     if (activeTab === 'reconciliation') loadReconciliation();
-    if (activeTab === 'types') loadTypes();
+    if (activeTab === 'batch_adjust') loadBatchPreview();
   }, [activeTab, ledgerPage, ledgerPageSize, ledgerTypeFilter, ledgerSort]);
+
+  // Re-run batch preview when configuration changes
+  useEffect(() => {
+    if (activeTab === 'batch_adjust') {
+      const timer = setTimeout(() => {
+        loadBatchPreview();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [batchAction, batchTarget, batchCalcMode, batchValue, batchFloorZero, selectedUserIds]);
 
   useEffect(() => {
     if (feedback) {
@@ -71,16 +90,12 @@ const MasterData = ({ user }) => {
   }, [feedback]);
 
   // Loaders
-  const loadTypes = async () => {
-    setLoadingTypes(true);
+  const loadUsers = async () => {
     try {
-      const res = await fetchMasterTransactionTypes();
-      setTypes(res.data || []);
+      const res = await fetchUsers();
+      setAllUsersList(res.data || []);
     } catch (err) {
-      console.error('Failed to load transaction types:', err);
-      setFeedback({ type: 'error', message: 'Failed to fetch transaction rules.' });
-    } finally {
-      setLoadingTypes(false);
+      console.error('Failed to load user list:', err);
     }
   };
 
@@ -97,7 +112,6 @@ const MasterData = ({ user }) => {
       const res = await fetchMasterTransactions(params);
       setTransactions(res.data.transactions || []);
       setLedgerTotal(res.data.pagination?.total || 0);
-      setLedgerTelemetry(res.data.telemetry || {});
     } catch (err) {
       console.error('Failed to load ledger:', err);
       setFeedback({ type: 'error', message: 'Failed to fetch transaction ledger.' });
@@ -119,38 +133,72 @@ const MasterData = ({ user }) => {
     }
   };
 
-  // Toggle Type Active
-  const handleToggleType = async (typeCode) => {
+  // Preview Batch Adjustment
+  const loadBatchPreview = async () => {
+    if (!batchValue || parseFloat(batchValue) <= 0) {
+      setPreviewData(null);
+      return;
+    }
+    if (batchTarget === 'specific' && selectedUserIds.length === 0) {
+      setPreviewData(null);
+      return;
+    }
+
+    setLoadingPreview(true);
     try {
-      const res = await toggleTransactionType(typeCode);
-      setTypes(prev =>
-        prev.map(t => (t.type_code === typeCode ? { ...t, is_active: res.data.is_active } : t))
-      );
-      setFeedback({ type: 'success', message: res.data.message });
+      const payload = {
+        target: batchTarget,
+        user_ids: selectedUserIds,
+        action: batchAction,
+        calc_mode: batchCalcMode,
+        value: parseFloat(batchValue),
+        floor_zero: batchFloorZero
+      };
+      const res = await previewBatchAdjustment(payload);
+      setPreviewData(res.data);
     } catch (err) {
-      setFeedback({ type: 'error', message: 'Failed to update transaction rule status.' });
+      console.error('Failed to load batch preview:', err);
+      setPreviewData(null);
+    } finally {
+      setLoadingPreview(false);
     }
   };
 
-  // Save Transaction Type (Create or Edit)
-  const handleSaveType = async (e) => {
-    e.preventDefault();
-    setActionLoading(true);
+  // Execute Batch Adjustment
+  const handleExecuteBatch = async () => {
+    if (!batchReason.trim()) {
+      setFeedback({ type: 'error', message: 'Please enter a justification memo for this batch operation.' });
+      return;
+    }
+
+    setExecutingBatch(true);
     try {
-      await createOrUpdateTransactionType(editTypeModal);
-      setFeedback({ type: 'success', message: `Transaction rule '${editTypeModal.type_code}' saved.` });
-      setEditTypeModal(null);
-      loadTypes();
+      const payload = {
+        target: batchTarget,
+        user_ids: selectedUserIds,
+        action: batchAction,
+        calc_mode: batchCalcMode,
+        value: parseFloat(batchValue),
+        reason: batchReason.trim(),
+        admin_id: user?.user_id,
+        floor_zero: batchFloorZero
+      };
+      const res = await executeBatchAdjustment(payload);
+      setFeedback({ type: 'success', message: res.data.message });
+      setConfirmBatchModal(false);
+      setBatchReason('');
+      loadBatchPreview();
+      loadLedger();
     } catch (err) {
       const raw = err.response?.data?.message || err.response?.data?.error || err.message;
-      setFeedback({ type: 'error', message: typeof raw === 'string' ? raw : 'Failed to save rule.' });
+      setFeedback({ type: 'error', message: typeof raw === 'string' ? raw : 'Failed to execute batch adjustment.' });
     } finally {
-      setActionLoading(false);
+      setExecutingBatch(false);
     }
   };
 
-  // Execute Balance Adjustment
-  const handleExecuteAdjustment = async (e) => {
+  // Single User Balance Adjustment
+  const handleExecuteSingleAdjustment = async (e) => {
     e.preventDefault();
     setActionLoading(true);
     try {
@@ -162,6 +210,7 @@ const MasterData = ({ user }) => {
       setAdjustModal(null);
       if (activeTab === 'reconciliation') loadReconciliation();
       if (activeTab === 'ledger') loadLedger();
+      if (activeTab === 'batch_adjust') loadBatchPreview();
     } catch (err) {
       const raw = err.response?.data?.message || err.response?.data?.error || err.message;
       setFeedback({ type: 'error', message: typeof raw === 'string' ? raw : 'Failed to adjust balance.' });
@@ -223,26 +272,6 @@ const MasterData = ({ user }) => {
     URL.revokeObjectURL(url);
   };
 
-  // Filtered Types
-  const filteredTypes = useMemo(() => {
-    return types.filter(t => {
-      if (typeCategoryFilter !== 'all' && t.category !== typeCategoryFilter) return false;
-      if (typeSearch.trim()) {
-        const q = typeSearch.toLowerCase().trim();
-        const matchCode = (t.type_code || '').toLowerCase().includes(q);
-        const matchName = (t.name || '').toLowerCase().includes(q);
-        const matchDesc = (t.description || '').toLowerCase().includes(q);
-        if (!matchCode && !matchName && !matchDesc) return false;
-      }
-      return true;
-    });
-  }, [types, typeCategoryFilter, typeSearch]);
-
-  const uniqueCategories = useMemo(() => {
-    const cats = new Set(types.map(t => t.category).filter(Boolean));
-    return Array.from(cats);
-  }, [types]);
-
   // Filtered Reconciliation Rows
   const filteredAudits = useMemo(() => {
     if (!reconciliation?.userAudits) return [];
@@ -265,14 +294,31 @@ const MasterData = ({ user }) => {
     return reconciliation.userAudits.filter(u => u.discrepancy).length;
   }, [reconciliation]);
 
+  // Filtered User Picker for specific target
+  const filteredUsersPicker = useMemo(() => {
+    if (!userSearchQuery.trim()) return allUsersList.slice(0, 20);
+    const q = userSearchQuery.toLowerCase().trim();
+    return allUsersList.filter(u =>
+      (u.full_name || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      String(u.student_id || '').includes(q)
+    ).slice(0, 30);
+  }, [allUsersList, userSearchQuery]);
+
+  const toggleSelectUser = (id) => {
+    setSelectedUserIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className="md-page">
       {/* ── Header ── */}
       <div className="md-header">
         <div className="md-header-left">
-          <h1 className="md-title">Master Data &amp; Finance</h1>
+          <h1 className="md-title">Master Data &amp; Financial Ledger</h1>
           <p className="md-subtitle">
-            Financial ledger, system transaction rules, and wallet reconciliation auditor.
+            Audit platform transactions, execute targeted mass balance operations, and reconcile wallets.
           </p>
         </div>
 
@@ -293,42 +339,25 @@ const MasterData = ({ user }) => {
             </button>
           )}
 
-          {activeTab === 'types' && (
-            <button
-              type="button"
-              className="md-btn-primary"
-              onClick={() =>
-                setEditTypeModal({
-                  type_code: '',
-                  name: '',
-                  direction: 'credit',
-                  category: 'General',
-                  accounting_treatment: 'Platform Reserve',
-                  is_disputable: false,
-                  is_reversible: false,
-                  trigger_method: 'Automated',
-                  min_amount: 50,
-                  max_amount: 10000,
-                  description: '',
-                  is_active: true
-                })
-              }
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              <span>Add Rule</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className="md-btn-primary"
+            onClick={() => setActiveTab('batch_adjust')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>Batch Balance Tool</span>
+          </button>
 
           <button
             type="button"
             className="md-btn-outline"
             onClick={() => {
               if (activeTab === 'ledger') loadLedger();
-              if (activeTab === 'types') loadTypes();
               if (activeTab === 'reconciliation') loadReconciliation();
+              if (activeTab === 'batch_adjust') loadBatchPreview();
             }}
             title="Refresh current view"
           >
@@ -363,11 +392,11 @@ const MasterData = ({ user }) => {
 
         <button
           type="button"
-          className={`md-tab ${activeTab === 'types' ? 'active' : ''}`}
-          onClick={() => setActiveTab('types')}
+          className={`md-tab ${activeTab === 'batch_adjust' ? 'active' : ''}`}
+          onClick={() => setActiveTab('batch_adjust')}
         >
-          <span>Transaction Rules</span>
-          <span className="md-tab-badge">{types.length}</span>
+          <span>Mass Balance Operations</span>
+          <span className="md-tab-badge highlight">New</span>
         </button>
 
         <button
@@ -414,10 +443,13 @@ const MasterData = ({ user }) => {
                 value={ledgerTypeFilter}
                 onChange={(e) => { setLedgerTypeFilter(e.target.value); setLedgerPage(1); }}
               >
-                <option value="all">All Types</option>
-                {types.map(t => (
-                  <option key={t.type_code} value={t.type_code}>{t.name}</option>
-                ))}
+                <option value="all">All Transaction Types</option>
+                <option value="top_up">Top Up</option>
+                <option value="bounty_held">Bounty Held (Escrow)</option>
+                <option value="bounty_received">Bounty Received (Payout)</option>
+                <option value="refund">Refund</option>
+                <option value="admin_adjustment">Admin Adjustment</option>
+                <option value="withdrawal">Withdrawal</option>
               </select>
 
               <select
@@ -680,205 +712,235 @@ const MasterData = ({ user }) => {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          TAB 2: TRANSACTION RULES (COLLAPSIBLE ROW TABLE)
+          TAB 2: MASS / TARGETED BALANCE OPERATIONS (NEW REQUESTED FEATURE)
          ══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'types' && (
+      {activeTab === 'batch_adjust' && (
         <div className="md-tab-pane">
-          {/* Controls Bar */}
-          <div className="md-filter-card">
-            <div className="md-search-box">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search rule code, name, or description..."
-                value={typeSearch}
-                onChange={(e) => setTypeSearch(e.target.value)}
-              />
-              {typeSearch && (
-                <button type="button" className="md-clear-btn" onClick={() => setTypeSearch('')}>
-                  &times;
-                </button>
-              )}
-            </div>
+          <div className="md-batch-layout">
+            {/* Left Configuration Panel */}
+            <div className="md-batch-config-card">
+              <h3 className="md-batch-card-title">Configure Balance Operation</h3>
+              <p className="md-batch-card-subtitle">
+                Add or deduct funds across specific user groups or selected accounts.
+              </p>
 
-            <div className="md-controls-row">
-              <select
-                className="md-select"
-                value={typeCategoryFilter}
-                onChange={(e) => setTypeCategoryFilter(e.target.value)}
-              >
-                <option value="all">All Categories</option>
-                {uniqueCategories.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-              <span className="md-subtle-count">{filteredTypes.length} Rules Defined</span>
-            </div>
-          </div>
+              {/* 1. Operation Direction */}
+              <div className="md-form-field">
+                <label>Operation Type</label>
+                <div className="md-segment-group">
+                  <button
+                    type="button"
+                    className={`md-segment-btn debit ${batchAction === 'debit' ? 'active' : ''}`}
+                    onClick={() => setBatchAction('debit')}
+                  >
+                    Deduct Funds (Debit)
+                  </button>
+                  <button
+                    type="button"
+                    className={`md-segment-btn credit ${batchAction === 'credit' ? 'active' : ''}`}
+                    onClick={() => setBatchAction('credit')}
+                  >
+                    Add Funds (Credit)
+                  </button>
+                </div>
+              </div>
 
-          {/* Collapsible Rules Table */}
-          <div className="md-table-card">
-            <table className="md-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '160px' }}>Rule Code</th>
-                  <th>Display Name</th>
-                  <th>Direction</th>
-                  <th style={{ width: '130px', textAlign: 'right' }}>Volume</th>
-                  <th style={{ width: '100px', textAlign: 'center' }}>Transactions</th>
-                  <th style={{ width: '90px', textAlign: 'center' }}>Active</th>
-                  <th style={{ width: '140px', textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loadingTypes ? (
-                  <tr>
-                    <td colSpan="7" className="md-table-empty">Loading transaction rules...</td>
-                  </tr>
-                ) : filteredTypes.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="md-table-empty">No transaction rules found.</td>
-                  </tr>
-                ) : (
-                  filteredTypes.map(t => {
-                    const dirMeta = DIRECTION_META[t.direction] || DIRECTION_META.neutral;
-                    const volume = parseFloat(t.total_volume || 0);
-                    const count = parseInt(t.tx_count || 0, 10);
-                    const isExpanded = expandedTypeId === t.type_code;
+              {/* 2. Target Audience */}
+              <div className="md-form-field">
+                <label>Target Group</label>
+                <select
+                  className="md-select full"
+                  value={batchTarget}
+                  onChange={(e) => setBatchTarget(e.target.value)}
+                >
+                  <option value="student">Students Only (role: student)</option>
+                  <option value="tutor">Tutors Only (role: tutor)</option>
+                  <option value="both">Both Students &amp; Tutors (role: both)</option>
+                  <option value="all_users">All Campus Users (Non-admins)</option>
+                  <option value="admin">Administrators Only</option>
+                  <option value="specific">Specific Selected Accounts</option>
+                </select>
+              </div>
 
-                    return (
-                      <React.Fragment key={t.type_code}>
-                        <tr
-                          className={`md-row ${isExpanded ? 'expanded' : ''} ${!t.is_active ? 'inactive' : ''}`}
-                          onClick={() => setExpandedTypeId(isExpanded ? null : t.type_code)}
+              {/* Specific user selection if target === 'specific' */}
+              {batchTarget === 'specific' && (
+                <div className="md-specific-picker-box">
+                  <label className="md-meta-k">Select Target Accounts ({selectedUserIds.length} Selected)</label>
+                  <input
+                    type="text"
+                    className="md-user-search-input"
+                    placeholder="Search user name, email, or student ID..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                  />
+
+                  <div className="md-users-chips-container">
+                    {filteredUsersPicker.map(u => {
+                      const isSel = selectedUserIds.includes(u.user_id);
+                      return (
+                        <div
+                          key={u.user_id}
+                          className={`md-user-chip ${isSel ? 'selected' : ''}`}
+                          onClick={() => toggleSelectUser(u.user_id)}
                         >
-                          <td className="td-id">
-                            <span className="md-mono-pill bold">{t.type_code}</span>
-                          </td>
+                          <input type="checkbox" checked={isSel} readOnly />
+                          <span className="md-chip-name">{u.full_name}</span>
+                          <span className="md-chip-role">({u.role})</span>
+                          <span className="md-chip-bal">৳{parseFloat(u.wallet_balance || 0).toFixed(0)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-                          <td className="td-name">
-                            <span className="md-rule-name">{t.name}</span>
-                            <span className="md-cat-badge">{t.category}</span>
-                          </td>
+              {/* 3. Calculation Mode & Amount */}
+              <div className="md-form-row">
+                <div className="md-form-field">
+                  <label>Calculation Method</label>
+                  <select
+                    className="md-select full"
+                    value={batchCalcMode}
+                    onChange={(e) => setBatchCalcMode(e.target.value)}
+                  >
+                    <option value="percentage">Percentage (%) of Current Balance</option>
+                    <option value="fixed">Fixed Amount (৳)</option>
+                  </select>
+                </div>
 
-                          <td className="td-direction">
-                            <span className={`md-type-pill ${dirMeta.class}`}>
-                              <span className="md-dir-arrow">{dirMeta.arrow}</span>
-                              <span>{dirMeta.label}</span>
-                            </span>
-                          </td>
+                <div className="md-form-field">
+                  <label>
+                    {batchCalcMode === 'percentage' ? 'Percentage Rate (%)' : 'Amount in BDT (৳)'}
+                  </label>
+                  <input
+                    type="number"
+                    step={batchCalcMode === 'percentage' ? '0.5' : '1'}
+                    min="0.01"
+                    className="md-input-val"
+                    value={batchValue}
+                    onChange={(e) => setBatchValue(e.target.value)}
+                    placeholder={batchCalcMode === 'percentage' ? 'e.g. 5%' : 'e.g. 100'}
+                  />
+                </div>
+              </div>
 
-                          <td className="td-volume" style={{ textAlign: 'right' }}>
-                            <span className="md-vol-text">
-                              ৳{volume.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </td>
+              {/* 4. Safety Floor */}
+              {batchAction === 'debit' && (
+                <div className="md-checkbox-row">
+                  <label className="md-check-label">
+                    <input
+                      type="checkbox"
+                      checked={batchFloorZero}
+                      onChange={(e) => setBatchFloorZero(e.target.checked)}
+                    />
+                    <span>Protect against negative balance (floor deduction at ৳0.00)</span>
+                  </label>
+                </div>
+              )}
 
-                          <td className="td-count" style={{ textAlign: 'center' }}>
-                            <span className="md-count-pill">{count}</span>
-                          </td>
+              {/* 5. Audit Reason */}
+              <div className="md-form-field full">
+                <label>Audit Memo / Formal Justification (Mandatory)</label>
+                <textarea
+                  rows="2"
+                  required
+                  className="md-textarea"
+                  placeholder="e.g. Semester platform maintenance fee, bonus credit grant, etc."
+                  value={batchReason}
+                  onChange={(e) => setBatchReason(e.target.value)}
+                />
+              </div>
 
-                          <td className="td-active" style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                            <label className="md-switch" title={t.is_active ? 'Rule is active' : 'Rule is deactivated'}>
-                              <input
-                                type="checkbox"
-                                checked={Boolean(t.is_active)}
-                                onChange={() => handleToggleType(t.type_code)}
-                              />
-                              <span className="md-slider" />
-                            </label>
-                          </td>
+              <div className="md-batch-action-row">
+                <button
+                  type="button"
+                  className={`md-btn-execute ${batchAction}`}
+                  disabled={!previewData || previewData.total_users === 0 || !batchReason.trim() || loadingPreview}
+                  onClick={() => setConfirmBatchModal(true)}
+                >
+                  {batchAction === 'debit' ? 'Execute Batch Deduction' : 'Execute Batch Addition'}
+                </button>
+              </div>
+            </div>
 
-                          <td className="td-action" onClick={(e) => e.stopPropagation()}>
-                            <div className="md-action-group">
-                              <button
-                                type="button"
-                                className="md-btn-edit-rule"
-                                onClick={() => setEditTypeModal(t)}
-                                title="Configure rule limits and parameters"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                className={`md-expand-btn ${isExpanded ? 'active' : ''}`}
-                                onClick={() => setExpandedTypeId(isExpanded ? null : t.type_code)}
-                                aria-label="Toggle details"
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`md-chevron ${isExpanded ? 'rotate' : ''}`}>
-                                  <polyline points="6 9 12 15 18 9" />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
+            {/* Right Live Impact Preview */}
+            <div className="md-batch-preview-card">
+              <div className="md-preview-header">
+                <div>
+                  <h3 className="md-batch-card-title">Live Impact Preview</h3>
+                  <span className="md-preview-subtitle">
+                    Calculated in real-time based on live wallet balances
+                  </span>
+                </div>
+                {loadingPreview && <span className="md-preview-loading">Calculating...</span>}
+              </div>
+
+              {previewData ? (
+                <>
+                  <div className="md-preview-kpis">
+                    <div className="md-pkpi">
+                      <span className="md-pkpi-k">Affected Accounts</span>
+                      <strong className="md-pkpi-v">{previewData.total_users}</strong>
+                    </div>
+
+                    <div className="md-pkpi">
+                      <span className="md-pkpi-k">Total Current Holdings</span>
+                      <strong className="md-pkpi-v">
+                        ৳{previewData.total_current_balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </strong>
+                    </div>
+
+                    <div className="md-pkpi">
+                      <span className="md-pkpi-k">
+                        Total {batchAction === 'debit' ? 'Deduction' : 'Addition'}
+                      </span>
+                      <strong className={`md-pkpi-v ${batchAction === 'debit' ? 'debit' : 'credit'}`}>
+                        {batchAction === 'debit' ? '-' : '+'}৳{previewData.total_adjustment_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Impacted User Table */}
+                  <div className="md-preview-table-wrap">
+                    <table className="md-preview-table">
+                      <thead>
+                        <tr>
+                          <th>Account</th>
+                          <th>Role</th>
+                          <th style={{ textAlign: 'right' }}>Current Balance</th>
+                          <th style={{ textAlign: 'right' }}>Adjustment</th>
+                          <th style={{ textAlign: 'right' }}>Projected Balance</th>
                         </tr>
-
-                        {/* Collapsible Rule Drawer */}
-                        {isExpanded && (
-                          <tr className="md-drawer-row">
-                            <td colSpan="7" className="md-drawer-td">
-                              <div className="md-drawer">
-                                <div className="md-drawer-col info">
-                                  <div className="md-card-section">
-                                    <h4 className="md-section-title">Rule Specifications &amp; Limits</h4>
-                                    <div className="md-meta-grid">
-                                      <div className="md-meta-item">
-                                        <span className="md-meta-k">Accounting Classification</span>
-                                        <span className="md-meta-v">{t.accounting_treatment}</span>
-                                      </div>
-                                      <div className="md-meta-item">
-                                        <span className="md-meta-k">Trigger Mechanism</span>
-                                        <span className="md-meta-v mono">{t.trigger_method}</span>
-                                      </div>
-                                      <div className="md-meta-item">
-                                        <span className="md-meta-k">Permitted Range</span>
-                                        <span className="md-meta-v">৳{parseFloat(t.min_amount).toFixed(0)} – ৳{parseFloat(t.max_amount).toFixed(0)}</span>
-                                      </div>
-                                      <div className="md-meta-item">
-                                        <span className="md-meta-k">Policy Protections</span>
-                                        <span className="md-meta-v">
-                                          Disputable: <strong>{t.is_disputable ? 'Yes' : 'No'}</strong> • Reversible: <strong>{t.is_reversible ? 'Yes' : 'No'}</strong>
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {t.description && (
-                                      <div className="md-desc-box">
-                                        <span className="md-meta-k">Operational Policy</span>
-                                        <p>{t.description}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="md-drawer-col tools">
-                                  <div className="md-card-section">
-                                    <h4 className="md-section-title">Rule Action</h4>
-                                    <p className="md-subtle-hint">
-                                      Configure operational thresholds or deactivate this rule from the ledger engine.
-                                    </p>
-                                    <button
-                                      type="button"
-                                      className="md-btn-primary"
-                                      onClick={() => setEditTypeModal(t)}
-                                    >
-                                      Configure Rule Parameters
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
+                      </thead>
+                      <tbody>
+                        {previewData.preview.map(u => (
+                          <tr key={u.user_id}>
+                            <td>
+                              <span className="md-user-name">{u.full_name}</span>
+                              <span className="md-user-sub">{u.student_id ? `#${u.student_id}` : u.email}</span>
+                            </td>
+                            <td><span className="md-role-tag">{u.role}</span></td>
+                            <td style={{ textAlign: 'right' }}>৳{u.current_balance.toFixed(2)}</td>
+                            <td style={{ textAlign: 'right' }} className={batchAction === 'debit' ? 'text-danger' : 'text-success'}>
+                              {batchAction === 'debit' ? '-' : '+'}৳{u.adjustment_amount.toFixed(2)}
+                            </td>
+                            <td style={{ textAlign: 'right', fontWeight: '700' }}>
+                              ৳{u.new_balance.toFixed(2)}
                             </td>
                           </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <div className="md-preview-empty">
+                  {batchTarget === 'specific' && selectedUserIds.length === 0
+                    ? 'Please select one or more accounts to calculate preview.'
+                    : 'Enter an amount or percentage above to preview impact.'}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1038,132 +1100,80 @@ const MasterData = ({ user }) => {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          MODAL: CREATE / EDIT TRANSACTION RULE
+          MODAL: CONFIRM BATCH BALANCE OPERATION
          ══════════════════════════════════════════════════════════════ */}
-      {editTypeModal && (
-        <div className="md-modal-overlay" onClick={() => setEditTypeModal(null)}>
+      {confirmBatchModal && previewData && (
+        <div className="md-modal-overlay" onClick={() => !executingBatch && setConfirmBatchModal(false)}>
           <div className="md-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="md-modal-header">
-              <h3>{editTypeModal.type_code ? `Edit Rule: ${editTypeModal.type_code}` : 'Add Transaction Rule'}</h3>
-              <button type="button" className="md-modal-close" onClick={() => setEditTypeModal(null)}>&times;</button>
+            <div className={`md-modal-header ${batchAction === 'debit' ? 'danger' : ''}`}>
+              <h3>
+                Confirm Batch {batchAction === 'debit' ? 'Deduction' : 'Addition'}
+              </h3>
+              <button
+                type="button"
+                className="md-modal-close"
+                onClick={() => setConfirmBatchModal(false)}
+                disabled={executingBatch}
+              >
+                &times;
+              </button>
             </div>
 
-            <form onSubmit={handleSaveType}>
-              <div className="md-modal-body">
-                <div className="md-form-row">
-                  <div className="md-form-field">
-                    <label>Rule Identifier Code</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. platform_fee, bonus"
-                      value={editTypeModal.type_code}
-                      onChange={(e) => setEditTypeModal(prev => ({ ...prev, type_code: e.target.value }))}
-                      disabled={Boolean(types.some(t => t.type_code === editTypeModal.type_code && t.created_at))}
-                    />
-                  </div>
+            <div className="md-modal-body">
+              <p className="md-modal-p">
+                You are about to execute a mass balance adjustment across <strong>{previewData.total_users}</strong> accounts.
+              </p>
 
-                  <div className="md-form-field">
-                    <label>Display Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Platform Commission Fee"
-                      value={editTypeModal.name}
-                      onChange={(e) => setEditTypeModal(prev => ({ ...prev, name: e.target.value }))}
-                    />
-                  </div>
+              <div className="md-confirm-summary-box">
+                <div className="md-cs-row">
+                  <span>Target Group:</span>
+                  <strong>{batchTarget.toUpperCase()}</strong>
                 </div>
-
-                <div className="md-form-row">
-                  <div className="md-form-field">
-                    <label>Balance Flow Direction</label>
-                    <select
-                      value={editTypeModal.direction}
-                      onChange={(e) => setEditTypeModal(prev => ({ ...prev, direction: e.target.value }))}
-                    >
-                      <option value="credit">Credit (+) Adds to balance</option>
-                      <option value="debit">Debit (-) Deducts from balance</option>
-                      <option value="escrow_hold">Escrow Hold (Locks funds)</option>
-                      <option value="neutral">Neutral (Internal transfer)</option>
-                    </select>
-                  </div>
-
-                  <div className="md-form-field">
-                    <label>Category</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Marketplace, Deposit, Penalty"
-                      value={editTypeModal.category}
-                      onChange={(e) => setEditTypeModal(prev => ({ ...prev, category: e.target.value }))}
-                    />
-                  </div>
+                <div className="md-cs-row">
+                  <span>Adjustment Rule:</span>
+                  <strong>{batchCalcMode === 'percentage' ? `${batchValue}% of balance` : `৳${parseFloat(batchValue).toFixed(2)}`}</strong>
                 </div>
-
-                <div className="md-form-row">
-                  <div className="md-form-field">
-                    <label>Min Permitted Amount (৳)</label>
-                    <input
-                      type="number"
-                      value={editTypeModal.min_amount}
-                      onChange={(e) => setEditTypeModal(prev => ({ ...prev, min_amount: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="md-form-field">
-                    <label>Max Permitted Amount (৳)</label>
-                    <input
-                      type="number"
-                      value={editTypeModal.max_amount}
-                      onChange={(e) => setEditTypeModal(prev => ({ ...prev, max_amount: e.target.value }))}
-                    />
-                  </div>
+                <div className="md-cs-row">
+                  <span>Total Financial Impact:</span>
+                  <strong className={batchAction === 'debit' ? 'text-danger' : 'text-success'}>
+                    {batchAction === 'debit' ? '-' : '+'}৳{previewData.total_adjustment_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </strong>
                 </div>
-
-                <div className="md-checkbox-row">
-                  <label className="md-check-label">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(editTypeModal.is_disputable)}
-                      onChange={(e) => setEditTypeModal(prev => ({ ...prev, is_disputable: e.target.checked }))}
-                    />
-                    Permit dispute filing
-                  </label>
-
-                  <label className="md-check-label">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(editTypeModal.is_reversible)}
-                      onChange={(e) => setEditTypeModal(prev => ({ ...prev, is_reversible: e.target.checked }))}
-                    />
-                    Reversible by administrator
-                  </label>
-                </div>
-
-                <div className="md-form-field full">
-                  <label>Rule Description</label>
-                  <textarea
-                    rows="3"
-                    placeholder="Describe how and when this rule applies..."
-                    value={editTypeModal.description || ''}
-                    onChange={(e) => setEditTypeModal(prev => ({ ...prev, description: e.target.value }))}
-                  />
+                <div className="md-cs-row">
+                  <span>Audit Memo:</span>
+                  <em>&ldquo;{batchReason}&rdquo;</em>
                 </div>
               </div>
 
-              <div className="md-modal-footer">
-                <button type="button" className="md-btn-outline" onClick={() => setEditTypeModal(null)}>Cancel</button>
-                <button type="submit" className="md-btn-primary" disabled={actionLoading}>
-                  {actionLoading ? 'Saving...' : 'Save Rule'}
-                </button>
-              </div>
-            </form>
+              <p className="md-confirm-warning">
+                This operation will update user balances immediately and write an audited ledger transaction for each account.
+              </p>
+            </div>
+
+            <div className="md-modal-footer">
+              <button
+                type="button"
+                className="md-btn-outline"
+                onClick={() => setConfirmBatchModal(false)}
+                disabled={executingBatch}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`md-btn-primary ${batchAction === 'debit' ? 'danger' : ''}`}
+                onClick={handleExecuteBatch}
+                disabled={executingBatch}
+              >
+                {executingBatch ? 'Processing...' : `Confirm & Execute ${batchAction === 'debit' ? 'Deduction' : 'Addition'}`}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          MODAL: ADMIN BALANCE ADJUSTMENT TOOL
+          MODAL: ADMIN SINGLE BALANCE ADJUSTMENT TOOL
          ══════════════════════════════════════════════════════════════ */}
       {adjustModal && (
         <div className="md-modal-overlay" onClick={() => setAdjustModal(null)}>
@@ -1173,7 +1183,7 @@ const MasterData = ({ user }) => {
               <button type="button" className="md-modal-close" onClick={() => setAdjustModal(null)}>&times;</button>
             </div>
 
-            <form onSubmit={handleExecuteAdjustment}>
+            <form onSubmit={handleExecuteSingleAdjustment}>
               <div className="md-modal-body">
                 <div className="md-adjust-summary">
                   <div><span>Target Account:</span> <strong>{adjustModal.name}</strong></div>
