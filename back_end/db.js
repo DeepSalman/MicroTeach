@@ -1,4 +1,5 @@
 const dotenv = require('dotenv');
+const fs = require('fs');
 const path = require('path');
 dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config({ path: path.join(process.cwd(), '.env') });
@@ -28,7 +29,10 @@ if (isPostgres) {
   const { Pool } = require('pg');
   const connectionUrl = new URL(rawDbUrl);
   const isLocalPg = ['localhost', '127.0.0.1', '[::1]'].includes(connectionUrl.hostname);
-  const databaseCaCert = process.env.DATABASE_CA_CERT?.replace(/\\n/g, '\n').trim();
+  const isSupabaseHost = connectionUrl.hostname.endsWith('.pooler.supabase.com') ||
+    /^db\.[a-z0-9-]+\.supabase\.co$/.test(connectionUrl.hostname);
+  const databaseCaCert = process.env.DATABASE_CA_CERT?.replace(/\\n/g, '\n').trim() ||
+    (isSupabaseHost ? fs.readFileSync(path.join(__dirname, 'certs', 'supabase-prod-ca-2021.crt'), 'utf8') : undefined);
 
   // node-postgres replaces the explicit SSL config when these URL options exist.
   if (['sslrootcert', 'sslcert', 'sslkey'].some((key) => connectionUrl.searchParams.has(key))) {

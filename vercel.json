@@ -3,6 +3,11 @@
   "installCommand": "npm install && npm install --prefix front_end",
   "buildCommand": "cd front_end && npm run build",
   "outputDirectory": "front_end/dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "back_end/certs/*.crt"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
