@@ -67,3 +67,13 @@ Rotate the exposed database password, revoke the old credential, update deployme
 | Registration feedback | Replaced the suggestion that registration will work during an availability outage with a clear temporary failure message. |
 | Live rollout | Applied PostgreSQL migration 005 in the authenticated MicroTeach DB Supabase SQL Editor; it returned `Success. No rows returned`. The GitHub push redeployed the API with the bundled CA. |
 | Validation | Backend syntax, focused registration lint, frontend production build, Vercel configuration JSON, and Git whitespace checks passed. The bundled certificate's SHA-256 fingerprint matched the published Supabase Root 2021 CA fingerprint. After deployment, the live posts, username availability, and public profile endpoints returned HTTP 200; the availability endpoint returned `{ "available": true }` for a new sample handle. |
+
+## 2026-11-13 — Production database recovery and access lockdown
+
+| Topic | Fix |
+| --- | --- |
+| Direct Supabase access | Added migration `006_lock_down_public_pg.sql` and applied it to production. It enables row-level security on every public table, including the legacy `post_comments` table, and revokes direct `PUBLIC`, `anon`, and `authenticated` access to public tables, views, and sequences. The live catalog now reports 19 public tables, 16 views, zero tables without RLS, zero anonymous or authenticated SELECT grants, and zero anonymous INSERT grants. |
+| Login sessions | Applied the missing PostgreSQL session migration to production, creating `auth_sessions` with its user index, RLS, and revoked direct Data API grants in one transaction. The migration file now includes those protections for future deployments. |
+| Escrow settlements | Applied the missing PostgreSQL escrow migration transactionally. It created the private settlement table, backfilled 16 historical settled posts from 63 existing transaction rows, and disabled the two legacy funding transaction types. Post-migration counts show 16 settlement markers for 16 historical settled posts and zero active legacy funding types. |
+| Rollout documentation | Updated the deployment guide to include migration 006 for existing databases. |
+| Backup and credential limitation | The live Supabase Free plan provides no scheduled backups. Automatic approval review rejected using a historical database credential from Git to make a CLI dump, so no offsite backup was made. The historical credential must be rotated through the Supabase dashboard and the Vercel `DATABASE_URL` updated by the account owner; no credential value was printed or stored in this report. |
