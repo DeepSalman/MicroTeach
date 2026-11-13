@@ -50,7 +50,9 @@ const TABLES = {
       wallet_balance DECIMAL(10,2) DEFAULT 0.00,
       is_admin TINYINT(1) DEFAULT 0,
       avatar_color VARCHAR(7),
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      username VARCHAR(30) CHARACTER SET ascii COLLATE ascii_general_ci NULL,
+      UNIQUE KEY users_username_unique (username)
     )`,
   Auth_Sessions: `
     CREATE TABLE IF NOT EXISTS Auth_Sessions (

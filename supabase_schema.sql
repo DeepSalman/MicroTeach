@@ -50,8 +50,10 @@ CREATE TABLE public.users (
   wallet_balance DECIMAL(10,2) DEFAULT 0.00,
   is_admin SMALLINT DEFAULT 0,
   avatar_color VARCHAR(7),
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  username VARCHAR(30)
 );
+CREATE UNIQUE INDEX users_username_unique ON public.users (LOWER(username)) WHERE username IS NOT NULL;
 
 -- Opaque, server-side login sessions. Only a hash of each cookie token is stored.
 CREATE TABLE public.auth_sessions (

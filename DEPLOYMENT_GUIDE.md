@@ -28,7 +28,7 @@ This guide walks you through hosting the **MicroTeach** platform on **Vercel** w
    - Open [`supabase_schema.sql`](./supabase_schema.sql) in this repository, copy all contents, paste into the Supabase SQL Editor.
    - Click the green **Run** button (or press `Ctrl+Enter` / `Cmd+Enter`).
    - You should see `Success. No rows returned`. The tables and constraints are created without demo users.
-   - This schema script drops existing tables. For an existing database, run `back_end/migrations/001_auth_sessions_pg.sql`, `002_lock_down_supabase_api.sql`, `003_escrow_settlements_pg.sql`, and `004_private_documents_pg.sql` in order without deleting data. The escrow migration backfills previously settled posts; the final migration adds private document and attachment columns.
+   - This schema script drops existing tables. For an existing database, run `back_end/migrations/001_auth_sessions_pg.sql`, `002_lock_down_supabase_api.sql`, `003_escrow_settlements_pg.sql`, `004_private_documents_pg.sql`, and `005_usernames_pg.sql` in order without deleting data. The escrow migration backfills previously settled posts; migration 004 adds private document and attachment columns; migration 005 adds case-insensitive unique usernames. Run migrations before deploying the corresponding API changes.
 
 3. **Get Your Database Connection String**:
    - In Supabase, go to **Project Settings** (gear icon) -> **Database**.

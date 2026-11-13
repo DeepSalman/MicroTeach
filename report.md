@@ -46,3 +46,14 @@ Rotate the exposed database password, revoke the old credential, update deployme
 | Escrow and ledger consistency | Kept the earlier transactional post hold and one-time settlement design. Manual balance adjustments now validate exact cents and write a signed audit entry in the same locked transaction. Administrative post removal now closes the post while retaining its escrow and dispute history. |
 | Rollout | No new schema migration is required. Re-review legacy tutors without an approved application, inventory old uploads, and reconcile historical administrator debit entries whose stored amount was positive. |
 | Validation | Backend syntax checks, the frontend production build, and Git whitespace checks passed. Live database and concurrent transaction behavior still require deployment-environment verification. |
+
+## 2026-11-13 — Live username availability during registration
+
+| Topic | Change |
+| --- | --- |
+| Registration experience | Added a separate username field with lowercase normalization, clear format guidance, and availability feedback after a 350 ms typing pause. Cancelled outdated requests so older responses cannot overwrite the current name's status. The chosen handle appears on public profiles. |
+| Availability API and privacy | Added a public, read-only username check that validates input, returns only an availability boolean, and disables response caching. Reserved platform names are unavailable. |
+| Account creation | Require a valid username for new accounts and handle database uniqueness conflicts with a clear 409 response, including races after an earlier availability check. Existing accounts can keep a null username. |
+| Profile display | Show the username when present and use only the viewed profile's email, avoiding a misleading fallback to the viewer's email on someone else's profile. |
+| Database rollout | Added case-insensitive unique username indexes to fresh PostgreSQL and MySQL schemas, plus additive PostgreSQL migration 005 and MySQL migration 004. Run the matching migration before deploying this API version. |
+| Validation | Backend syntax checks, the frontend production build, focused registration/API lint, and Git whitespace checks passed. The broader profile lint check still reports pre-existing errors elsewhere in `Profile.jsx`. Live migrations and database-backed signup behavior still require validation in the deployment environment. |

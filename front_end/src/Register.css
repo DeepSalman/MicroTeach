@@ -205,6 +205,34 @@
   color: var(--color-ink-faint);
 }
 
+.register-username-prefix {
+  position: absolute;
+  left: 14px;
+  color: var(--color-ink-muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.register-username-input {
+  padding-left: 31px;
+}
+
+.register-username-status {
+  min-height: 16px;
+  margin: 6px 0 0 4px;
+  color: var(--color-ink-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.register-username-status.is-available {
+  color: #237447;
+}
+
+.register-username-status.is-unavailable {
+  color: var(--color-danger);
+}
+
 /* Select */
 .register-select {
   width: 100%;

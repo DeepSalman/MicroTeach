@@ -5,6 +5,22 @@ const db = require('../db');
 const { randomAvatarColor } = require('../avatarColors');
 const { createSession, endSession } = require('../auth');
 const { hasApprovedTutorApplication } = require('../tutorEligibility');
+const { normalizeUsername, usernameError } = require('../username');
+
+router.get('/username-availability', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const username = normalizeUsername(req.query.username);
+  const validationError = usernameError(username);
+  if (validationError) return res.status(400).json({ available: false, message: validationError });
+
+  try {
+    const lookup = db.isPostgres ? 'LOWER(username)' : 'username';
+    const [rows] = await db.query(`SELECT user_id FROM Users WHERE ${lookup} = ? LIMIT 1`, [username]);
+    res.json({ available: rows.length === 0 });
+  } catch (error) {
+    res.status(500).json({ message: 'Could not check username availability.' });
+  }
+});
 
 router.get('/me', (req, res) => {
   res.json({ user: req.auth });
@@ -27,6 +43,7 @@ router.get('/', async (req, res) => {
       SELECT
         user_id,
         full_name,
+        username,
         email,
         role,
         is_verified,
@@ -47,11 +64,14 @@ router.get('/', async (req, res) => {
 
 // 2. Register a new user
 router.post('/register', async (req, res) => {
-  const { full_name, email, password, department } = req.body;
+  const { full_name, email, password, department, username: requestedUsername } = req.body || {};
+  const username = normalizeUsername(requestedUsername);
 
-  if (!full_name || !email || !password) {
-    return res.status(400).json({ message: 'Full name, email, and password are required.' });
+  if (!full_name || !email || !password || !username) {
+    return res.status(400).json({ message: 'Full name, username, email, and password are required.' });
   }
+  const validationError = usernameError(username);
+  if (validationError) return res.status(400).json({ message: validationError });
   if (typeof password !== 'string' || password.length < 8) {
     return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
   }
@@ -63,12 +83,13 @@ router.post('/register', async (req, res) => {
 
     const query = `
       INSERT INTO Users
-        (full_name, email, password, role, department, avatar_color)
+        (full_name, username, email, password, role, department, avatar_color)
       VALUES
-        (?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?)
     `;
     const [result] = await db.query(query, [
       full_name,
+      username,
       email,
       hashedPassword,
       'student',
@@ -77,7 +98,14 @@ router.post('/register', async (req, res) => {
     ]);
     res.status(201).json({ message: 'User registered successfully!', userId: result.insertId });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (error.code === '23505' || error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
+      const constraint = `${error.constraint || ''} ${error.sqlMessage || ''}`;
+      if (constraint.includes('users_username_unique')) {
+        return res.status(409).json({ message: 'That username is already taken.' });
+      }
+      return res.status(409).json({ message: 'Account details are already in use.' });
+    }
+    res.status(500).json({ message: 'Could not create account.' });
   }
 });
 
@@ -91,6 +119,7 @@ router.get('/profile/:userId', async (req, res) => {
       SELECT
         user_id,
         full_name,
+        username,
         email,
         role,
         is_verified,
@@ -105,7 +134,7 @@ router.get('/profile/:userId', async (req, res) => {
       FROM Users
       WHERE user_id = ?
     ` : `
-      SELECT user_id, full_name, role, is_verified, department, bio, avatar_color, created_at
+      SELECT user_id, full_name, username, role, is_verified, department, bio, avatar_color, created_at
       FROM Users WHERE user_id = ?
     `;
     const [userRows] = await db.query(userQuery, [req.params.userId]);
@@ -166,7 +195,7 @@ router.put('/profile/:userId', async (req, res) => {
     await db.query(query, [full_name, department || null, bio || null, phone || null, student_id || null, req.params.userId]);
 
     const updatedQuery = `
-      SELECT user_id, full_name, email, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin, avatar_color, created_at
+      SELECT user_id, full_name, username, email, role, is_verified, department, bio, phone, student_id, wallet_balance, is_admin, avatar_color, created_at
       FROM Users WHERE user_id = ?
     `;
     const [rows] = await db.query(updatedQuery, [req.params.userId]);
@@ -190,6 +219,7 @@ router.post('/login', async (req, res) => {
       SELECT
         user_id,
         full_name,
+        username,
         email,
         role,
         is_verified,

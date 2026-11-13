@@ -1,13 +1,26 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { registerUser } from './api';
+import { checkUsernameAvailability, registerUser } from './api';
 import { isValidEmailDomain } from './utils';
 import './Register.css';
+
+const reservedUsernames = new Set([
+  'admin', 'help', 'microteach', 'moderator', 'root', 'security', 'support', 'system'
+]);
+
+const usernameError = (username) => {
+  if (!/^[a-z0-9_][a-z0-9._]{1,28}[a-z0-9_]$/.test(username) || username.includes('..')) {
+    return 'Use 3–30 letters, numbers, underscores, or single periods. No period at the start or end.';
+  }
+  if (reservedUsernames.has(username)) return 'This username is unavailable.';
+  return '';
+};
 
 const Register = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: '',
+    username: '',
     email: '',
     department: '',
     password: '',
@@ -17,12 +30,46 @@ const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [usernameCheck, setUsernameCheck] = useState({ username: '', state: 'idle' });
+  const username = formData.username.trim().toLowerCase();
+  const formatError = username ? usernameError(username) : '';
+  const usernameState = usernameCheck.username === username ? usernameCheck.state : 'checking';
+
+  useEffect(() => {
+    if (!username || formatError) return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await checkUsernameAvailability(username, controller.signal);
+        if (!controller.signal.aborted) {
+          setUsernameCheck((current) => current.username === username && current.state === 'taken'
+            ? current
+            : { username, state: response.data.available ? 'available' : 'taken' });
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setUsernameCheck((current) => current.username === username && current.state === 'taken'
+            ? current
+            : { username, state: 'error' });
+        }
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [username, formatError]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (name === 'username') {
+      setUsernameCheck({ username: value.trim().toLowerCase(), state: 'checking' });
+    }
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : (name === 'username' ? value.toLowerCase() : value)
     });
     if (error) setError('');
   };
@@ -35,8 +82,18 @@ const Register = () => {
     const password = formData.password.trim();
     const confirmPassword = formData.confirmPassword.trim();
 
-    if (!name || !email || !password) {
-      setError('Full name, email, and password are required.');
+    if (!name || !username || !email || !password) {
+      setError('Full name, username, email, and password are required.');
+      return;
+    }
+
+    if (formatError) {
+      setError(formatError);
+      return;
+    }
+
+    if (usernameState === 'taken') {
+      setError('That username is already taken. Please choose another.');
       return;
     }
 
@@ -71,6 +128,7 @@ const Register = () => {
     try {
       await registerUser({
         full_name: name,
+        username,
         email: email,
         password: password,
         department: formData.department
@@ -82,6 +140,9 @@ const Register = () => {
         }
       });
     } catch (err) {
+      if (err.response?.status === 409 && err.response?.data?.message === 'That username is already taken.') {
+        setUsernameCheck({ username, state: 'taken' });
+      }
       const raw = err.response?.data?.message || err.response?.data?.error || err.message;
       const msg = typeof raw === 'string'
         ? raw
@@ -133,6 +194,44 @@ const Register = () => {
                 required
               />
             </div>
+          </div>
+
+          {/* Username */}
+          <div className="register-field">
+            <label className="register-label" htmlFor="username">Username</label>
+            <div className="register-input-wrapper">
+              <span className="register-username-prefix" aria-hidden="true">@</span>
+              <input
+                className="register-input register-username-input"
+                type="text"
+                id="username"
+                name="username"
+                placeholder="yourname"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                maxLength={30}
+                aria-describedby="username-status"
+                aria-invalid={Boolean(username && (formatError || usernameState === 'taken'))}
+                value={formData.username}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <p
+              id="username-status"
+              className={`register-username-status ${!formatError && usernameState === 'available' ? 'is-available' : ''} ${formatError || usernameState === 'taken' ? 'is-unavailable' : ''}`}
+              role="status"
+              aria-live="polite"
+            >
+              {!username ? '3–30 characters. Letters, numbers, underscores, and periods.'
+                : formatError || (
+                  usernameState === 'available' ? `@${username} is available` :
+                  usernameState === 'taken' ? `@${username} is already taken` :
+                  usernameState === 'error' ? 'Could not check right now. You can still submit.' :
+                  'Checking availability…'
+                )}
+            </p>
           </div>
 
           {/* Email */}

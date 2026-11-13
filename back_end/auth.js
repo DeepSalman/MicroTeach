@@ -46,7 +46,7 @@ async function loadSession(req) {
   const token = readToken(req);
   if (!token) return null;
   const [rows] = await db.query(
-    `SELECT u.user_id, u.full_name, u.email, u.role, u.is_verified,
+    `SELECT u.user_id, u.full_name, u.username, u.email, u.role, u.is_verified,
             u.department, u.bio, u.phone, u.student_id, u.wallet_balance,
             u.is_admin, u.avatar_color, u.created_at
        FROM Auth_Sessions s

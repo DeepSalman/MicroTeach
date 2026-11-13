@@ -288,6 +288,12 @@
   text-overflow: ellipsis;
 }
 
+.hero-username {
+  margin-bottom: 8px;
+  color: var(--color-ink-muted);
+  font-size: 14px;
+}
+
 .verified-badge {
   display: inline-flex;
   align-items: center;

@@ -15,6 +15,10 @@ export const updateUserProfile = (userId, data) => API.put(`/users/profile/${use
 export const updateUserVerification = (userId, is_verified) => API.patch(`/users/${userId}/verify`, { is_verified });
 export const updateUserRole = (userId, role) => API.patch(`/users/${userId}/role`, { role });
 export const registerUser = (userData) => API.post("/users/register", userData);
+export const checkUsernameAvailability = (username, signal) => API.get('/users/username-availability', {
+  params: { username },
+  signal
+});
 export const loginUser = (credentials) => API.post("/users/login", credentials);
 
 export const fetchSkills = () => API.get("/skills");

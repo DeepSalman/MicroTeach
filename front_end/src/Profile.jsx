@@ -302,7 +302,8 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const reviewsCurrentPage = Math.min(reviewsPage, reviewsTotalPages);
   const pagedReviews = userReviews.slice((reviewsCurrentPage - 1) * REVIEWS_PAGE_SIZE, reviewsCurrentPage * REVIEWS_PAGE_SIZE);
   const displayName = userData?.full_name || user?.full_name || 'User';
-  const email = userData?.email || user?.email || '';
+  const username = userData?.username || '';
+  const email = userData?.email || '';
   const department = userData?.department || '';
   const bio = userData?.bio || '';
   const phone = userData?.phone || '';
@@ -475,6 +476,7 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
                   </span>
                   {studentId && <span className="class-badge">ID: {studentId}</span>}
                 </div>
+                {username && <p className="hero-username">@{username}</p>}
                 {bio && <p className="hero-role">{bio}</p>}
                 {!bio && <p className="hero-role">Campus peer tutor and student</p>}
                 <div className="hero-meta">

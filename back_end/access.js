@@ -34,6 +34,7 @@ async function conversationMember(req, conversationId) {
 
 function publicRoute(area, method, path) {
   if (area === 'users' && method === 'POST' && ['/login', '/register', '/logout'].includes(path)) return true;
+  if (area === 'users' && method === 'GET' && path === '/username-availability') return true;
   if (area === 'users' && method === 'GET' && /^\/profile\/[^/]+$/.test(path)) return true;
   if (area === 'posts' && method === 'GET' && path === '/') return true;
   if (area === 'skills' && method === 'GET' && path === '/') return true;
@@ -209,7 +210,7 @@ function access(area) {
     const path = req.path.replace(/\/+$/, '') || '/';
     try {
       if (publicRoute(area, req.method, path)) {
-        if (area === 'users' && req.method === 'GET') {
+        if (area === 'users' && req.method === 'GET' && /^\/profile\/[^/]+$/.test(path)) {
           req.auth = await loadSession(req);
           res.setHeader('Cache-Control', 'no-store');
         }

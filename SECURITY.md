@@ -25,6 +25,7 @@
 - Post application lists return every applicant only to the post owner or an administrator; other signed-in users see only their own application.
 - Supabase tables have row-level security enabled, and the `anon` and `authenticated` Data API roles have no table or compatibility-view privileges. Browser requests must use the Express API.
 - Private API responses and file downloads use `Cache-Control: no-store`.
+- Username availability checks accept only normalized, valid handles and return only an availability boolean with `Cache-Control: no-store`. The database enforces case-insensitive uniqueness at registration, so a live availability result does not reserve a name. Existing accounts retain a null username until a future profile flow lets them choose one.
 
 ## Wallet and escrow
 
@@ -36,7 +37,7 @@
 ## Deployment
 
 - Use a same-site frontend and API. The bundled Vercel deployment serves both on one origin. For separate services, use subdomains of the same site and set `FRONTEND_ORIGIN` to the exact HTTPS frontend origin. A frontend on an unrelated domain needs a same-origin API proxy; cross-site cookies are unreliable in privacy-focused browsers.
-- Run the additive migrations in `back_end/migrations/` for an existing database before deploying this version. On Supabase, run PostgreSQL migrations 001 through 004 in order; on MySQL, run 001 through 003. Both fresh database setup scripts declare the session, escrow, document, and attachment columns. The application does not need permission to create these tables at runtime.
+- Run the additive migrations in `back_end/migrations/` for an existing database before deploying this version. On Supabase, run PostgreSQL migrations 001 through 005 in order; on MySQL, run 001 through 004. Both fresh database setup scripts declare the session, escrow, document, attachment, and username columns. The application does not need permission to create these tables at runtime.
 - After migration, inventory old `uploads/teacher_documents` files. Remove a file only after confirming its document row has `file_data`; retain and privately migrate any disk-only rows before removing their files.
 - Review older tutor accounts that have a tutor role and verification but no approved application. They cannot take new work until their identity application is approved. Do not create approval records merely from their legacy role flags. The isolated demo seeds include explicit approvals for their sample tutors.
 - Review historical administrator adjustments with positive amounts that represented debits; older ledger entries did not store the direction in the amount. Reconcile those records before relying on aggregate ledger calculations.
