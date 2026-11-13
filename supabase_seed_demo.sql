@@ -89,6 +89,15 @@ INSERT INTO public.teacher_applications (application_id, user_id, student_id, re
 INSERT INTO public.teacher_applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (9, 13, NULL, 'I wanna apply for teacher jjjjjjjjjjj', '', 'approved', 7, '2026-09-26 15:28:44+06:00') ON CONFLICT (application_id) DO NOTHING;
 INSERT INTO public.teacher_applications (application_id, user_id, student_id, reason, expertise, status, reviewed_by, reviewed_at) VALUES (10, 15, NULL, 'ami porate chai fewfhfhoewiqhfeoiqfhq', 'cse', 'approved', 7, '2026-09-29 15:10:14+06:00') ON CONFLICT (application_id) DO NOTHING;
 SELECT setval(pg_get_serial_sequence('public.teacher_applications', 'application_id'), COALESCE((SELECT MAX(application_id) FROM public.teacher_applications), 1));
+-- Demo-only approvals for the original verified tutor accounts.
+INSERT INTO public.teacher_applications (user_id, reason, expertise, status, reviewed_by, reviewed_at)
+SELECT u.user_id, 'Demo tutor approval.', 'Demo subject expertise', 'approved', 7, NOW()
+FROM public.users u
+WHERE u.user_id IN (1, 3, 6)
+  AND NOT EXISTS (
+    SELECT 1 FROM public.teacher_applications ta
+    WHERE ta.user_id = u.user_id AND ta.status = 'approved'
+  );
 
 -- Reports
 INSERT INTO public.reports (report_id, post_id, user_id, reason, description, status, admin_notes, action_taken) VALUES (1, 1, 5, 'spam', NULL, 'pending', NULL, NULL) ON CONFLICT (report_id) DO NOTHING;

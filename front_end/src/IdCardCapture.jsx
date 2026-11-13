@@ -59,7 +59,7 @@ const IdCardCapture = ({ label, onCapture, captured }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       setCameraError('Please select a valid image file.');
       return;
     }
@@ -140,7 +140,7 @@ const IdCardCapture = ({ label, onCapture, captured }) => {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             capture="environment"
             className="idc-file-input"
             onChange={handleFileChange}

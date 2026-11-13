@@ -177,7 +177,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
 
   const processFile = (file) => {
     if (!file) return;
-    const isImage = file.type.startsWith('image/');
+    const isImage = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
     const isPdf = file.type === 'application/pdf';
 
     if (!isImage && !isPdf) {
@@ -624,7 +624,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
                   style={{ display: 'none' }}
                   onChange={handleFileChange}
                 />

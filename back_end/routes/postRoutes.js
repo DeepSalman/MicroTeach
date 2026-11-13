@@ -72,7 +72,8 @@ router.get('/user/:userId', async (req, res) => {
 
 // 3. Create a post and reserve its bounty in one transaction.
 router.post('/', async (req, res) => {
-  const { user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent } = req.body;
+  const { category, course_code, title, description, delivery_format, bounty, deadline, is_urgent } = req.body;
+  const user_id = req.auth?.user_id;
   if (!user_id || !category || !title) {
     return res.status(400).json({ message: 'User ID, category, and title are required.' });
   }
@@ -150,19 +151,19 @@ router.post('/:postId/close', async (req, res) => {
   }
 });
 
-// 6. Remove a post and refund its unsettled bounty atomically.
+// 6. Remove a post from public view while preserving its financial audit trail.
 router.delete('/:postId', async (req, res) => {
   try {
     await inTransaction(async (conn) => {
       const post = await lockPost(conn, req.params.postId);
       const [apps] = await conn.query('SELECT status FROM Post_Applications WHERE post_id = ?', [post.post_id]);
-      if (toCents(post.bounty) > 0 && !apps.some((app) => app.status === 'completed') && post.status !== 'closed') {
+      if (toCents(post.bounty) > 0 && !apps.some((app) => app.status === 'completed')) {
         await settleEscrow(conn, post, [{
           userId: post.user_id, type: 'refund', cents: toCents(post.bounty),
           description: `Refunded bounty for removed post #${post.post_id}`
         }]);
       }
-      await conn.query('DELETE FROM Posts WHERE post_id = ?', [post.post_id]);
+      await conn.query("UPDATE Posts SET status = 'closed' WHERE post_id = ?", [post.post_id]);
     });
     res.json({ message: 'Post removed successfully.' });
   } catch (error) {
@@ -171,4 +172,3 @@ router.delete('/:postId', async (req, res) => {
 });
 
 module.exports = router;
-

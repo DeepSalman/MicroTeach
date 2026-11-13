@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { isEligibleTutor } = require('../tutorEligibility');
+const { EscrowError, inTransaction } = require('../escrow');
 
 // 1. Get all sessions with student, tutor, and skill details
 router.get('/', async (req, res) => {
@@ -30,29 +32,28 @@ router.get('/', async (req, res) => {
 
 // 2. Create a new session booking
 router.post('/', async (req, res) => {
-  const { student_id, tutor_id, skill_id, scheduled_time, duration_minutes } = req.body;
+  const { tutor_id, skill_id, scheduled_time, duration_minutes } = req.body;
+  const student_id = req.auth?.user_id;
 
   if (!student_id || !tutor_id || !skill_id || !scheduled_time) {
     return res.status(400).json({ message: 'Missing required session parameters.' });
   }
 
   try {
-    const query = `
-      INSERT INTO Sessions
-        (student_id, tutor_id, skill_id, scheduled_time, duration_minutes)
-      VALUES
-        (?, ?, ?, ?, ?)
-    `;
-    const [result] = await db.query(query, [
-      student_id,
-      tutor_id,
-      skill_id,
-      scheduled_time,
-      duration_minutes || 60
-    ]);
-    res.status(201).json({ message: 'Session created successfully!', sessionId: result.insertId });
+    const sessionId = await inTransaction(async (conn) => {
+      if (!(await isEligibleTutor(conn, tutor_id, true))) {
+        throw new EscrowError(403, 'An approved and verified tutor account is required.');
+      }
+      const [result] = await conn.query(
+        `INSERT INTO Sessions (student_id, tutor_id, skill_id, scheduled_time, duration_minutes)
+         VALUES (?, ?, ?, ?, ?)`,
+        [student_id, tutor_id, skill_id, scheduled_time, duration_minutes || 60]
+      );
+      return result.insertId;
+    });
+    res.status(201).json({ message: 'Session created successfully!', sessionId });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(error instanceof EscrowError ? error.status : 500).json({ message: error.message });
   }
 });
 

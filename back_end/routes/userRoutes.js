@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { randomAvatarColor } = require('../avatarColors');
 const { createSession, endSession } = require('../auth');
+const { hasApprovedTutorApplication } = require('../tutorEligibility');
 
 router.get('/me', (req, res) => {
   res.json({ user: req.auth });
@@ -228,10 +229,23 @@ router.post('/login', async (req, res) => {
 
 // 6. Admin toggle verification
 router.patch('/:userId/verify', async (req, res) => {
+  if (Number(req.auth?.is_admin) !== 1) return res.status(403).json({ message: 'Access denied.' });
   const { is_verified } = req.body;
+  if (![true, false, 0, 1].includes(is_verified)) {
+    return res.status(400).json({ message: 'is_verified must be a boolean.' });
+  }
+  const enableVerification = is_verified === true || is_verified === 1;
   try {
-    await db.query('UPDATE Users SET is_verified = ? WHERE user_id = ?', [is_verified ? 1 : 0, req.params.userId]);
-    res.json({ message: `User verification updated to ${is_verified ? 'verified' : 'unverified'}.` });
+    if (enableVerification) {
+      const [users] = await db.query('SELECT role FROM Users WHERE user_id = ?', [req.params.userId]);
+      if (!users.length) return res.status(404).json({ message: 'User not found.' });
+      if (['tutor', 'both'].includes(users[0].role) &&
+          !(await hasApprovedTutorApplication(db, req.params.userId))) {
+        return res.status(409).json({ message: 'Tutor approval is required before verification.' });
+      }
+    }
+    await db.query('UPDATE Users SET is_verified = ? WHERE user_id = ?', [enableVerification ? 1 : 0, req.params.userId]);
+    res.json({ message: `User verification updated to ${enableVerification ? 'verified' : 'unverified'}.` });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -239,12 +253,17 @@ router.patch('/:userId/verify', async (req, res) => {
 
 // 7. Admin update role
 router.patch('/:userId/role', async (req, res) => {
+  if (Number(req.auth?.is_admin) !== 1) return res.status(403).json({ message: 'Access denied.' });
   const { role } = req.body;
   const validRoles = ['student', 'tutor', 'both'];
   if (!validRoles.includes(role)) {
     return res.status(400).json({ message: 'Invalid role.' });
   }
   try {
+    if (['tutor', 'both'].includes(role) &&
+        !(await hasApprovedTutorApplication(db, req.params.userId))) {
+      return res.status(409).json({ message: 'Tutor approval is required before granting this role.' });
+    }
     await db.query('UPDATE Users SET role = ? WHERE user_id = ?', [role, req.params.userId]);
     res.json({ message: `User role updated to ${role}.` });
   } catch (error) {

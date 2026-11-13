@@ -36,3 +36,13 @@ Rotate the exposed database password, revoke the old credential, update deployme
 | Account data | Added handler-level administrator checks for the user list and ownership checks for profile updates. Public profiles select only public columns from the database. |
 | Existing data rollout | Added PostgreSQL migration 004 and MySQL migration 003, and updated fresh schemas. Apply the matching migration before deployment; inventory legacy identity document files and remove only verified duplicate copies. |
 | Validation | Backend syntax checks, the frontend production build, and Git whitespace checks passed. Live database access checks and migration execution remain to be performed in the deployment environment. |
+
+## 2026-11-13 — Security issues 7, 8, and 9
+
+| Topic | Fix |
+| --- | --- |
+| Tutor approval bypass | Require an approved teacher application alongside tutor role and verification for post applications and session bookings, and recheck before acceptance. Administrator role and verification controls cannot grant tutor access without approval; reviews accept only pending applications. Older unapproved tutor accounts can submit documents for review. Demo tutor records now include explicit approvals. |
+| Active upload content | Match uploaded file bytes, declared MIME type, and extension against an allowlist. Reject SVG, HTML, and mismatches. Store new chat attachments only in the private database; constrain and validate legacy disk files. Serve PDFs as downloads and raster images with fixed MIME types, `nosniff`, and a sandbox policy. Align browser file pickers with the allowed types and preserve attachment bytes when legacy conversations are merged. |
+| Escrow and ledger consistency | Kept the earlier transactional post hold and one-time settlement design. Manual balance adjustments now validate exact cents and write a signed audit entry in the same locked transaction. Administrative post removal now closes the post while retaining its escrow and dispute history. |
+| Rollout | No new schema migration is required. Re-review legacy tutors without an approved application, inventory old uploads, and reconcile historical administrator debit entries whose stored amount was positive. |
+| Validation | Backend syntax checks, the frontend production build, and Git whitespace checks passed. Live database and concurrent transaction behavior still require deployment-environment verification. |

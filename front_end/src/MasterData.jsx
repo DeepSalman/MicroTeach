@@ -681,7 +681,7 @@ const MasterData = ({ user }) => {
                           </td>
                           <td className="md-td-amount">
                             <span className={`md-amt ${isCredit ? 'credit' : isDebit ? 'debit' : 'neutral'}`}>
-                              {isCredit ? '+' : isDebit ? '-' : ''}৳{amt.toFixed(2)}
+                              {isCredit ? '+' : isDebit ? '-' : ''}৳{Math.abs(amt).toFixed(2)}
                             </span>
                           </td>
                           <td className="md-td-bal">

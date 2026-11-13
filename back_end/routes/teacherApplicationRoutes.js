@@ -4,6 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
+const { validateUpload, decodeStoredDataUri, sendPrivateFile } = require('../fileSecurity');
+const { hasApprovedTutorApplication } = require('../tutorEligibility');
 
 const os = require('os');
 
@@ -23,8 +25,8 @@ try {
 
 // Identity images are stored once in the private database, not copied to disk.
 const fileFilter = (_req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) cb(null, true);
-  else cb(new Error('Only image files are allowed.'), false);
+  if (['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) cb(null, true);
+  else cb(new Error('Only JPEG, PNG, or WEBP images are allowed.'), false);
 };
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -119,18 +121,26 @@ router.post('/', (req, res) => {
     if (!studentIdCardFile || !nidCardFile) {
       return res.status(400).json({ message: 'Both Student ID card and NID card images are required.' });
     }
+    let studentDoc;
+    let nidDoc;
+    try {
+      studentDoc = validateUpload(studentIdCardFile);
+      nidDoc = validateUpload(nidCardFile);
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
 
     const conn = await db.getConnection();
     try {
       await conn.beginTransaction();
 
-      // Check user exists and not already a tutor
-      const [users] = await conn.query('SELECT role, student_id FROM Users WHERE user_id = ?', [user_id]);
+      // Older tutor flags without an approval record must go through review.
+      const [users] = await conn.query('SELECT student_id FROM Users WHERE user_id = ?', [user_id]);
       if (users.length === 0) {
         await conn.rollback();
         return res.status(404).json({ message: 'User not found.' });
       }
-      if (users[0].role === 'tutor' || users[0].role === 'both') {
+      if (await hasApprovedTutorApplication(conn, user_id)) {
         await conn.rollback();
         return res.status(400).json({ message: 'You are already registered as a verified tutor.' });
       }
@@ -161,16 +171,17 @@ router.post('/', (req, res) => {
 
       // Keep only the private database copy. The path column remains for legacy rows.
       const docsToInsert = [
-        { type: 'student_id_card', file: studentIdCardFile },
-        { type: 'nid_card',        file: nidCardFile }
+        { type: 'student_id_card', file: studentIdCardFile, checked: studentDoc },
+        { type: 'nid_card',        file: nidCardFile, checked: nidDoc }
       ];
-      for (const { type, file } of docsToInsert) {
-        const fileDataUri = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+      for (const { type, file, checked } of docsToInsert) {
+        const fileDataUri = `data:${checked.mime};base64,${file.buffer.toString('base64')}`;
+        const privateName = `${type}${path.extname(checked.name).toLowerCase()}`;
         await conn.query(
           `INSERT INTO Teacher_Application_Documents
            (application_id, document_type, file_path, file_name, file_size, mime_type, file_data)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [applicationId, type, '', file.originalname, file.size, file.mimetype, fileDataUri]
+          [applicationId, type, '', privateName, file.size, checked.mime, fileDataUri]
         );
       }
 
@@ -198,12 +209,16 @@ router.put('/:id/review', async (req, res) => {
     await conn.beginTransaction();
 
     const [apps] = await conn.query(
-      'SELECT * FROM Teacher_Applications WHERE application_id = ?',
+      'SELECT * FROM Teacher_Applications WHERE application_id = ? FOR UPDATE',
       [req.params.id]
     );
     if (apps.length === 0) {
       await conn.rollback();
       return res.status(404).json({ message: 'Application not found.' });
+    }
+    if (apps[0].status !== 'pending') {
+      await conn.rollback();
+      return res.status(409).json({ message: 'Only pending applications can be reviewed.' });
     }
 
     await conn.query(
@@ -243,15 +258,10 @@ router.get('/documents/:documentId/file', async (req, res) => {
       return res.status(404).send('Document not found');
     }
     const doc = rows[0];
-    const safeMime = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(doc.mime_type)
-      ? doc.mime_type : 'application/octet-stream';
-    res.setHeader('Cache-Control', 'private, no-store');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
-    res.setHeader('Content-Type', safeMime);
-    res.setHeader('Content-Disposition', safeMime === 'application/octet-stream' ? 'attachment' : 'inline');
-    if (doc.file_data && /^data:[^,]+;base64,/.test(doc.file_data)) {
-      const imgBuf = Buffer.from(doc.file_data.slice(doc.file_data.indexOf(',') + 1), 'base64');
-      return res.send(imgBuf);
+    const storedBytes = decodeStoredDataUri(doc.file_data);
+    if (storedBytes) {
+      if (sendPrivateFile(res, storedBytes, doc.mime_type, doc.file_name)) return;
+      return res.status(404).send('Document unavailable');
     }
     // Legacy disk rows only: never allow a database path to escape this directory.
     const legacyPrefix = 'uploads/teacher_documents/';
@@ -260,7 +270,7 @@ router.get('/documents/:documentId/file', async (req, res) => {
         normalizedPath.slice(legacyPrefix.length) === path.basename(normalizedPath)) {
       const diskPath = path.join(UPLOAD_DIR, path.basename(normalizedPath));
       if (fs.existsSync(diskPath) && fs.realpathSync(diskPath).startsWith(`${fs.realpathSync(UPLOAD_DIR)}${path.sep}`)) {
-        return res.send(fs.readFileSync(diskPath));
+        if (sendPrivateFile(res, fs.readFileSync(diskPath), doc.mime_type, doc.file_name)) return;
       }
     }
     res.status(404).send('File not found');

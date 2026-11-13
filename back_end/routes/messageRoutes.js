@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
+const { validateUpload, decodeStoredDataUri, sendPrivateFile } = require('../fileSecurity');
 
 const os = require('os');
 
@@ -75,9 +76,9 @@ try {
           );
           const nextSeq = maxSeq[0].next_seq;
           await db.query(
-            `INSERT INTO Messages (conversation_id, seq, sender_id, kind, body, file_path, file_name, file_size, mime_type, client_msg_id, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [primaryConvId, nextSeq, msg.sender_id, msg.kind, msg.body, msg.file_path, msg.file_name, msg.file_size, msg.mime_type, msg.client_msg_id ? msg.client_msg_id + '_merged' : null, msg.created_at]
+            `INSERT INTO Messages (conversation_id, seq, sender_id, kind, body, file_path, file_name, file_size, mime_type, file_data, client_msg_id, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [primaryConvId, nextSeq, msg.sender_id, msg.kind, msg.body, msg.file_path, msg.file_name, msg.file_size, msg.mime_type, msg.file_data, msg.client_msg_id ? msg.client_msg_id + '_merged' : null, msg.created_at]
           );
         }
         await db.query('DELETE FROM Conversations WHERE conversation_id = ?', [secId]);
@@ -88,22 +89,13 @@ try {
   }
 })();
 
-// ── Multer Storage Configuration for Chat Attachments ──
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const unique = `${Date.now()}_${Math.round(Math.random() * 1e6)}`;
-    const cleanExt = path.extname(file.originalname).toLowerCase();
-    cb(null, `${unique}${cleanExt}`);
-  }
-});
-
+// ── New attachments are kept in memory until the private database write. ──
 const fileFilter = (_req, file, cb) => {
   const allowed = [
     'image/jpeg', 'image/png', 'image/webp', 'image/gif',
     'application/pdf'
   ];
-  if (allowed.includes(file.mimetype) || file.mimetype.startsWith('image/')) {
+  if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Only images (JPEG, PNG, WEBP, GIF) and PDF documents are allowed.'), false);
@@ -111,7 +103,7 @@ const fileFilter = (_req, file, cb) => {
 };
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: { fileSize: 25 * 1024 * 1024 } // 25 MB max limit
 });
@@ -185,7 +177,7 @@ router.get('/:conversationId/messages', async (req, res) => {
         m.sender_id,
         m.kind,
         m.body,
-        CASE WHEN m.file_path IS NOT NULL THEN 1 ELSE 0 END AS has_attachment,
+        CASE WHEN m.file_path IS NOT NULL OR m.file_data IS NOT NULL THEN 1 ELSE 0 END AS has_attachment,
         m.file_name,
         m.file_size,
         m.mime_type,
@@ -224,8 +216,16 @@ router.post('/:conversationId/messages', (req, res) => {
     const convId = req.params.conversationId;
     const { client_msg_id } = req.body;
     const sender_id = req.auth?.user_id;
-    let body = (req.body.body || '').trim();
+    let body = typeof req.body.body === 'string' ? req.body.body.trim() : '';
     const file = req.file;
+    let checkedFile = null;
+    if (file) {
+      try {
+        checkedFile = validateUpload(file, true);
+      } catch (error) {
+        return res.status(400).json({ message: error.message });
+      }
+    }
 
     if (!sender_id) {
       return res.status(400).json({ message: 'sender_id is required.' });
@@ -243,7 +243,6 @@ router.post('/:conversationId/messages', (req, res) => {
         [sender_id, convId]
       );
       if (member.length === 0) {
-        if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
         return res.status(403).json({ message: 'You are not a member of this conversation.' });
       }
 
@@ -253,7 +252,6 @@ router.post('/:conversationId/messages', (req, res) => {
         [convId, effectiveClientMsgId]
       );
       if (existing.length > 0) {
-        if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
         return res.json({ seq: existing[0].seq, message: 'Message already sent.' });
       }
 
@@ -274,21 +272,12 @@ router.post('/:conversationId/messages', (req, res) => {
 
       let fileDataUri = null;
       if (file) {
-        try {
-          if (file.path && fs.existsSync(file.path)) {
-            const buf = fs.readFileSync(file.path);
-            fileDataUri = `data:${file.mimetype || 'image/jpeg'};base64,${buf.toString('base64')}`;
-          }
-        } catch (e) {
-          console.warn('[messageRoutes] Error reading uploaded file into base64:', e.message);
-        }
-
-        filePath = path.posix.join('uploads', 'chat_attachments', file.filename);
-        fileName = file.originalname;
+        fileDataUri = `data:${checkedFile.mime};base64,${file.buffer.toString('base64')}`;
+        fileName = checkedFile.name;
         fileSize = file.size;
-        mimeType = file.mimetype;
+        mimeType = checkedFile.mime;
 
-        if (file.mimetype === 'application/pdf') {
+        if (checkedFile.kind === 'pdf') {
           kind = 'pdf';
           preview = body ? `📄 ${fileName}: ${body}` : `📄 ${fileName}`;
         } else {
@@ -327,14 +316,13 @@ router.post('/:conversationId/messages', (req, res) => {
       res.status(201).json({
         seq: nextSeq,
         kind,
-        has_attachment: Boolean(filePath),
+        has_attachment: Boolean(fileDataUri),
         file_name: fileName,
         file_size: fileSize,
         mime_type: mimeType,
         message: 'Message sent successfully.'
       });
     } catch (error) {
-      if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       res.status(500).json({ error: error.message });
     }
   });
@@ -442,17 +430,18 @@ router.get('/:conversationId/:seq/file', async (req, res) => {
       return res.status(404).send('Attachment not found');
     }
     const msg = rows[0];
-    if (msg.file_data && msg.file_data.startsWith('data:')) {
-      const parts = msg.file_data.split(',');
-      const mime = parts[0].split(':')[1].split(';')[0];
-      const buf = Buffer.from(parts[1], 'base64');
-      res.setHeader('Content-Type', mime || msg.mime_type || 'application/octet-stream');
-      res.setHeader('Cache-Control', 'private, no-store');
-      return res.send(buf);
+    const storedBytes = decodeStoredDataUri(msg.file_data);
+    if (storedBytes) {
+      if (sendPrivateFile(res, storedBytes, msg.mime_type, msg.file_name, true)) return;
+      return res.status(404).send('Attachment unavailable');
     }
-    const diskPath = path.join(__dirname, '..', msg.file_path);
-    if (fs.existsSync(diskPath)) {
-      return res.sendFile(diskPath, { headers: { 'Cache-Control': 'private, no-store' } });
+    const legacyPrefix = 'uploads/chat_attachments/';
+    const normalizedPath = String(msg.file_path || '').replace(/\\/g, '/');
+    if (normalizedPath.startsWith(legacyPrefix) &&
+        normalizedPath.slice(legacyPrefix.length) === path.basename(normalizedPath)) {
+      const diskPath = path.join(UPLOAD_DIR, path.basename(normalizedPath));
+      if (fs.existsSync(diskPath) && fs.realpathSync(diskPath).startsWith(`${fs.realpathSync(UPLOAD_DIR)}${path.sep}`) &&
+          sendPrivateFile(res, fs.readFileSync(diskPath), msg.mime_type, msg.file_name, true)) return;
     }
     res.status(404).send('File not found');
   } catch (err) {

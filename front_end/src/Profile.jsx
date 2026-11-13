@@ -313,8 +313,8 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
   const roleLabels = { student: 'Student', tutor: 'Peer Tutor', both: 'Student & Tutor' };
   const isTutorRole = role === 'both' || role === 'tutor';
   const isApplicationApproved = applicationStatus === 'approved';
-  const isApprovedTutor = isApplicationApproved || isTutorRole;
-  const isStudentOnly = role === 'student' && !isApprovedTutor;
+  const isApprovedTutor = isApplicationApproved && isTutorRole && Number(userData?.is_verified ?? user?.is_verified) === 1;
+  const isStudentOnly = !isApprovedTutor && !isApplicationApproved;
   const isApplicationPending = applicationStatus === 'pending' && !isApprovedTutor;
   const isApplicationRejected = applicationStatus === 'rejected' && !isApprovedTutor;
 

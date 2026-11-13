@@ -199,7 +199,8 @@ const WalletModal = ({ isOpen, onClose, user, initialBalance, onBalanceUpdate })
           ) : (
             <div className="wallet-tx-list">
               {transactions.map((tx) => {
-                const isPositive = tx.type === 'top_up' || tx.type === 'bounty_received' || tx.type === 'refund';
+                const isPositive = tx.type === 'top_up' || tx.type === 'bounty_received' || tx.type === 'refund' ||
+                  (tx.type === 'admin_adjustment' && Number(tx.amount) > 0);
                 return (
                   <div key={tx.transaction_id} className="wallet-tx-item">
                     {renderTransactionIcon(tx.type)}
@@ -207,7 +208,7 @@ const WalletModal = ({ isOpen, onClose, user, initialBalance, onBalanceUpdate })
                       <div className="wallet-tx-top-row">
                         <span className="wallet-tx-type">{getTypeLabel(tx.type)}</span>
                         <span className={`wallet-tx-amount ${isPositive ? 'tx-positive' : 'tx-negative'}`}>
-                          {isPositive ? '+' : '-'}৳{Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          {isPositive ? '+' : '-'}৳{Math.abs(Number(tx.amount)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
                       <div className="wallet-tx-bottom-row">

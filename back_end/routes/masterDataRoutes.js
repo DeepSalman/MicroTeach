@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { EscrowError, toCents, money, inTransaction } = require('../escrow');
 
 // Ensure Master_Transaction_Types table exists and has default entries
 (async function ensureMasterDataTables() {
@@ -277,7 +278,9 @@ router.get('/transactions', async (req, res) => {
         u.department,
         u.wallet_balance AS current_user_balance,
         COALESCE(m.name, t.type) AS type_name,
-        COALESCE(m.direction, 'neutral') AS direction,
+        CASE WHEN t.type = 'admin_adjustment'
+          THEN CASE WHEN t.amount < 0 THEN 'debit' ELSE 'credit' END
+          ELSE COALESCE(m.direction, 'neutral') END AS direction,
         COALESCE(m.category, 'General') AS category
       FROM Transactions t
       JOIN Users u ON t.user_id = u.user_id
@@ -366,6 +369,7 @@ router.get('/reconciliation', async (req, res) => {
             CASE
               WHEN type IN ('top_up', 'bounty_received', 'refund') THEN amount
               WHEN type IN ('bounty_held', 'bounty_payment', 'withdrawal') THEN -amount
+              WHEN type = 'admin_adjustment' THEN amount
               ELSE 0
             END
           ) AS net_tx_flow
@@ -394,61 +398,40 @@ router.get('/reconciliation', async (req, res) => {
 
 // 6. Administrative Manual Adjustment (Audited Ledger Balance Correction)
 router.post('/adjust-balance', async (req, res) => {
-  const { user_id, amount, direction, reason, admin_id } = req.body;
-
-  if (!user_id || !amount || parseFloat(amount) <= 0 || !direction || !reason) {
+  const { user_id, amount, direction, reason } = req.body;
+  if (Number(req.auth?.is_admin) !== 1) return res.status(403).json({ message: 'Access denied.' });
+  if (!user_id || !['credit', 'debit'].includes(direction) ||
+      typeof reason !== 'string' || !reason.trim() || reason.length > 150) {
     return res.status(400).json({ message: 'user_id, positive amount, direction (credit/debit), and reason are required.' });
   }
-
-  const conn = await db.getConnection();
   try {
-    await conn.beginTransaction();
-
-    const [userRows] = await conn.query('SELECT wallet_balance, full_name FROM Users WHERE user_id = ? FOR UPDATE', [user_id]);
-    if (userRows.length === 0) {
-      await conn.rollback();
-      return res.status(404).json({ message: 'User not found.' });
-    }
-
-    const curBal = parseFloat(userRows[0].wallet_balance) || 0;
-    const adjAmount = parseFloat(amount);
-    let newBal = curBal;
-
-    if (direction === 'credit') {
-      newBal = curBal + adjAmount;
-    } else if (direction === 'debit') {
-      if (curBal < adjAmount) {
-        await conn.rollback();
-        return res.status(400).json({ message: `Insufficient user balance (৳${curBal.toFixed(2)}) for debit adjustment of ৳${adjAmount.toFixed(2)}.` });
-      }
-      newBal = curBal - adjAmount;
-    } else {
-      await conn.rollback();
-      return res.status(400).json({ message: 'Direction must be credit or debit.' });
-    }
-
-    // Update user balance
-    await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBal, user_id]);
-
-    // Insert audited transaction
-    const desc = `Super Admin Adjustment (${direction.toUpperCase()}): ${reason} (Authorized by #${admin_id || 'System'})`;
-    const [txResult] = await conn.query(
-      `INSERT INTO Transactions (user_id, type, amount, balance_after, description) VALUES (?, 'admin_adjustment', ?, ?, ?)`,
-      [user_id, adjAmount, newBal, desc]
-    );
-
-    await conn.commit();
+    const adjustmentCents = toCents(amount);
+    if (adjustmentCents === 0) throw new EscrowError(400, 'Adjustment must be greater than zero.');
+    const result = await inTransaction(async (conn) => {
+      const [userRows] = await conn.query('SELECT wallet_balance, full_name FROM Users WHERE user_id = ? FOR UPDATE', [user_id]);
+      if (!userRows.length) throw new EscrowError(404, 'User not found.');
+      const balanceCents = toCents(userRows[0].wallet_balance);
+      const signedCents = direction === 'credit' ? adjustmentCents : -adjustmentCents;
+      const newBalanceCents = balanceCents + signedCents;
+      if (newBalanceCents < 0) throw new EscrowError(400, 'Insufficient user balance for this adjustment.');
+      if (newBalanceCents > 9999999999) throw new EscrowError(400, 'Adjustment exceeds the wallet limit.');
+      const newBalance = money(newBalanceCents);
+      const description = `Admin adjustment (${direction}): ${reason.trim()} (Authorized by #${req.auth.user_id})`;
+      await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBalance, user_id]);
+      const [tx] = await conn.query(
+        `INSERT INTO Transactions (user_id, type, amount, balance_after, description) VALUES (?, 'admin_adjustment', ?, ?, ?)`,
+        [user_id, money(signedCents), newBalance, description]
+      );
+      return { name: userRows[0].full_name, transactionId: tx.insertId, newBalance };
+    });
     res.json({
-      message: `Successfully adjusted balance for ${userRows[0].full_name}. New balance: ৳${newBal.toFixed(2)}.`,
-      transaction_id: txResult.insertId,
-      new_balance: newBal
+      message: `Successfully adjusted balance for ${result.name}. New balance: ৳${result.newBalance}.`,
+      transaction_id: result.transactionId,
+      new_balance: result.newBalance
     });
   } catch (error) {
-    await conn.rollback();
     console.error('Balance adjustment error:', error);
-    res.status(500).json({ error: error.message });
-  } finally {
-    conn.release();
+    res.status(error instanceof EscrowError ? error.status : 500).json({ message: error instanceof EscrowError ? error.message : 'Balance adjustment failed.' });
   }
 });
 

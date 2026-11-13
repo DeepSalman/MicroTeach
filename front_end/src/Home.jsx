@@ -35,6 +35,8 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
   const [applyTeacherOpen, setApplyTeacherOpen] = useState(false);
   const [dbUserRole, setDbUserRole] = useState(user?.role || 'student');
   const [teacherAppStatus, setTeacherAppStatus] = useState(null);
+  const eligibleTutor = ['tutor', 'both'].includes(dbUserRole) &&
+    Number(user?.is_verified) === 1 && teacherAppStatus === 'approved';
   const [showApprovedBanner, setShowApprovedBanner] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -113,10 +115,12 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
             // Only update parent if valid values exist and actually differ
             const roleChanged = Boolean(profileUser.role && user.role && profileUser.role !== user.role);
             const colorChanged = Boolean(profileUser.avatar_color && user.avatar_color && profileUser.avatar_color !== user.avatar_color);
-            if (onProfileUpdate && (roleChanged || colorChanged)) {
+            const verificationChanged = Number(profileUser.is_verified) !== Number(user.is_verified);
+            if (onProfileUpdate && (roleChanged || colorChanged || verificationChanged)) {
               onProfileUpdate({
                 ...user,
                 role: profileUser.role || user.role,
+                is_verified: profileUser.is_verified,
                 avatar_color: profileUser.avatar_color || user.avatar_color
               });
             }
@@ -271,7 +275,7 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
         </div>
 
         <div className="header-actions">
-          {user && (dbUserRole === 'student' && user.role === 'student' && teacherAppStatus !== 'approved') && (
+          {user && teacherAppStatus !== 'approved' && (
             <button className="btn-become-tutor-nav" onClick={() => setApplyTeacherOpen(true)}>
               Apply to Teach
             </button>
@@ -334,7 +338,7 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
                         Admin Panel
                       </button>
                     )}
-                    {user.role === 'student' && dbUserRole === 'student' && teacherAppStatus !== 'approved' && (
+                    {teacherAppStatus !== 'approved' && (
                       <button className="dropdown-item" onClick={() => { setDropdownOpen(false); setApplyTeacherOpen(true); }}>
                         🎓 Apply to Teach
                       </button>
@@ -487,7 +491,7 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
                         {isOwnPost ? (
                           <button className="view-details-btn" onClick={() => setDetailModalPost(post)}>View Details</button>
                         ) : user ? (
-                          (dbUserRole === 'both' || dbUserRole === 'tutor' || teacherAppStatus === 'approved') ? (
+                          eligibleTutor ? (
                             appliedPostIds.has(post.post_id) ? (
                               <button className="apply-btn applied-btn" onClick={() => setApplyModalPost(post)}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
@@ -498,6 +502,10 @@ const Home = ({ user, onLogout, onProfileUpdate }) => {
                             ) : (
                               <button className="apply-btn" onClick={() => setApplyModalPost(post)}>Apply Now</button>
                             )
+                          ) : teacherAppStatus === 'approved' ? (
+                            <button className="apply-btn pending-teacher-btn" disabled title="Tutor access is paused until verification is restored">
+                              Tutor Access Paused
+                            </button>
                           ) : teacherAppStatus === 'pending' ? (
                             <button
                               className="apply-btn pending-teacher-btn"

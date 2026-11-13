@@ -524,6 +524,9 @@ async function main() {
   // 12. Seed Teacher Applications
   console.log('\n📋 Seeding teacher applications...');
   const applications = [
+    { user_email: 'rafiq@bracu.ac.bd', reason: 'Demo tutor approval.', expertise: 'Algorithms & Data Structures', status: 'approved' },
+    { user_email: 'tanvir@bracu.ac.bd', reason: 'Demo tutor approval.', expertise: 'Electrical Engineering', status: 'approved' },
+    { user_email: 'fatima@bracu.ac.bd', reason: 'Demo tutor approval.', expertise: 'Machine Learning', status: 'approved' },
     { user_email: 'sadia@bracu.ac.bd', reason: 'I have been helping peers with algorithms and calculus for 2 years. Want to officially become a tutor.', expertise: 'Algorithms & Data Structures, Calculus I & II', status: 'pending' },
     { user_email: 'imran@bracu.ac.bd', reason: 'Strong background in OOP and databases. Want to tutor junior students.', expertise: 'Object-Oriented Programming, Database Management Systems', status: 'pending' },
   ];

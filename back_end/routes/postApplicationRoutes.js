@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const { EscrowError, toCents, inTransaction, lockPost, settleEscrow } = require('../escrow');
 const { statusChangeAllowed } = require('../applicationStatus');
+const { isEligibleTutor } = require('../tutorEligibility');
 
 // 1. Get all applications for a post (with applicant info + avg rating)
 router.get('/post/:postId', async (req, res) => {
@@ -86,7 +87,8 @@ router.get('/user/:userId', async (req, res) => {
 
 // 3. Apply only while the post is open for tutors.
 router.post('/', async (req, res) => {
-  const { post_id, user_id, message } = req.body;
+  const { post_id, message } = req.body;
+  const user_id = req.auth?.user_id;
   if (!post_id || !user_id) return res.status(400).json({ message: 'Post ID and User ID are required.' });
   try {
     const applicationId = await inTransaction(async (conn) => {
@@ -97,9 +99,8 @@ router.post('/', async (req, res) => {
       if (String(post.user_id) === String(user_id)) {
         throw new EscrowError(400, 'You cannot apply to your own post.');
       }
-      const [users] = await conn.query('SELECT role, is_verified FROM Users WHERE user_id = ?', [user_id]);
-      if (!users.length || !['both', 'tutor'].includes(users[0].role) || !Number(users[0].is_verified)) {
-        throw new EscrowError(403, 'Only verified tutors can apply for tutoring gigs.');
+      if (!(await isEligibleTutor(conn, user_id, true))) {
+        throw new EscrowError(403, 'An approved and verified tutor account is required.');
       }
       const [existing] = await conn.query(
         'SELECT application_id FROM Post_Applications WHERE post_id = ? AND user_id = ?', [post_id, user_id]
@@ -164,6 +165,9 @@ router.patch('/:id/status', async (req, res) => {
       }
 
       if (nextStatus === 'accepted' && app.status === 'pending') {
+        if (!(await isEligibleTutor(conn, app.applicant_id, true))) {
+          throw new EscrowError(403, 'This tutor is no longer approved and verified.');
+        }
         const [active] = await conn.query(
           "SELECT application_id FROM Post_Applications WHERE post_id = ? AND application_id <> ? AND status IN ('accepted', 'completion_requested', 'cancellation_requested', 'completed') LIMIT 1 FOR UPDATE",
           [post.post_id, app.application_id]
