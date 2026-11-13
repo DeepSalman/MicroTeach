@@ -23,8 +23,14 @@
 - Supabase tables have row-level security enabled, and the `anon` and `authenticated` Data API roles have no table or compatibility-view privileges. Browser requests must use the Express API.
 - Private API responses and file downloads use `Cache-Control: no-store`.
 
+## Wallet and escrow
+
+- The browser can read its wallet but cannot credit it. Self-service top-ups and the direct bounty-payment endpoint were removed. Online funding must remain unavailable until a payment provider's signed, verified confirmation is integrated. An authorized administrator can make an audited manual adjustment after independently verifying funds.
+- A bounty is reserved with the post creation in one database transaction. Completion, cancellation, post closure or deletion, moderation, and dispute resolution all lock the post and use the same single-use `Escrow_Settlements` record before updating balances and ledger entries.
+- Existing settlement transactions are backfilled into the settlement table by the migration. Review historical ledger entries separately for any duplicate payments or unreferenced holds created before this fix.
+
 ## Deployment
 
 - Use a same-site frontend and API. The bundled Vercel deployment serves both on one origin. For separate services, use subdomains of the same site and set `FRONTEND_ORIGIN` to the exact HTTPS frontend origin. A frontend on an unrelated domain needs a same-origin API proxy; cross-site cookies are unreliable in privacy-focused browsers.
-- Run the additive session migration in `back_end/migrations/` for an existing database before deploying this version. On Supabase, also run `002_lock_down_supabase_api.sql`. Both fresh database setup scripts declare `Auth_Sessions`. The application does not need permission to create tables at runtime.
+- Run the additive migrations in `back_end/migrations/` for an existing database before deploying this version. On Supabase, run PostgreSQL migrations 001, 002, and 003 in order; on MySQL, run 001 and 002. Both fresh database setup scripts declare the session and escrow settlement tables. The application does not need permission to create these tables at runtime.
 - Serve the API over HTTPS in production. Do not expose the upload directory as public static content.

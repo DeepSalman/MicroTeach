@@ -930,7 +930,7 @@ const ReportQueue = ({ user }) => {
               <p className="rq-modal-desc">
                 Taking down this post will immediately unpublish it from the platform.
                 {takedownTarget.bounty > 0 && (
-                  <span> The held escrow bounty of <strong>৳{Number(takedownTarget.bounty).toLocaleString('en-IN')}</strong> will be automatically refunded to <strong>{takedownTarget.post_author_name}</strong>.</span>
+                  <span> If still held, the escrow bounty of <strong>৳{Number(takedownTarget.bounty).toLocaleString('en-IN')}</strong> will be refunded to <strong>{takedownTarget.post_author_name}</strong>.</span>
                 )}
               </p>
 

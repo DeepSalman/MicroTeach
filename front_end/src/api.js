@@ -25,7 +25,6 @@ export const createSession = (sessionData) => API.post("/sessions", sessionData)
 
 export const fetchPosts = () => API.get("/posts");
 export const createPost = (postData) => API.post("/posts", postData);
-export const updatePostStatus = (postId, status) => API.patch(`/posts/${postId}/status`, { status });
 export const deletePost = (postId) => API.delete(`/posts/${postId}`);
 
 export const fetchTeacherApplications = () => API.get("/teacher-applications");
@@ -63,7 +62,6 @@ export const fetchUnreadCount = (userId) => API.get(`/messages/unread/${userId}`
 
 // Wallet
 export const fetchWalletBalance = (userId) => API.get(`/wallet/balance/${userId}`);
-export const topUpWallet = (data) => API.post('/wallet/topup', data);
 export const fetchTransactions = (userId) => API.get(`/wallet/transactions/${userId}`);
 
 // Posts

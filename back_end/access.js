@@ -1,5 +1,6 @@
 const db = require('./db');
 const { loadSession } = require('./auth');
+const { statusChangeAllowed } = require('./applicationStatus');
 
 const same = (a, b) => String(a) === String(b);
 const admin = (req) => Number(req.auth?.is_admin) === 1;
@@ -41,23 +42,6 @@ function publicRoute(area, method, path) {
   return false;
 }
 
-function statusChangeAllowed(app, actor, status) {
-  const isOwner = same(actor, app.owner_id);
-  const isApplicant = same(actor, app.applicant_id);
-  if (!isOwner && !isApplicant) return false;
-  if (app.status === 'pending') return isOwner && ['accepted', 'rejected'].includes(status);
-  if (app.status === 'accepted') {
-    return status === 'completion_requested' || (isOwner && status === 'cancellation_requested');
-  }
-  if (app.status === 'completion_requested') {
-    return !same(actor, app.completion_requested_by) && ['completed', 'accepted'].includes(status);
-  }
-  if (app.status === 'cancellation_requested') {
-    return isApplicant && ['cancelled', 'accepted'].includes(status);
-  }
-  return false;
-}
-
 async function allowed(area, req, path) {
   const method = req.method;
   const body = req.body || (req.body = {});
@@ -78,11 +62,10 @@ async function allowed(area, req, path) {
       body.user_id = req.auth.user_id;
       return true;
     }
-    if ((method === 'PATCH' && (match = path.match(/^\/([^/]+)\/status$/))) ||
-        (method === 'POST' && (match = path.match(/^\/([^/]+)\/close$/)))) {
+    if (method === 'POST' && (match = path.match(/^\/([^/]+)\/close$/))) {
       const post = await postOwner(match[1]);
       if (!post) return false;
-      if (method === 'POST') body.user_id = req.auth.user_id;
+      body.user_id = req.auth.user_id;
       return ownerOrAdmin(req, post.user_id);
     }
     if (method === 'DELETE' && /^\/[^/]+$/.test(path)) return admin(req);
@@ -166,11 +149,6 @@ async function allowed(area, req, path) {
 
   if (area === 'wallet') {
     if (method === 'GET' && (match = path.match(/^\/(balance|transactions)\/([^/]+)$/))) return ownerOrAdmin(req, match[2]);
-    if (method === 'POST' && path === '/topup') {
-      body.user_id = req.auth.user_id;
-      return true;
-    }
-    if (method === 'POST' && path === '/pay-bounty') return admin(req);
     return false;
   }
 

@@ -17,3 +17,12 @@ Record each future fix here with a date, a brief description, and any deployment
 ### Required rollout
 
 Rotate the exposed database password, revoke the old credential, update deployment secrets, run the applicable migration files in `back_end/migrations/`, and deploy this code. Coordinate any Git history cleanup after rotation; removing the file from tracking does not remove old commits.
+
+## 2026-11-13 — Security issues 3 and 4
+
+| Topic | Fix |
+| --- | --- |
+| Wallet self-credit | Removed the client-controlled top-up API and its frontend form. Online funding is unavailable until a payment provider's signed confirmation is integrated; only the existing administrator-only audited adjustment can credit funds after manual verification. |
+| Duplicate bounty settlement | Added a post-level database lock, an atomic single-use escrow settlement record, and a check for historical payouts. Completion, cancellation, refunds, takedowns, dispute decisions, and post creation now keep the balance and ledger changes in database transactions. The direct bounty-payment API and bypassing post-status endpoint were removed. |
+| Existing data rollout | Added PostgreSQL migration 003 and MySQL migration 002 to create and backfill settlement records. Apply the appropriate migration before deploying; review historical transactions for earlier duplicate credits or missing escrow holds. |
+| Validation | Backend syntax checks, the frontend production build, and Git whitespace checks passed. Database migrations and concurrent settlement behavior still need validation against a live database before production rollout. |

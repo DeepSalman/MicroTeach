@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { EscrowError, toCents, money, inTransaction, lockPost, settleEscrow } = require('../escrow');
 
 // 1. Get all posts with user info
 router.get('/', async (req, res) => {
@@ -69,220 +70,103 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-// 3. Create a new post (deducts bounty from wallet)
+// 3. Create a post and reserve its bounty in one transaction.
 router.post('/', async (req, res) => {
   const { user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent } = req.body;
-
   if (!user_id || !category || !title) {
     return res.status(400).json({ message: 'User ID, category, and title are required.' });
   }
-
-  // Validate deadline: cannot be in the past
   if (deadline && typeof deadline === 'string' && deadline.trim()) {
     const deadlineTimestamp = Date.parse(deadline.trim());
-    if (isNaN(deadlineTimestamp)) {
-      return res.status(400).json({ message: 'Invalid deadline format. Please provide a valid date.' });
-    }
-    // Allow 60 seconds grace period for network latency / clock skew
-    const graceWindow = Date.now() - 60 * 1000;
-    if (deadlineTimestamp < graceWindow) {
-      return res.status(400).json({ message: 'The deadline cannot be in the past. Please select a future date and time.' });
+    if (isNaN(deadlineTimestamp)) return res.status(400).json({ message: 'Invalid deadline format.' });
+    if (deadlineTimestamp < Date.now() - 60000) {
+      return res.status(400).json({ message: 'The deadline cannot be in the past.' });
     }
   }
 
-  const bountyAmount = parseFloat(bounty) || 0;
-
   try {
-    // Check wallet balance before creating post
-    if (bountyAmount > 0) {
-      const [userRows] = await db.query('SELECT wallet_balance FROM Users WHERE user_id = ?', [user_id]);
-      if (userRows.length === 0) {
-        return res.status(404).json({ message: 'User not found.' });
+    const bountyCents = toCents(bounty ?? 0);
+    const postId = await inTransaction(async (conn) => {
+      let newBalance;
+      if (bountyCents > 0) {
+        const [users] = await conn.query('SELECT wallet_balance FROM Users WHERE user_id = ? FOR UPDATE', [user_id]);
+        if (!users.length) throw new EscrowError(404, 'User not found.');
+        const balanceCents = toCents(users[0].wallet_balance);
+        if (balanceCents < bountyCents) {
+          throw new EscrowError(400, `Insufficient balance. Your balance is ৳${money(balanceCents)}, but the bounty is ৳${money(bountyCents)}.`);
+        }
+        newBalance = money(balanceCents - bountyCents);
       }
-      const currentBalance = parseFloat(userRows[0].wallet_balance) || 0;
-      if (currentBalance < bountyAmount) {
-        return res.status(400).json({ message: `Insufficient balance. Your balance is ৳${currentBalance.toFixed(2)}, but the bounty is ৳${bountyAmount.toFixed(2)}. Please top up your wallet.` });
-      }
-    }
 
-    const query = `
-      INSERT INTO Posts
-        (user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent)
-      VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    const isUrgentVal = (is_urgent === true || is_urgent === 1 || is_urgent === '1' || is_urgent === 'true') ? 1 : 0;
-    const [result] = await db.query(query, [
-      user_id,
-      category,
-      course_code || '',
-      title,
-      description || '',
-      delivery_format || 'live_call',
-      bountyAmount,
-      deadline || null,
-      isUrgentVal
-    ]);
-
-    // Record bounty_held transaction AFTER post is created (need post_id as reference)
-    if (bountyAmount > 0) {
-      const [userRows] = await db.query('SELECT wallet_balance FROM Users WHERE user_id = ?', [user_id]);
-      const currentBalance = parseFloat(userRows[0].wallet_balance) || 0;
-      const newBalance = currentBalance - bountyAmount;
-      await db.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBalance, user_id]);
-      await db.query(
-        'INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description) VALUES (?, ?, ?, ?, ?, ?)',
-        [user_id, 'bounty_held', bountyAmount, newBalance, result.insertId, `Held ৳${bountyAmount} bounty for post: ${title}`]
+      const isUrgentVal = (is_urgent === true || is_urgent === 1 || is_urgent === '1' || is_urgent === 'true') ? 1 : 0;
+      const [result] = await conn.query(
+        `INSERT INTO Posts (user_id, category, course_code, title, description, delivery_format, bounty, deadline, is_urgent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [user_id, category, course_code || '', title, description || '', delivery_format || 'live_call',
+          money(bountyCents), deadline || null, isUrgentVal]
       );
-    }
-
-    res.status(201).json({ message: 'Post created successfully!', postId: result.insertId });
+      if (bountyCents > 0) {
+        await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBalance, user_id]);
+        await conn.query(
+          'INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description) VALUES (?, ?, ?, ?, ?, ?)',
+          [user_id, 'bounty_held', money(bountyCents), newBalance, result.insertId, `Held ৳${money(bountyCents)} bounty for post: ${title}`]
+        );
+      }
+      return result.insertId;
+    });
+    res.status(201).json({ message: 'Post created successfully!', postId });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(error instanceof EscrowError ? error.status : 500).json({ message: error.message });
   }
 });
 
-// 4. Update post status
-router.patch('/:postId/status', async (req, res) => {
-  const { status } = req.body;
-  const validStatuses = ['active', 'pending', 'resolved', 'closed'];
-
-  if (!validStatuses.includes(status)) {
-    return res.status(400).json({ message: 'Invalid status.' });
-  }
-
-  try {
-    const query = `
-      UPDATE Posts
-      SET status = ?
-      WHERE post_id = ?
-    `;
-    await db.query(query, [status, req.params.postId]);
-    res.json({ message: 'Post status updated!' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 5. Close post (with validation + bounty refund)
+// 5. Close a post and refund any unsettled bounty atomically.
 router.post('/:postId/close', async (req, res) => {
-  const { user_id } = req.body;
-
   try {
-    // Verify post exists and belongs to user
-    const [posts] = await db.query('SELECT * FROM Posts WHERE post_id = ?', [req.params.postId]);
-    if (posts.length === 0) {
-      return res.status(404).json({ message: 'Post not found.' });
-    }
-    if (String(posts[0].user_id) !== String(user_id)) {
-      return res.status(403).json({ message: 'Only the post owner can close this post.' });
-    }
-    if (posts[0].status === 'closed') {
-      return res.status(400).json({ message: 'Post is already closed.' });
-    }
-
-    // Check if any application is accepted or completion_requested (active sessions block closing)
-    const [apps] = await db.query(
-      'SELECT status FROM Post_Applications WHERE post_id = ?',
-      [req.params.postId]
-    );
-    const hasActive = apps.some(a => a.status === 'accepted' || a.status === 'completion_requested');
-    if (hasActive) {
-      return res.status(400).json({ message: 'Cannot close post. There is an active tutoring session. Please wait for it to finish or cancel it first.' });
-    }
-
-    const hasCompleted = apps.some(a => a.status === 'completed');
-
-    // Close the post
-    await db.query('UPDATE Posts SET status = ? WHERE post_id = ?', ['closed', req.params.postId]);
-
-    // Refund bounty only if no session was completed (bounty still held in escrow)
-    let refundMessage = '';
-    const bounty = parseFloat(posts[0].bounty) || 0;
-    if (bounty > 0 && !hasCompleted) {
-      const [existingRefund] = await db.query(
-        "SELECT transaction_id FROM Transactions WHERE user_id = ? AND reference_id = ? AND type = 'refund'",
-        [user_id, req.params.postId]
-      );
-      if (existingRefund.length === 0) {
-        const [heldTx] = await db.query(
-          "SELECT transaction_id FROM Transactions WHERE user_id = ? AND type = 'bounty_held' AND (reference_id = ? OR (reference_id IS NULL AND amount = ?)) LIMIT 1",
-          [user_id, req.params.postId, bounty]
-        );
-        if (heldTx.length > 0) {
-          const [userRows] = await db.query('SELECT wallet_balance FROM Users WHERE user_id = ?', [user_id]);
-          const currentBalance = parseFloat(userRows[0].wallet_balance) || 0;
-          const newBalance = currentBalance + bounty;
-          await db.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBalance, user_id]);
-          await db.query(
-            'INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description) VALUES (?, ?, ?, ?, ?, ?)',
-            [user_id, 'refund', bounty, newBalance, req.params.postId, `Refunded ৳${bounty} bounty for closed post #${req.params.postId}`]
-          );
-          refundMessage = ' Bounty refunded to your wallet.';
-        }
+    const refunded = await inTransaction(async (conn) => {
+      const post = await lockPost(conn, req.params.postId);
+      if (String(post.user_id) !== String(req.auth.user_id)) {
+        throw new EscrowError(403, 'Only the post owner can close this post.');
       }
-    }
-
-    res.json({ message: `Post closed.${refundMessage}` });
+      if (post.status === 'closed') throw new EscrowError(409, 'Post is already closed.');
+      const [apps] = await conn.query('SELECT status FROM Post_Applications WHERE post_id = ?', [post.post_id]);
+      if (apps.some((app) => ['accepted', 'completion_requested', 'cancellation_requested'].includes(app.status))) {
+        throw new EscrowError(409, 'An active tutoring session must be completed or cancelled first.');
+      }
+      let released = false;
+      if (!apps.some((app) => app.status === 'completed') && toCents(post.bounty) > 0) {
+        const settlement = await settleEscrow(conn, post, [{
+          userId: post.user_id, type: 'refund', cents: toCents(post.bounty),
+          description: `Refunded bounty for closed post #${post.post_id}`
+        }]);
+        released = settlement.released;
+      }
+      await conn.query("UPDATE Posts SET status = 'closed' WHERE post_id = ?", [post.post_id]);
+      return released;
+    });
+    res.json({ message: `Post closed.${refunded ? ' Bounty refunded to your wallet.' : ''}` });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(error instanceof EscrowError ? error.status : 500).json({ message: error.message });
   }
 });
 
-// 6. Delete / Remove post (Admin Content Moderation)
+// 6. Remove a post and refund its unsettled bounty atomically.
 router.delete('/:postId', async (req, res) => {
-  const { postId } = req.params;
-
   try {
-    const [posts] = await db.query('SELECT * FROM Posts WHERE post_id = ?', [postId]);
-    if (posts.length === 0) {
-      return res.status(404).json({ message: 'Post not found.' });
-    }
-
-    const post = posts[0];
-    const bounty = parseFloat(post.bounty) || 0;
-    const authorId = post.user_id;
-
-    // Check if any application is completed
-    const [apps] = await db.query(
-      'SELECT status FROM Post_Applications WHERE post_id = ?',
-      [postId]
-    );
-    const hasCompleted = apps.some(a => a.status === 'completed');
-
-    // Refund escrow bounty if not completed and not already refunded
-    if (bounty > 0 && !hasCompleted && post.status !== 'closed') {
-      const [existingRefund] = await db.query(
-        "SELECT transaction_id FROM Transactions WHERE user_id = ? AND reference_id = ? AND type = 'refund'",
-        [authorId, postId]
-      );
-      if (existingRefund.length === 0) {
-        const [heldTx] = await db.query(
-          "SELECT transaction_id FROM Transactions WHERE user_id = ? AND type = 'bounty_held' AND (reference_id = ? OR (reference_id IS NULL AND amount = ?)) LIMIT 1",
-          [authorId, postId, bounty]
-        );
-        if (heldTx.length > 0) {
-          const [userRows] = await db.query('SELECT wallet_balance FROM Users WHERE user_id = ?', [authorId]);
-          if (userRows.length > 0) {
-            const currentBalance = parseFloat(userRows[0].wallet_balance) || 0;
-            const newBalance = currentBalance + bounty;
-            await db.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBalance, authorId]);
-            await db.query(
-              'INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description) VALUES (?, ?, ?, ?, ?, ?)',
-              [authorId, 'refund', bounty, newBalance, postId, `Refunded ৳${bounty} bounty for removed post #${postId}`]
-            );
-          }
-        }
+    await inTransaction(async (conn) => {
+      const post = await lockPost(conn, req.params.postId);
+      const [apps] = await conn.query('SELECT status FROM Post_Applications WHERE post_id = ?', [post.post_id]);
+      if (toCents(post.bounty) > 0 && !apps.some((app) => app.status === 'completed') && post.status !== 'closed') {
+        await settleEscrow(conn, post, [{
+          userId: post.user_id, type: 'refund', cents: toCents(post.bounty),
+          description: `Refunded bounty for removed post #${post.post_id}`
+        }]);
       }
-    }
-
-    // Delete post (cascades cleanly to applications, reports, reviews, disputes)
-    await db.query('DELETE FROM Posts WHERE post_id = ?', [postId]);
-
+      await conn.query('DELETE FROM Posts WHERE post_id = ?', [post.post_id]);
+    });
     res.json({ message: 'Post removed successfully.' });
   } catch (error) {
-    console.error('Failed to remove post:', error);
-    res.status(500).json({ error: error.message });
+    res.status(error instanceof EscrowError ? error.status : 500).json({ message: error.message });
   }
 });
 

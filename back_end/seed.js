@@ -160,6 +160,12 @@ const TABLES = {
       INDEX idx_tx_user_type (user_id, type),
       INDEX idx_tx_ref (reference_id)
     )`,
+  Escrow_Settlements: `
+    CREATE TABLE IF NOT EXISTS Escrow_Settlements (
+      post_id INT PRIMARY KEY,
+      outcome VARCHAR(20) NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
   Reviews: `
     CREATE TABLE IF NOT EXISTS Reviews (
       review_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -214,7 +220,7 @@ const TABLES = {
 const DROP_ORDER = [
   'Auth_Sessions',
   'Messages', 'Conversation_Members', 'Conversations',
-  'Reviews', 'Transactions',
+  'Reviews', 'Escrow_Settlements', 'Transactions',
   'Post_Applications', 'Reports', 'Teacher_Applications',
   'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users'
 ];

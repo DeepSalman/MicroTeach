@@ -89,7 +89,7 @@ const CreatePost = ({ user }) => {
 
     const bountyAmount = parseFloat(formData.bounty) || 0;
     if (bountyAmount > 0 && bountyAmount > walletBalance) {
-      setError(`Insufficient wallet balance. Your balance is ৳${walletBalance.toFixed(2)}, but the bounty is ৳${bountyAmount.toFixed(2)}. Please top up your wallet.`);
+      setError(`Insufficient wallet balance. Your balance is ৳${walletBalance.toFixed(2)}, but the bounty is ৳${bountyAmount.toFixed(2)}.`);
       return;
     }
 
@@ -297,7 +297,7 @@ const CreatePost = ({ user }) => {
                 </div>
                 {parseFloat(formData.bounty) > walletBalance && (
                   <span className="field-hint insufficient-hint">
-                    Insufficient balance (৳{Number(walletBalance).toFixed(2)}). Set bounty to 0 or top up your wallet in Profile.
+                    Insufficient balance (৳{Number(walletBalance).toFixed(2)}). Set the bounty to 0 to continue.
                   </span>
                 )}
               </div>

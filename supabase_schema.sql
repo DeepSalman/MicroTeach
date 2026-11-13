@@ -22,6 +22,7 @@ DROP TABLE IF EXISTS public.conversation_members, public."Conversation_Members" 
 DROP TABLE IF EXISTS public.conversations, public."Conversations" CASCADE;
 DROP TABLE IF EXISTS public.reviews, public."Reviews" CASCADE;
 DROP TABLE IF EXISTS public.transactions, public."Transactions" CASCADE;
+DROP TABLE IF EXISTS public.escrow_settlements CASCADE;
 DROP TABLE IF EXISTS public.post_applications, public."Post_Applications" CASCADE;
 DROP TABLE IF EXISTS public.reports, public."Reports" CASCADE;
 DROP TABLE IF EXISTS public.teacher_application_documents, public."Teacher_Application_Documents" CASCADE;
@@ -170,6 +171,13 @@ CREATE TABLE public.transactions (
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- One settlement per post, retained after post deletion for audit and replay protection.
+CREATE TABLE public.escrow_settlements (
+  post_id INT PRIMARY KEY,
+  outcome VARCHAR(20) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 11. Reviews
 CREATE TABLE public.reviews (
   review_id SERIAL PRIMARY KEY,
@@ -286,7 +294,7 @@ BEGIN
   FOREACH relation_name IN ARRAY ARRAY[
     'users', 'auth_sessions', 'skills', 'user_skills', 'posts', 'sessions',
     'teacher_applications', 'teacher_application_documents', 'reports',
-    'post_applications', 'transactions', 'reviews', 'conversations',
+    'post_applications', 'transactions', 'escrow_settlements', 'reviews', 'conversations',
     'conversation_members', 'messages', 'transaction_disputes',
     'master_transaction_types'
   ] LOOP

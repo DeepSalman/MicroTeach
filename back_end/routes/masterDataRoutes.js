@@ -26,10 +26,10 @@ const db = require('../db');
     `);
 
     const defaultTypes = [
-      ['top_up', 'Wallet Deposit / Top-up', 'credit', 'Inflow / Funding', 'Student Wallet Asset', false, false, 'Automated (Payment Gateway)', 50.00, 25000.00, 'Funds loaded into student wallet via mobile financial service (bKash/Nagad) or card.', true],
+      ['top_up', 'Wallet Deposit / Top-up', 'credit', 'Inflow / Funding', 'Student Wallet Asset', false, false, 'Disabled until verified payment integration', 50.00, 25000.00, 'Historical deposits only; online funding is currently disabled.', false],
       ['bounty_held', 'Escrow Bounty Reservation', 'escrow_hold', 'Escrow Lifecycle', 'Escrow Liability Reserve', false, true, 'Automated (Post Creation)', 50.00, 10000.00, 'Locked in platform escrow when a student creates a help request with a bounty.', true],
       ['bounty_received', 'Peer Tutor Bounty Payout', 'credit', 'Marketplace Settlement', 'Tutor Earned Revenue', true, true, 'Automated (Session Completion)', 50.00, 10000.00, 'Released from escrow to peer tutor upon mutual lesson completion or dispute settlement.', true],
-      ['bounty_payment', 'Direct Bounty Settlement', 'debit', 'Marketplace Settlement', 'Student Expense Settlement', true, true, 'Automated (Session Completion)', 50.00, 10000.00, 'Direct debit record from poster to tutor wallet when settling peer teaching session.', true],
+      ['bounty_payment', 'Direct Bounty Settlement', 'debit', 'Marketplace Settlement', 'Student Expense Settlement', true, true, 'Disabled', 50.00, 10000.00, 'Historical direct payments only; escrow now settles through one protected path.', false],
       ['refund', 'Escrow Bounty Refund', 'credit', 'Dispute & Cancellation', 'Liability Reversal to Student', false, false, 'Automated (Post Close / Dispute)', 0.00, 10000.00, 'Returned to student wallet when a post is closed without completed session or arbitrated.', true],
       ['withdrawal', 'Tutor Cashout / Withdrawal', 'debit', 'Outflow / Payout', 'Tutor Asset Withdrawal', false, false, 'Manual / Scheduled Batch', 100.00, 25000.00, 'Peer tutor cashout request from platform wallet to personal bank or mobile wallet.', true],
       ['admin_adjustment', 'Administrative Ledger Correction', 'neutral', 'Governance & Audit', 'Manual General Ledger Adjustment', false, true, 'Manual (Super Admin Only)', 0.00, 50000.00, 'Audited discretionary credit or debit by Super Admin for ledger reconciliation or disputes.', true],
@@ -58,6 +58,10 @@ const db = require('../db');
       `;
       await db.query(sql, t);
     }
+
+    await db.query(
+      "UPDATE Master_Transaction_Types SET is_active = 0 WHERE type_code IN ('top_up', 'bounty_payment')"
+    );
 
     console.log('[masterDataRoutes] Master_Transaction_Types verified & synchronized');
   } catch (err) {

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { fetchWalletBalance, fetchTransactions, topUpWallet } from './api';
+import { fetchWalletBalance, fetchTransactions } from './api';
 import './WalletModal.css';
-
-const PRESET_AMOUNTS = [200, 500, 1000, 2000];
 
 const WalletModal = ({ isOpen, onClose, user, initialBalance, onBalanceUpdate }) => {
   const [balance, setBalance] = useState(() => {
@@ -15,9 +13,6 @@ const WalletModal = ({ isOpen, onClose, user, initialBalance, onBalanceUpdate })
     return 0;
   });
   const [transactions, setTransactions] = useState([]);
-  const [topUpAmount, setTopUpAmount] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (initialBalance !== undefined && initialBalance !== null && !isNaN(Number(initialBalance))) {
@@ -57,26 +52,6 @@ const WalletModal = ({ isOpen, onClose, user, initialBalance, onBalanceUpdate })
     } catch (error) {
       console.error('Failed to load transactions:', error);
     }
-  };
-
-  const handleTopUp = async (e) => {
-    e.preventDefault();
-    const amount = parseFloat(topUpAmount);
-    if (!amount || amount <= 0) return;
-
-    setLoading(true);
-    setMessage('');
-    try {
-      const res = await topUpWallet({ user_id: user.user_id, amount });
-      setBalance(res.data.balance);
-      setTopUpAmount('');
-      setMessage(`৳${Number(amount).toLocaleString('en-IN')} added successfully!`);
-      await loadWalletData();
-      if (onBalanceUpdate) onBalanceUpdate(res.data.balance);
-    } catch (error) {
-      setMessage('Failed to process top up. Please try again.');
-    }
-    setLoading(false);
   };
 
   const renderTransactionIcon = (type) => {
@@ -196,86 +171,11 @@ const WalletModal = ({ isOpen, onClose, user, initialBalance, onBalanceUpdate })
           </div>
         </div>
 
-        {/* Top Up Form */}
         <div className="wallet-topup-section">
           <div className="wallet-section-header">
-            <h3>Add Funds</h3>
-            <span className="wallet-section-sub">Quick top up to fund student bounties</span>
+            <h3>Adding funds</h3>
+            <span className="wallet-section-sub">Online top-ups are unavailable until payment verification is enabled.</span>
           </div>
-
-          {/* Quick preset chips */}
-          <div className="wallet-presets">
-            {PRESET_AMOUNTS.map((amt) => (
-              <button
-                key={amt}
-                type="button"
-                className={`wallet-preset-btn ${parseFloat(topUpAmount) === amt ? 'active' : ''}`}
-                onClick={() => setTopUpAmount(String(amt))}
-              >
-                +৳{amt}
-              </button>
-            ))}
-          </div>
-
-          <form className="wallet-topup-form" onSubmit={handleTopUp}>
-            <div className="wallet-topup-row">
-              <div className="wallet-input-wrapper">
-                <span className="wallet-input-prefix">৳</span>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={topUpAmount}
-                  onChange={(e) => setTopUpAmount(e.target.value)}
-                  min="1"
-                  step="any"
-                  className="wallet-topup-input"
-                  disabled={loading}
-                />
-                {topUpAmount && (
-                  <button
-                    type="button"
-                    className="wallet-input-clear"
-                    onClick={() => setTopUpAmount('')}
-                    aria-label="Clear amount"
-                  >
-                    &times;
-                  </button>
-                )}
-              </div>
-              <button type="submit" className="wallet-topup-btn" disabled={loading || !topUpAmount}>
-                {loading ? (
-                  <span className="wallet-btn-loader"></span>
-                ) : (
-                  <>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Top Up
-                  </>
-                )}
-              </button>
-            </div>
-            {message && (
-              <div className={`wallet-message ${message.includes('Failed') ? 'wallet-message-error' : 'wallet-message-success'}`}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  {message.includes('Failed') ? (
-                    <>
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </>
-                  ) : (
-                    <>
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                    </>
-                  )}
-                </svg>
-                <span>{message}</span>
-              </div>
-            )}
-          </form>
         </div>
 
         {/* Transaction History */}

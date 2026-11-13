@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { EscrowError, toCents, inTransaction, lockPost, settleEscrow } = require('../escrow');
 
 // ── Auto-create Transaction_Disputes table ──
 (async () => {
@@ -255,202 +256,100 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ── 4. POST resolve dispute (Admin execution with atomic wallet transactions) ──
+// ── 4. Resolve a dispute through the shared, single-use escrow settlement. ──
 router.post('/:id/resolve', async (req, res) => {
-  const { id } = req.params;
-  const {
-    resolution_type, // 'full_refund', 'split', 'full_payment', 'dismissed'
-    resolution_notes,
-    admin_id,
-    split_percentage = 50
-  } = req.body;
-
+  const { resolution_type, resolution_notes, split_percentage = 50 } = req.body;
   if (!['full_refund', 'split', 'full_payment', 'dismissed'].includes(resolution_type)) {
-    return res.status(400).json({
-      message: 'Invalid resolution_type. Must be full_refund, split, full_payment, or dismissed.'
-    });
+    return res.status(400).json({ message: 'Invalid resolution type.' });
   }
-
-  const conn = await db.getConnection();
   try {
-    await conn.beginTransaction();
-
-    // 1. Fetch dispute & post details
-    const [disputes] = await conn.query(
-      `SELECT td.*, p.bounty, p.user_id AS poster_id, p.title AS post_title
-       FROM Transaction_Disputes td
-       JOIN Posts p ON td.post_id = p.post_id
-       WHERE td.dispute_id = ? FOR UPDATE`,
-      [id]
+    const [references] = await db.query(
+      'SELECT post_id FROM Transaction_Disputes WHERE dispute_id = ?', [req.params.id]
     );
-
-    if (disputes.length === 0) {
-      await conn.rollback();
-      return res.status(404).json({ message: 'Dispute record not found.' });
-    }
-
-    const dispute = disputes[0];
-    if (dispute.status === 'resolved' || dispute.status === 'dismissed') {
-      await conn.rollback();
-      return res.status(400).json({ message: `Dispute has already been ${dispute.status}.` });
-    }
-
-    const bounty = parseFloat(dispute.bounty) || 0;
-    const posterId = dispute.poster_id;
-    let tutorId = dispute.reporter_role === 'tutor' ? dispute.reporter_id : dispute.respondent_id;
-
-    // PREVENT MONEY GLITCH: Ensure escrow funds have not already been disbursed
-    const [existingPayouts] = await conn.query(
-      "SELECT transaction_id, type FROM Transactions WHERE reference_id = ? AND type IN ('bounty_received', 'refund')",
-      [dispute.post_id]
-    );
-    if (existingPayouts.length > 0 && resolution_type !== 'dismissed') {
-      await conn.rollback();
-      return res.status(400).json({
-        message: 'Escrow funds for this post have already been released or refunded. Settlement blocked to prevent double-spending.'
-      });
-    }
-
-    // If tutorId is still null, look in Post_Applications
-    if (!tutorId) {
-      const [appRows] = await conn.query(
-        `SELECT user_id FROM Post_Applications 
-         WHERE post_id = ? AND status IN ('accepted', 'completion_requested', 'completed') LIMIT 1`,
-        [dispute.post_id]
+    if (!references.length) return res.status(404).json({ message: 'Dispute not found.' });
+    await inTransaction(async (conn) => {
+      const post = await lockPost(conn, references[0].post_id);
+      const [disputes] = await conn.query(
+        'SELECT * FROM Transaction_Disputes WHERE dispute_id = ? FOR UPDATE', [req.params.id]
       );
-      if (appRows.length > 0) tutorId = appRows[0].user_id;
-    }
-
-    // 2. Perform monetary settlements if not dismissed
-    if (resolution_type === 'full_refund') {
-      // 100% of bounty returned to Student (Poster)
-      if (bounty > 0) {
-        const [posterRows] = await conn.query('SELECT wallet_balance FROM Users WHERE user_id = ? FOR UPDATE', [posterId]);
-        const curBal = parseFloat(posterRows[0]?.wallet_balance) || 0;
-        const newBal = curBal + bounty;
-        await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBal, posterId]);
-
-        await conn.query(
-          `INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description)
-           VALUES (?, 'refund', ?, ?, ?, ?)`,
-          [posterId, bounty, newBal, dispute.post_id, `Escrow Arbitrated: 100% refund for post #${dispute.post_id} (${dispute.post_title})`]
-        );
+      if (!disputes.length) throw new EscrowError(404, 'Dispute not found.');
+      const dispute = disputes[0];
+      if (['resolved', 'dismissed'].includes(dispute.status)) {
+        throw new EscrowError(409, 'Dispute has already been resolved.');
       }
 
-      // Close post and cancel application
-      await conn.query('UPDATE Posts SET status = ? WHERE post_id = ?', ['closed', dispute.post_id]);
-      if (dispute.application_id) {
-        await conn.query('UPDATE Post_Applications SET status = ? WHERE application_id = ?', ['cancelled', dispute.application_id]);
+      if (resolution_type !== 'dismissed') {
+        const bountyCents = toCents(post.bounty);
+        let tutorId = dispute.reporter_role === 'tutor' ? dispute.reporter_id : dispute.respondent_id;
+        if (!tutorId && resolution_type !== 'full_refund') {
+          const [apps] = await conn.query(
+            "SELECT user_id FROM Post_Applications WHERE post_id = ? AND status IN ('accepted', 'completion_requested', 'completed') LIMIT 1",
+            [post.post_id]
+          );
+          tutorId = apps[0]?.user_id;
+        }
+        if (resolution_type !== 'full_refund' && !tutorId) {
+          throw new EscrowError(400, 'No tutor is available to receive this settlement.');
+        }
+        if (resolution_type !== 'full_refund') {
+          const [tutors] = await conn.query(
+            'SELECT application_id FROM Post_Applications WHERE post_id = ? AND user_id = ? LIMIT 1',
+            [post.post_id, tutorId]
+          );
+          if (!tutors.length || String(tutorId) === String(post.user_id)) {
+            throw new EscrowError(409, 'Settlement recipient must be a tutor who applied to this post.');
+          }
+        }
+
+        let allocations;
+        if (resolution_type === 'full_refund') {
+          allocations = [{ userId: post.user_id, type: 'refund', cents: bountyCents,
+            description: `Escrow refund for disputed post #${post.post_id}` }];
+        } else if (resolution_type === 'full_payment') {
+          allocations = [{ userId: tutorId, type: 'bounty_received', cents: bountyCents,
+            description: `Escrow payout for disputed post #${post.post_id}` }];
+        } else {
+          const percentage = Math.max(5, Math.min(95, parseInt(split_percentage, 10) || 50));
+          const refundCents = Math.round(bountyCents * percentage / 100);
+          allocations = [
+            { userId: post.user_id, type: 'refund', cents: refundCents,
+              description: `Escrow split refund for post #${post.post_id}` },
+            { userId: tutorId, type: 'bounty_received', cents: bountyCents - refundCents,
+              description: `Escrow split payout for post #${post.post_id}` }
+          ];
+        }
+        const settlement = await settleEscrow(conn, post, allocations);
+        if (settlement.alreadySettled) throw new EscrowError(409, 'Escrow has already been settled.');
+        await conn.query("UPDATE Posts SET status = 'closed' WHERE post_id = ?", [post.post_id]);
+        if (dispute.application_id) {
+          await conn.query('UPDATE Post_Applications SET status = ? WHERE application_id = ?',
+            [resolution_type === 'full_refund' ? 'cancelled' : 'completed', dispute.application_id]);
+        }
       }
-
-    } else if (resolution_type === 'full_payment') {
-      // 100% of bounty released to Tutor
-      if (!tutorId) {
-        await conn.rollback();
-        return res.status(400).json({ message: 'No tutor found to receive payment for this post.' });
-      }
-
-      if (bounty > 0) {
-        const [tutorRows] = await conn.query('SELECT wallet_balance FROM Users WHERE user_id = ? FOR UPDATE', [tutorId]);
-        const curBal = parseFloat(tutorRows[0]?.wallet_balance) || 0;
-        const newBal = curBal + bounty;
-        await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBal, tutorId]);
-
-        await conn.query(
-          `INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description)
-           VALUES (?, 'bounty_received', ?, ?, ?, ?)`,
-          [tutorId, bounty, newBal, dispute.post_id, `Escrow Arbitrated: 100% tutor payout for post #${dispute.post_id} (${dispute.post_title})`]
-        );
-      }
-
-      // Mark application completed and close post
-      await conn.query('UPDATE Posts SET status = ? WHERE post_id = ?', ['closed', dispute.post_id]);
-      if (dispute.application_id) {
-        await conn.query('UPDATE Post_Applications SET status = ? WHERE application_id = ?', ['completed', dispute.application_id]);
-      }
-
-    } else if (resolution_type === 'split') {
-      // Compromise split between Student and Tutor
-      if (!tutorId) {
-        await conn.rollback();
-        return res.status(400).json({ message: 'No tutor found to participate in split settlement.' });
-      }
-
-      const splitPct = Math.max(5, Math.min(95, parseInt(split_percentage, 10) || 50));
-      const studentAmount = parseFloat(((bounty * splitPct) / 100).toFixed(2));
-      const tutorAmount = parseFloat((bounty - studentAmount).toFixed(2));
-
-      // Credit student share
-      if (studentAmount > 0) {
-        const [posterRows] = await conn.query('SELECT wallet_balance FROM Users WHERE user_id = ? FOR UPDATE', [posterId]);
-        const curBal = parseFloat(posterRows[0]?.wallet_balance) || 0;
-        const newBal = curBal + studentAmount;
-        await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBal, posterId]);
-
-        await conn.query(
-          `INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description)
-           VALUES (?, 'refund', ?, ?, ?, ?)`,
-          [posterId, studentAmount, newBal, dispute.post_id, `Escrow Arbitrated: ${splitPct}% split refund for post #${dispute.post_id}`]
-        );
-      }
-
-      // Credit tutor share
-      if (tutorAmount > 0) {
-        const [tutorRows] = await conn.query('SELECT wallet_balance FROM Users WHERE user_id = ? FOR UPDATE', [tutorId]);
-        const curBal = parseFloat(tutorRows[0]?.wallet_balance) || 0;
-        const newBal = curBal + tutorAmount;
-        await conn.query('UPDATE Users SET wallet_balance = ? WHERE user_id = ?', [newBal, tutorId]);
-
-        await conn.query(
-          `INSERT INTO Transactions (user_id, type, amount, balance_after, reference_id, description)
-           VALUES (?, 'bounty_received', ?, ?, ?, ?)`,
-          [tutorId, tutorAmount, newBal, dispute.post_id, `Escrow Arbitrated: ${100 - splitPct}% split payout for post #${dispute.post_id}`]
-        );
-      }
-
-      // Close post and mark completed
-      await conn.query('UPDATE Posts SET status = ? WHERE post_id = ?', ['closed', dispute.post_id]);
-      if (dispute.application_id) {
-        await conn.query('UPDATE Post_Applications SET status = ? WHERE application_id = ?', ['completed', dispute.application_id]);
-      }
-    }
-
-    // 3. Update the dispute row
-    const newStatus = resolution_type === 'dismissed' ? 'dismissed' : 'resolved';
-    await conn.query(
-      `UPDATE Transaction_Disputes SET
-        status = ?,
-        resolution_type = ?,
-        resolution_notes = ?,
-        resolved_by = ?,
-        resolved_at = NOW()
-       WHERE dispute_id = ?`,
-      [newStatus, resolution_type, resolution_notes || '', admin_id || null, id]
-    );
-
-    await conn.commit();
-    res.json({
-      message: `Dispute settled successfully as [${resolution_type.toUpperCase()}]. Escrow allocated.`,
-      dispute_id: id,
-      resolution_type
+      await conn.query(
+        `UPDATE Transaction_Disputes SET status = ?, resolution_type = ?, resolution_notes = ?,
+           resolved_by = ?, resolved_at = NOW() WHERE dispute_id = ?`,
+        [resolution_type === 'dismissed' ? 'dismissed' : 'resolved', resolution_type,
+          resolution_notes || '', req.auth.user_id, dispute.dispute_id]
+      );
     });
+    res.json({ message: `Dispute settled as ${resolution_type}.`, dispute_id: req.params.id, resolution_type });
   } catch (error) {
-    await conn.rollback();
-    console.error('Error resolving dispute:', error);
-    res.status(500).json({ error: error.message });
-  } finally {
-    conn.release();
+    res.status(error instanceof EscrowError ? error.status : 500).json({ message: error.message });
   }
 });
 
 // ── 5. PATCH update status (e.g. under_review) ──
 router.patch('/:id/status', async (req, res) => {
   const { status } = req.body;
-  if (!['pending', 'under_review', 'resolved', 'dismissed'].includes(status)) {
+  if (!['pending', 'under_review'].includes(status)) {
     return res.status(400).json({ message: 'Invalid status.' });
   }
   try {
-    await db.query('UPDATE Transaction_Disputes SET status = ? WHERE dispute_id = ?', [status, req.params.id]);
+    await db.query(
+      "UPDATE Transaction_Disputes SET status = ? WHERE dispute_id = ? AND status IN ('pending', 'under_review')",
+      [status, req.params.id]
+    );
     res.json({ message: `Dispute status updated to ${status}.` });
   } catch (error) {
     res.status(500).json({ error: error.message });
