@@ -3,6 +3,20 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { randomAvatarColor } = require('../avatarColors');
+const { createSession, endSession } = require('../auth');
+
+router.get('/me', (req, res) => {
+  res.json({ user: req.auth });
+});
+
+router.post('/logout', async (req, res) => {
+  try {
+    await endSession(req, res);
+    res.json({ message: 'Signed out.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Could not sign out.' });
+  }
+});
 
 // 1. Get all users
 router.get('/', async (req, res) => {
@@ -31,10 +45,13 @@ router.get('/', async (req, res) => {
 
 // 2. Register a new user
 router.post('/register', async (req, res) => {
-  const { full_name, email, password, role, department } = req.body;
+  const { full_name, email, password, department } = req.body;
 
   if (!full_name || !email || !password) {
     return res.status(400).json({ message: 'Full name, email, and password are required.' });
+  }
+  if (typeof password !== 'string' || password.length < 8) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
   }
 
   try {
@@ -52,7 +69,7 @@ router.post('/register', async (req, res) => {
       full_name,
       email,
       hashedPassword,
-      role || 'student',
+      'student',
       department || null,
       randomAvatarColor()
     ]);
@@ -90,6 +107,18 @@ router.get('/profile/:userId', async (req, res) => {
     }
 
     const user = userRows[0];
+    const isOwner = req.auth && String(req.auth.user_id) === String(user.user_id);
+    const isAdmin = req.auth && Number(req.auth.is_admin) === 1;
+    const visibleUser = (isOwner || isAdmin) ? user : {
+      user_id: user.user_id,
+      full_name: user.full_name,
+      role: user.role,
+      is_verified: user.is_verified,
+      department: user.department,
+      bio: user.bio,
+      avatar_color: user.avatar_color,
+      created_at: user.created_at
+    };
 
     const postsQuery = `
       SELECT
@@ -114,7 +143,7 @@ router.get('/profile/:userId', async (req, res) => {
     `;
     const [posts] = await db.query(postsQuery, [req.params.userId]);
 
-    res.json({ user, posts });
+    res.json({ user: visibleUser, posts });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -150,7 +179,7 @@ router.put('/profile/:userId', async (req, res) => {
 
 // 5. Login user
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, remember_me } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required.' });
@@ -191,6 +220,7 @@ router.post('/login', async (req, res) => {
     }
 
     const { password: _, ...userData } = user;
+    await createSession(res, user.user_id, remember_me === true);
     res.status(200).json({ message: 'Login successful!', user: userData });
   } catch (error) {
     res.status(500).json({ error: error.message });

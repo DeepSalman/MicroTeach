@@ -5,6 +5,10 @@ const db = require('../db');
 // 1. Get all applications for a post (with applicant info + avg rating)
 router.get('/post/:postId', async (req, res) => {
   try {
+    const [posts] = await db.query('SELECT user_id FROM Posts WHERE post_id = ?', [req.params.postId]);
+    if (posts.length === 0) return res.status(404).json({ message: 'Post not found.' });
+    const canReviewAll = Number(req.auth.is_admin) === 1 ||
+      String(posts[0].user_id) === String(req.auth.user_id);
     const query = `
       SELECT
         pa.application_id,
@@ -14,25 +18,27 @@ router.get('/post/:postId', async (req, res) => {
         pa.status,
         pa.completion_requested_by,
         pa.created_at,
+        p.user_id AS post_owner_id,
         u.full_name AS applicant_name,
         u.department AS applicant_department,
-        u.email AS applicant_email,
         u.role AS applicant_role,
         u.avatar_color AS applicant_avatar_color,
         COALESCE(r.avg_rating, 0) AS avg_rating,
         COALESCE(r.review_count, 0) AS review_count
       FROM Post_Applications pa
+      JOIN Posts p ON pa.post_id = p.post_id
       JOIN Users u ON pa.user_id = u.user_id
       LEFT JOIN (
         SELECT reviewee_id, ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS review_count
         FROM Reviews
         GROUP BY reviewee_id
       ) r ON r.reviewee_id = pa.user_id
-      WHERE pa.post_id = ?
+      WHERE pa.post_id = ?${canReviewAll ? '' : ' AND pa.user_id = ?'}
       ORDER BY pa.created_at DESC
     `;
-    const [rows] = await db.query(query, [req.params.postId]);
-    res.json(rows);
+    const params = canReviewAll ? [req.params.postId] : [req.params.postId, req.auth.user_id];
+    const [rows] = await db.query(query, params);
+    res.json(rows.map(({ post_owner_id, ...application }) => application));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -105,7 +111,7 @@ router.post('/', async (req, res) => {
     if (userRows.length === 0) {
       return res.status(404).json({ message: 'User not found.' });
     }
-    if (userRows[0].role !== 'both' && userRows[0].role !== 'tutor') {
+    if ((userRows[0].role !== 'both' && userRows[0].role !== 'tutor') || !Number(userRows[0].is_verified)) {
       return res.status(403).json({ 
         message: 'Only verified tutors/teachers can apply for tutoring gigs. Please apply to become a teacher first.' 
       });

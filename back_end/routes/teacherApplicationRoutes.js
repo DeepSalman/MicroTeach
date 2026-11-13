@@ -110,7 +110,8 @@ router.get('/', async (req, res) => {
     if (appIds.length > 0) {
       const placeholders = appIds.map(() => '?').join(',');
       const [docs] = await db.query(
-        `SELECT * FROM Teacher_Application_Documents WHERE application_id IN (${placeholders})`,
+        `SELECT document_id, application_id, document_type, file_name, file_size, mime_type, created_at
+           FROM Teacher_Application_Documents WHERE application_id IN (${placeholders})`,
         appIds
       );
       docs.forEach(d => {
@@ -145,7 +146,8 @@ router.post('/', (req, res) => {
       return res.status(400).json({ message: uploadErr.message });
     }
 
-    const { user_id, reason, expertise } = req.body;
+    const { reason, expertise } = req.body;
+    const user_id = req.auth.user_id;
     const studentIdCardFile = req.files?.['student_id_card']?.[0];
     const nidCardFile       = req.files?.['nid_card']?.[0];
 
@@ -238,7 +240,8 @@ router.post('/', (req, res) => {
 
 // ── PUT review an application (approve / reject) ──
 router.put('/:id/review', async (req, res) => {
-  const { status, reviewed_by } = req.body;
+    const { status } = req.body;
+    const reviewed_by = req.auth.user_id;
   if (!['approved', 'rejected'].includes(status)) {
     return res.status(400).json({ message: 'Status must be approved or rejected.' });
   }
@@ -295,12 +298,12 @@ router.get('/documents/:documentId/file', async (req, res) => {
       const mime = parts[0].split(':')[1].split(';')[0];
       const imgBuf = Buffer.from(parts[1], 'base64');
       res.setHeader('Content-Type', mime || doc.mime_type || 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Cache-Control', 'private, no-store');
       return res.send(imgBuf);
     }
     const diskPath = path.join(__dirname, '..', doc.file_path);
     if (fs.existsSync(diskPath)) {
-      return res.sendFile(diskPath);
+      return res.sendFile(diskPath, { headers: { 'Cache-Control': 'private, no-store' } });
     }
     res.status(404).send('File not found');
   } catch (err) {

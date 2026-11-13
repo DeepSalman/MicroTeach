@@ -22,12 +22,13 @@ This guide walks you through hosting the **MicroTeach** platform on **Vercel** w
    - Enter a name (e.g. `microteach-db`), set a secure **Database Password** (save this password!), and pick a region close to your users (e.g., `Singapore (ap-southeast-1)` or `Mumbai (ap-south-1)`).
    - Click **Create new project** and wait ~1 minute for provisioning.
 
-2. **Execute Database Schema & Seed Data**:
+2. **Execute the database schema on a new project**:
    - In your Supabase project dashboard, click on **SQL Editor** in the left sidebar (icon with `>_`).
    - Click **New query**.
    - Open [`supabase_schema.sql`](./supabase_schema.sql) in this repository, copy all contents, paste into the Supabase SQL Editor.
    - Click the green **Run** button (or press `Ctrl+Enter` / `Cmd+Enter`).
-   - You should see `Success. No rows returned`. All 16 tables, constraints, sequences, and initial seed users are now created!
+   - You should see `Success. No rows returned`. The tables and constraints are created without demo users.
+   - This schema script drops existing tables. For an existing database, run `back_end/migrations/001_auth_sessions_pg.sql` and then `back_end/migrations/002_lock_down_supabase_api.sql` without deleting data.
 
 3. **Get Your Database Connection String**:
    - In Supabase, go to **Project Settings** (gear icon) -> **Database**.
@@ -74,6 +75,7 @@ The repository includes a root `vercel.json` and `api/index.js` which automatica
    |---|---|---|
    | `DATABASE_URL` | `postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true` | Your Supabase pooled connection string |
    | `NODE_ENV` | `production` | Production environment |
+   | `PUBLIC_ORIGIN` | `https://your-site.example.com` | Exact public origin used for browser origin checks |
 5. Click **Deploy**.
 6. Once deployed, Vercel gives you a live URL like `https://microteach.vercel.app`!
    - Frontend is served at `/`
@@ -92,6 +94,8 @@ If you prefer keeping Express running as a persistent long-running daemon (e.g. 
 4. Set **Start Command**: `node server.js`.
 5. Set Environment Variable on Render/Railway:
    - `DATABASE_URL`: Your Supabase connection string.
+   - `NODE_ENV`: `production`.
+   - `FRONTEND_ORIGIN`: The exact HTTPS origin of the frontend when it uses a same-site subdomain.
 6. Note your live backend URL: `https://microteach-api.onrender.com`.
 
 #### 2. Deploy Frontend to Vercel:
@@ -103,15 +107,14 @@ If you prefer keeping Express running as a persistent long-running daemon (e.g. 
    - `VITE_SERVER_URL`: `https://microteach-api.onrender.com`
 5. Click **Deploy**.
 
+For a separate backend, use same-site subdomains (for example, `app.example.com` and `api.example.com`) and set the backend `FRONTEND_ORIGIN` to the exact HTTPS frontend origin. A frontend on an unrelated domain needs a same-origin API proxy because the application uses first-party, strict session cookies.
+
 ---
 
 ## Step 4: Verify Deployment
 
 1. **Browse Platform**: Open your Vercel URL.
-2. **Login**: Test logging in with sample seed accounts:
-   - **Admin Account**: `admin@bracu.ac.bd` / `password123`
-   - **Student Account**: `rafiq@bracu.ac.bd` / `password123`
-   - **Tutor Account**: `tanvir@bracu.ac.bd` / `password123`
+2. **Login**: Register a trusted account with a unique password, then sign in. To bootstrap an administrator, set `is_admin = 1` for that account in the Supabase SQL Editor after verifying its email address.
 3. **Admin Portal**: Navigate to `/admin` to verify:
    - User Management
    - Teacher Applications
@@ -125,7 +128,7 @@ If you prefer keeping Express running as a persistent long-running daemon (e.g. 
 
 The backend database adapter in [`back_end/db.js`](./back_end/db.js) is **dual-mode**:
 - If `DATABASE_URL` is set with a PostgreSQL URL: Connects to **Supabase**.
-- If `DATABASE_URL` is not set: Automatically falls back to **Local MySQL** (`DB_HOST`, `DB_NAME`).
+- In development, if `DATABASE_URL` is not set: Use **Local MySQL** (`DB_HOST`, `DB_NAME`). Production requires `DATABASE_URL`.
 
 You can seamlessly test with Supabase locally by putting your `DATABASE_URL` in `back_end/.env`:
 ```env

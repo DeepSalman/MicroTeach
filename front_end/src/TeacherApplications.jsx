@@ -4,7 +4,7 @@ import './TeacherApplications.css';
 
 const BASE_URL =
   import.meta.env.VITE_SERVER_URL ||
-  (import.meta.env.PROD ? '' : 'http://localhost:3001');
+  (import.meta.env.PROD ? '' : `http://${window.location.hostname}:3001`);
 
 const TeacherApplications = ({ user }) => {
   const [applications, setApplications] = useState([]);
@@ -427,7 +427,7 @@ const TeacherApplications = ({ user }) => {
                                   {docsCount > 0 ? (
                                     <div className="ta-docs-grid">
                                        {app.documents.map((doc) => {
-                                         const docUrl = doc.file_data || (doc.document_id ? `${BASE_URL}/api/teacher-applications/documents/${doc.document_id}/file` : `${BASE_URL}/${doc.file_path}`);
+                                         const docUrl = `${BASE_URL}/api/teacher-applications/documents/${doc.document_id}/file`;
                                          return (
                                            <button
                                              key={doc.document_id}

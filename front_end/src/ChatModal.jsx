@@ -5,16 +5,12 @@ import './ChatModal.css';
 
 const API_BASE =
   import.meta.env.VITE_SERVER_URL ||
-  (import.meta.env.PROD ? '' : 'http://localhost:3001');
+  (import.meta.env.PROD ? '' : `http://${window.location.hostname}:3001`);
 
 const QUICK_EMOJIS = ['👍', '📚', '💡', '✅', '🙌', '❓', '❤️', '🔥'];
 
-const getFileUrl = (filePath) => {
-  if (!filePath) return '';
-  if (filePath.startsWith('data:') || filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath;
-  const clean = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-  return `${API_BASE}/${clean}`;
-};
+const getFileUrl = (conversationId, sequence) =>
+  `${API_BASE}/api/messages/${conversationId}/${sequence}/file`;
 
 const formatFileSize = (bytes) => {
   if (!bytes || isNaN(bytes)) return '';
@@ -511,13 +507,13 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
 
                           <div className={`chat-msg-bubble ${isImage ? 'has-image' : ''} ${isPdf ? 'has-pdf' : ''}`}>
                             {/* Image Message */}
-                            {isImage && (msg.file_data || msg.file_path) && (
+                            {isImage && msg.file_path && (
                               <div className="chat-msg-image-wrap">
                                 <img
-                                  src={msg.file_data || getFileUrl(msg.file_path)}
+                                  src={getFileUrl(selectedConv.conversation_id, msg.seq)}
                                   alt={msg.file_name || 'Attached photo'}
                                   className="chat-msg-img"
-                                  onClick={() => setPreviewImageModal(msg.file_data || getFileUrl(msg.file_path))}
+                                  onClick={() => setPreviewImageModal(getFileUrl(selectedConv.conversation_id, msg.seq))}
                                   onLoad={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
                                   title="Click to view full photo"
                                   loading="lazy"
@@ -526,7 +522,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
                             )}
 
                             {/* PDF Document Message */}
-                            {isPdf && (msg.file_data || msg.file_path) && (
+                            {isPdf && msg.file_path && (
                               <div className="chat-msg-pdf-card">
                                 <div className="chat-pdf-icon-badge">
                                   <span>PDF</span>
@@ -540,7 +536,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
                                   )}
                                 </div>
                                 <a
-                                  href={msg.file_data || getFileUrl(msg.file_path)}
+                                  href={getFileUrl(selectedConv.conversation_id, msg.seq)}
                                   download={msg.file_name || 'document.pdf'}
                                   target="_blank"
                                   rel="noreferrer"

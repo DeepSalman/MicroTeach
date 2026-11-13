@@ -25,6 +25,10 @@ const { randomAvatarColor } = require('./avatarColors');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
+if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+  throw new Error('Demo seeding is disabled in production.');
+}
+
 const DB_NAME = process.env.DB_NAME || 'microteach_db';
 const DEFAULT_PASSWORD = 'password123';
 
@@ -47,6 +51,15 @@ const TABLES = {
       is_admin TINYINT(1) DEFAULT 0,
       avatar_color VARCHAR(7),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`,
+  Auth_Sessions: `
+    CREATE TABLE IF NOT EXISTS Auth_Sessions (
+      token_hash CHAR(64) PRIMARY KEY,
+      user_id INT NOT NULL,
+      expires_at DATETIME NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX auth_sessions_user_id (user_id),
+      FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
     )`,
   Skills: `
     CREATE TABLE IF NOT EXISTS Skills (
@@ -199,6 +212,7 @@ const TABLES = {
 
 // Children before parents so foreign keys never block a drop/truncate
 const DROP_ORDER = [
+  'Auth_Sessions',
   'Messages', 'Conversation_Members', 'Conversations',
   'Reviews', 'Transactions',
   'Post_Applications', 'Reports', 'Teacher_Applications',

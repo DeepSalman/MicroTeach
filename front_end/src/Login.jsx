@@ -10,7 +10,7 @@ const Login = ({ onLogin }) => {
   const location = useLocation();
   const [email, setEmail] = useState(location.state?.registeredEmail || '');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
   const [message, setMessage] = useState('');
   const [successNotice, setSuccessNotice] = useState(location.state?.message || '');
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ const Login = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const response = await loginUser({ email: email.trim(), password });
+      const response = await loginUser({ email: email.trim(), password, remember_me: rememberMe });
       const user = response.data.user;
       
       if (onLogin) onLogin(user);

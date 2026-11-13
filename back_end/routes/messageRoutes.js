@@ -180,7 +180,6 @@ router.get('/:conversationId/messages', async (req, res) => {
         m.file_name,
         m.file_size,
         m.mime_type,
-        m.file_data,
         m.created_at,
         u.full_name AS sender_name
       FROM Messages m
@@ -212,7 +211,8 @@ router.post('/:conversationId/messages', (req, res) => {
     }
 
     const convId = req.params.conversationId;
-    const { sender_id, client_msg_id } = req.body;
+    const { client_msg_id } = req.body;
+    const sender_id = req.auth.user_id;
     let body = (req.body.body || '').trim();
     const file = req.file;
 
@@ -320,7 +320,6 @@ router.post('/:conversationId/messages', (req, res) => {
         file_name: fileName,
         file_size: fileSize,
         mime_type: mimeType,
-        file_data: fileDataUri,
         message: 'Message sent successfully.'
       });
     } catch (error) {
@@ -426,12 +425,12 @@ router.get('/:conversationId/:seq/file', async (req, res) => {
       const mime = parts[0].split(':')[1].split(';')[0];
       const buf = Buffer.from(parts[1], 'base64');
       res.setHeader('Content-Type', mime || msg.mime_type || 'application/octet-stream');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Cache-Control', 'private, no-store');
       return res.send(buf);
     }
     const diskPath = path.join(__dirname, '..', msg.file_path);
     if (fs.existsSync(diskPath)) {
-      return res.sendFile(diskPath);
+      return res.sendFile(diskPath, { headers: { 'Cache-Control': 'private, no-store' } });
     }
     res.status(404).send('File not found');
   } catch (err) {

@@ -86,10 +86,9 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setDropdownOpen(false);
-    if (onLogout) onLogout();
-    navigate('/');
+    if (onLogout && await onLogout()) navigate('/');
   };
 
   const loadReviews = async () => {
@@ -114,7 +113,6 @@ const Profile = ({ user, onLogout, onProfileUpdate }) => {
       const freshRole = response.data.user.role;
       if (freshRole !== user.role) {
         const updatedUser = { ...user, role: freshRole };
-        localStorage.setItem('microteach_user', JSON.stringify(updatedUser));
         if (onProfileUpdate) onProfileUpdate(updatedUser);
       }
 

@@ -6,10 +6,14 @@ dotenv.config({ path: path.join(process.cwd(), 'back_end', '.env') });
 
 const { randomAvatarColor } = require('./avatarColors');
 
-const SUPABASE_FALLBACK_URL = "postgresql://postgres.tdbflvjdjrjzomywuxqg:thereisaverystrongpasswordwhichis%40123@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true";
-
-// Determine effective database connection string
-const rawDbUrl = process.env.DATABASE_URL || (process.env.VERCEL || process.env.NODE_ENV === 'production' ? SUPABASE_FALLBACK_URL : null);
+// Production must supply its own secret through the deployment environment.
+const rawDbUrl = process.env.DATABASE_URL || null;
+if ((process.env.VERCEL || process.env.NODE_ENV === 'production') && !rawDbUrl) {
+  throw new Error('DATABASE_URL is required in production.');
+}
+if (rawDbUrl && !/^postgres(?:ql)?:\/\//.test(rawDbUrl)) {
+  throw new Error('DATABASE_URL must be a PostgreSQL connection string.');
+}
 
 const isPostgres = Boolean(
   rawDbUrl &&
@@ -26,7 +30,7 @@ if (isPostgres) {
 
   pool = new Pool({
     connectionString: rawDbUrl,
-    ssl: isLocalPg ? false : { rejectUnauthorized: false },
+    ssl: isLocalPg ? false : { rejectUnauthorized: true },
     max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000

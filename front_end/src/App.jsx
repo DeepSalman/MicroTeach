@@ -17,6 +17,7 @@ import DisputesEscrow from './DisputesEscrow';
 import TeacherApplications from './TeacherApplications';
 import MasterData from './MasterData';
 import ErrorBoundary from './ErrorBoundary';
+import { fetchCurrentUser, logoutUser } from './api';
 
 // Shared page-load transition: remounts the page shell on every path change
 // so the entrance animation replays on each navigation.
@@ -64,30 +65,38 @@ const RequireAdmin = ({ currentUser, children }) => {
 };
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('microteach_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      localStorage.removeItem('microteach_user');
-      return null;
-    }
-  });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+
+  useEffect(() => {
+    // Remove identity data stored by older versions of the app.
+    try { localStorage.removeItem('microteach_user'); } catch { /* Storage may be disabled. */ }
+    fetchCurrentUser()
+      .then((response) => setCurrentUser(response.data.user))
+      .catch(() => setCurrentUser(null))
+      .finally(() => setSessionLoading(false));
+  }, []);
 
   const handleLogin = (userData) => {
-    localStorage.setItem('microteach_user', JSON.stringify(userData));
     setCurrentUser(userData);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('microteach_user');
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setCurrentUser(null);
+      return true;
+    } catch {
+      window.alert('Sign out failed. Please try again.');
+      return false;
+    }
   };
 
   const handleProfileUpdate = (updatedUser) => {
-    localStorage.setItem('microteach_user', JSON.stringify(updatedUser));
     setCurrentUser(updatedUser);
   };
+
+  if (sessionLoading) return <div className="page-enter">Loading MicroTeach…</div>;
 
   return (
     <Router>

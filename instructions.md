@@ -27,6 +27,8 @@ npm install
 
 Open `back_end/.env` and make sure it matches your MySQL setup:
 
+Create it from the ignored example first: `cp back_end/.env.example back_end/.env`.
+
 ```
 PORT=3001
 DB_HOST=localhost
@@ -67,6 +69,8 @@ npm run dev
 Now open http://localhost:5173 in your browser.
 
 ## Test Accounts
+
+These seeded accounts are for an isolated local development database only. Do not import them into production.
 
 Login with any of these emails. Password for all: **`password123`**
 
