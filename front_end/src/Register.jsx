@@ -228,7 +228,7 @@ const Register = () => {
                 : formatError || (
                   usernameState === 'available' ? `@${username} is available` :
                   usernameState === 'taken' ? `@${username} is already taken` :
-                  usernameState === 'error' ? 'Could not check right now. You can still submit.' :
+                  usernameState === 'error' ? 'Could not check availability. Please try again shortly.' :
                   'Checking availability…'
                 )}
             </p>

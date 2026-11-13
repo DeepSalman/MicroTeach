@@ -3,6 +3,7 @@
 ## Secrets
 
 - Set `DATABASE_URL` in the deployment provider's secret environment. Production startup fails when it is absent.
+- Database TLS verifies the server certificate. If Node does not trust the provider's root, set `DATABASE_CA_CERT` to the provider's PEM root certificate in the deployment environment. SSL URL parameters are rejected or ignored so they cannot override the verified TLS configuration.
 - Keep local `back_end/.env` untracked. Copy `back_end/.env.example` to create a local configuration.
 - A database connection string and a populated local `.env` were previously committed. Rotate any real database passwords and revoke the old credentials. Removing a file from the current Git index does not erase old commits; coordinate history cleanup with everyone using this repository.
 - Production database setup does not insert demo users. `supabase_seed_demo.sql` is only for an isolated development database because its accounts use a published default password.

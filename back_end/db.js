@@ -26,12 +26,23 @@ let dbInterface;
 if (isPostgres) {
   // ─── PostgreSQL / Supabase Driver ───
   const { Pool } = require('pg');
-  const isLocalPg = rawDbUrl.includes('localhost') || rawDbUrl.includes('127.0.0.1');
+  const connectionUrl = new URL(rawDbUrl);
+  const isLocalPg = ['localhost', '127.0.0.1', '[::1]'].includes(connectionUrl.hostname);
+  const databaseCaCert = process.env.DATABASE_CA_CERT?.replace(/\\n/g, '\n').trim();
+
+  // node-postgres replaces the explicit SSL config when these URL options exist.
+  if (['sslrootcert', 'sslcert', 'sslkey'].some((key) => connectionUrl.searchParams.has(key))) {
+    throw new Error('Configure database TLS through DATABASE_CA_CERT, not SSL certificate URL parameters.');
+  }
+  connectionUrl.searchParams.delete('sslmode');
 
   pool = new Pool({
-    connectionString: rawDbUrl,
-    ssl: isLocalPg ? false : { rejectUnauthorized: true },
-    max: 5,
+    connectionString: connectionUrl.toString(),
+    ssl: isLocalPg ? false : {
+      rejectUnauthorized: true,
+      ...(databaseCaCert ? { ca: databaseCaCert } : {})
+    },
+    max: process.env.VERCEL ? 1 : 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000
   });

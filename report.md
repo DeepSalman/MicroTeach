@@ -57,3 +57,13 @@ Rotate the exposed database password, revoke the old credential, update deployme
 | Profile display | Show the username when present and use only the viewed profile's email, avoiding a misleading fallback to the viewer's email on someone else's profile. |
 | Database rollout | Added case-insensitive unique username indexes to fresh PostgreSQL and MySQL schemas, plus additive PostgreSQL migration 005 and MySQL migration 004. Run the matching migration before deploying this API version. |
 | Validation | Backend syntax checks, the frontend production build, focused registration/API lint, and Git whitespace checks passed. The broader profile lint check still reports pre-existing errors elsewhere in `Profile.jsx`. Live migrations and database-backed signup behavior still require validation in the deployment environment. |
+
+## 2026-11-13 — Live username check outage
+
+| Topic | Change |
+| --- | --- |
+| Production diagnosis | The live username endpoint returned HTTP 500. Vercel runtime logs showed PostgreSQL certificate validation failing with `self-signed certificate in certificate chain`; the public posts endpoint failed for the same reason, so the outage affects the database connection generally. |
+| Database TLS | Added `DATABASE_CA_CERT` support for the provider's trusted root PEM while retaining certificate and hostname verification. Prevented SSL URL options from overriding the explicit TLS settings and limited Vercel function pools to one database connection each. |
+| Registration feedback | Replaced the suggestion that registration will work during an availability outage with a clear temporary failure message. |
+| Required live rollout | Download the Supabase root certificate from Database Settings, set `DATABASE_CA_CERT` in Vercel, redeploy, and apply PostgreSQL migration 005 in the Supabase SQL Editor. The workspace has neither the live database credential nor an authenticated Supabase session, so these production actions remain pending. |
+| Validation | Backend syntax, focused registration lint, frontend production build, and Git whitespace checks passed. The live API still requires the provider CA certificate and database migration. |

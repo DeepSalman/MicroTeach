@@ -74,9 +74,11 @@ The repository includes a root `vercel.json` and `api/index.js` which automatica
    | Key | Value | Description |
    |---|---|---|
    | `DATABASE_URL` | `postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true` | Your Supabase pooled connection string |
+   | `DATABASE_CA_CERT` | PEM root certificate from Supabase **Database Settings → SSL Configuration → Download Certificate** | Lets the backend verify the database server certificate. Paste the full PEM, preserving line breaks or using literal `\n`. Required when the pooler certificate is not in Node's default trust store. |
    | `NODE_ENV` | `production` | Production environment |
    | `PUBLIC_ORIGIN` | `https://your-site.example.com` | Exact public origin used for browser origin checks |
 5. Click **Deploy**.
+   - If the API logs `self-signed certificate in certificate chain`, add the project's `DATABASE_CA_CERT` and redeploy. Keep certificate verification enabled. For an existing database, apply migration `005_usernames_pg.sql` in the Supabase SQL Editor before using username registration.
 6. Once deployed, Vercel gives you a live URL like `https://microteach.vercel.app`!
    - Frontend is served at `/`
    - API endpoints are served at `/api/...` on the same domain without any CORS issues.
