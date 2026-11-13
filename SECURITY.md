@@ -17,8 +17,9 @@
 ## Privacy by default
 
 - Public profiles omit email, phone number, student ID, wallet balance, and admin status. The account owner and administrators can see the full profile.
-- Tutor identity documents are returned only through an administrator-authorized file endpoint. Application lists contain document metadata rather than image data.
-- Chat attachments are returned only through a conversation-member endpoint. Message lists contain attachment metadata rather than embedded file data.
+- Tutor identity documents are returned only through an administrator-authorized file endpoint. Application lists include document type and ID only. New uploads are held in memory until written to the private database, with no second disk copy. Legacy disk documents remain readable through a constrained path until operators clean up verified duplicates.
+- Chat histories and attachments are queried through the signed-in user's conversation membership. Message lists return an attachment flag rather than an internal file path, with a bounded page size.
+- Account listings are restricted to administrators. Public profile queries select only public fields; profile updates use the authenticated user or administrator identity.
 - Post application lists return every applicant only to the post owner or an administrator; other signed-in users see only their own application.
 - Supabase tables have row-level security enabled, and the `anon` and `authenticated` Data API roles have no table or compatibility-view privileges. Browser requests must use the Express API.
 - Private API responses and file downloads use `Cache-Control: no-store`.
@@ -32,5 +33,6 @@
 ## Deployment
 
 - Use a same-site frontend and API. The bundled Vercel deployment serves both on one origin. For separate services, use subdomains of the same site and set `FRONTEND_ORIGIN` to the exact HTTPS frontend origin. A frontend on an unrelated domain needs a same-origin API proxy; cross-site cookies are unreliable in privacy-focused browsers.
-- Run the additive migrations in `back_end/migrations/` for an existing database before deploying this version. On Supabase, run PostgreSQL migrations 001, 002, and 003 in order; on MySQL, run 001 and 002. Both fresh database setup scripts declare the session and escrow settlement tables. The application does not need permission to create these tables at runtime.
+- Run the additive migrations in `back_end/migrations/` for an existing database before deploying this version. On Supabase, run PostgreSQL migrations 001 through 004 in order; on MySQL, run 001 through 003. Both fresh database setup scripts declare the session, escrow, document, and attachment columns. The application does not need permission to create these tables at runtime.
+- After migration, inventory old `uploads/teacher_documents` files. Remove a file only after confirming its document row has `file_data`; retain and privately migrate any disk-only rows before removing their files.
 - Serve the API over HTTPS in production. Do not expose the upload directory as public static content.

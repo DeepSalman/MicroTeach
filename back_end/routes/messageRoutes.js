@@ -118,6 +118,9 @@ const upload = multer({
 
 // 1. Get inbox: all conversations for a user, sorted by recent activity
 router.get('/inbox/:userId', async (req, res) => {
+  if (!req.auth || String(req.auth.user_id) !== String(req.params.userId)) {
+    return res.status(403).json({ message: 'Access denied.' });
+  }
   try {
     const [rows] = await db.query(`
       SELECT
@@ -148,7 +151,7 @@ router.get('/inbox/:userId', async (req, res) => {
       ) lm ON lm.conversation_id = c.conversation_id
       WHERE cm.user_id = ?
       ORDER BY c.last_message_at DESC, c.conversation_id DESC
-    `, [req.params.userId]);
+    `, [req.auth.user_id]);
 
     // Ensure 1 unique conversation per other user
     const seen = new Set();
@@ -168,7 +171,13 @@ router.get('/inbox/:userId', async (req, res) => {
 
 // 2. Get messages for a conversation (with attachment fields)
 router.get('/:conversationId/messages', async (req, res) => {
+  if (!req.auth) return res.status(401).json({ message: 'Please sign in.' });
   const { before_seq, limit = 50 } = req.query;
+  const pageSize = Number(limit);
+  if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100 ||
+      (before_seq !== undefined && (!Number.isSafeInteger(Number(before_seq)) || Number(before_seq) < 1))) {
+    return res.status(400).json({ message: 'Invalid message page.' });
+  }
   try {
     let query = `
       SELECT
@@ -176,7 +185,7 @@ router.get('/:conversationId/messages', async (req, res) => {
         m.sender_id,
         m.kind,
         m.body,
-        m.file_path,
+        CASE WHEN m.file_path IS NOT NULL THEN 1 ELSE 0 END AS has_attachment,
         m.file_name,
         m.file_size,
         m.mime_type,
@@ -184,9 +193,11 @@ router.get('/:conversationId/messages', async (req, res) => {
         u.full_name AS sender_name
       FROM Messages m
       JOIN Users u ON m.sender_id = u.user_id
+      JOIN Conversation_Members cm ON cm.conversation_id = m.conversation_id
+        AND cm.user_id = ?
       WHERE m.conversation_id = ?
     `;
-    const params = [req.params.conversationId];
+    const params = [req.auth.user_id, req.params.conversationId];
 
     if (before_seq) {
       query += ' AND m.seq < ?';
@@ -194,7 +205,7 @@ router.get('/:conversationId/messages', async (req, res) => {
     }
 
     query += ' ORDER BY m.seq DESC LIMIT ?';
-    params.push(parseInt(limit));
+    params.push(pageSize);
 
     const [rows] = await db.query(query, params);
     res.json(rows.reverse()); // return oldest-first for display
@@ -212,7 +223,7 @@ router.post('/:conversationId/messages', (req, res) => {
 
     const convId = req.params.conversationId;
     const { client_msg_id } = req.body;
-    const sender_id = req.auth.user_id;
+    const sender_id = req.auth?.user_id;
     let body = (req.body.body || '').trim();
     const file = req.file;
 
@@ -316,7 +327,7 @@ router.post('/:conversationId/messages', (req, res) => {
       res.status(201).json({
         seq: nextSeq,
         kind,
-        file_path: filePath,
+        has_attachment: Boolean(filePath),
         file_name: fileName,
         file_size: fileSize,
         mime_type: mimeType,
@@ -331,11 +342,12 @@ router.post('/:conversationId/messages', (req, res) => {
 
 // 4. Mark conversation as read (update cursor)
 router.patch('/:conversationId/read', async (req, res) => {
-  const { user_id, seq } = req.body;
+  if (!req.auth) return res.status(401).json({ message: 'Please sign in.' });
+  const { seq } = req.body;
   try {
     await db.query(
       'UPDATE Conversation_Members SET last_read_seq = GREATEST(last_read_seq, ?) WHERE user_id = ? AND conversation_id = ?',
-      [seq, user_id, req.params.conversationId]
+      [seq, req.auth.user_id, req.params.conversationId]
     );
     res.json({ message: 'Marked as read.' });
   } catch (error) {
@@ -345,7 +357,9 @@ router.patch('/:conversationId/read', async (req, res) => {
 
 // 5. Start or get existing conversation between two users about a post
 router.post('/start', async (req, res) => {
-  const { user_id, other_user_id, post_id } = req.body;
+  if (!req.auth) return res.status(401).json({ message: 'Please sign in.' });
+  const { other_user_id, post_id } = req.body;
+  const user_id = req.auth.user_id;
 
   if (!user_id || !other_user_id) {
     return res.status(400).json({ message: 'user_id and other_user_id are required.' });
@@ -392,6 +406,9 @@ router.post('/start', async (req, res) => {
 
 // 6. Get total unread count for a user (for badge on message icon)
 router.get('/unread/:userId', async (req, res) => {
+  if (!req.auth || String(req.auth.user_id) !== String(req.params.userId)) {
+    return res.status(403).json({ message: 'Access denied.' });
+  }
   try {
     const [rows] = await db.query(`
       SELECT COALESCE(SUM(lm.max_seq - cm.last_read_seq), 0) AS total_unread
@@ -402,7 +419,7 @@ router.get('/unread/:userId', async (req, res) => {
         GROUP BY conversation_id
       ) lm ON cm.conversation_id = lm.conversation_id
       WHERE cm.user_id = ?
-    `, [req.params.userId]);
+    `, [req.auth.user_id]);
     res.json({ unread: rows[0].total_unread });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -411,10 +428,15 @@ router.get('/unread/:userId', async (req, res) => {
 
 // 7. Get message attachment file directly (supports both serverless base64 and disk files)
 router.get('/:conversationId/:seq/file', async (req, res) => {
+  if (!req.auth) return res.status(401).send('Please sign in');
   try {
     const [rows] = await db.query(
-      'SELECT file_path, file_name, mime_type, file_data FROM Messages WHERE conversation_id = ? AND seq = ?',
-      [req.params.conversationId, req.params.seq]
+      `SELECT m.file_path, m.file_name, m.mime_type, m.file_data
+         FROM Messages m
+         JOIN Conversation_Members cm ON cm.conversation_id = m.conversation_id
+          AND cm.user_id = ?
+        WHERE m.conversation_id = ? AND m.seq = ?`,
+      [req.auth.user_id, req.params.conversationId, req.params.seq]
     );
     if (rows.length === 0 || (!rows[0].file_path && !rows[0].file_data)) {
       return res.status(404).send('Attachment not found');
@@ -434,7 +456,7 @@ router.get('/:conversationId/:seq/file', async (req, res) => {
     }
     res.status(404).send('File not found');
   } catch (err) {
-    res.status(500).send(err.message);
+    res.status(500).send('Could not load attachment');
   }
 });
 

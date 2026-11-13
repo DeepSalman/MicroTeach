@@ -26,3 +26,13 @@ Rotate the exposed database password, revoke the old credential, update deployme
 | Duplicate bounty settlement | Added a post-level database lock, an atomic single-use escrow settlement record, and a check for historical payouts. Completion, cancellation, refunds, takedowns, dispute decisions, and post creation now keep the balance and ledger changes in database transactions. The direct bounty-payment API and bypassing post-status endpoint were removed. |
 | Existing data rollout | Added PostgreSQL migration 003 and MySQL migration 002 to create and backfill settlement records. Apply the appropriate migration before deploying; review historical transactions for earlier duplicate credits or missing escrow holds. |
 | Validation | Backend syntax checks, the frontend production build, and Git whitespace checks passed. Database migrations and concurrent settlement behavior still need validation against a live database before production rollout. |
+
+## 2026-11-13 — Security issues 5 and 6
+
+| Topic | Fix |
+| --- | --- |
+| Identity documents | Added administrator checks inside the application list and file handlers. The list now sends only document IDs, types, and dates. New uploads stay in memory until stored in the private database, avoiding duplicate disk files. Legacy disk reads are confined to the expected directory, and document responses disable caching and restrict active content. |
+| Private messages | Message history and attachment queries now join against the signed-in conversation member; inbox, unread, read-cursor, sender, and conversation creation use the session identity. Message pages are bounded, and responses use an attachment flag rather than exposing storage paths. |
+| Account data | Added handler-level administrator checks for the user list and ownership checks for profile updates. Public profiles select only public columns from the database. |
+| Existing data rollout | Added PostgreSQL migration 004 and MySQL migration 003, and updated fresh schemas. Apply the matching migration before deployment; inventory legacy identity document files and remove only verified duplicate copies. |
+| Validation | Backend syntax checks, the frontend production build, and Git whitespace checks passed. Live database access checks and migration execution remain to be performed in the deployment environment. |

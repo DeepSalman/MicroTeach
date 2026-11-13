@@ -507,7 +507,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
 
                           <div className={`chat-msg-bubble ${isImage ? 'has-image' : ''} ${isPdf ? 'has-pdf' : ''}`}>
                             {/* Image Message */}
-                            {isImage && msg.file_path && (
+                            {isImage && msg.has_attachment && (
                               <div className="chat-msg-image-wrap">
                                 <img
                                   src={getFileUrl(selectedConv.conversation_id, msg.seq)}
@@ -522,7 +522,7 @@ const ChatModal = ({ user, onClose, startWithUserId, startWithPostId }) => {
                             )}
 
                             {/* PDF Document Message */}
-                            {isPdf && msg.file_path && (
+                            {isPdf && msg.has_attachment && (
                               <div className="chat-msg-pdf-card">
                                 <div className="chat-pdf-icon-badge">
                                   <span>PDF</span>

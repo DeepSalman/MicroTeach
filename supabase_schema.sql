@@ -129,6 +129,7 @@ CREATE TABLE public.teacher_application_documents (
   file_name VARCHAR(255) NOT NULL,
   file_size INT NOT NULL,
   mime_type VARCHAR(100) NOT NULL,
+  file_data TEXT,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -221,6 +222,8 @@ CREATE TABLE public.messages (
   file_type VARCHAR(50) NULL,
   file_name VARCHAR(255) NULL,
   file_size INT NULL,
+  mime_type VARCHAR(100) NULL,
+  file_data TEXT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (conversation_id, seq)
 );

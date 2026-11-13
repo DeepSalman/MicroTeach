@@ -21,57 +21,13 @@ try {
   console.warn('[teacherApplicationRoutes] Upload dir creation warning:', err.message);
 }
 
-// ── Auto-create / migrate Teacher_Application_Documents table ──
-(async () => {
-  if (db.isPostgres) {
-    try {
-      await db.query('ALTER TABLE Teacher_Application_Documents ADD COLUMN IF NOT EXISTS file_data TEXT');
-    } catch (_) {}
-    return;
-  }
-  try {
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS Teacher_Application_Documents (
-        document_id   INT AUTO_INCREMENT PRIMARY KEY,
-        application_id INT NOT NULL,
-        document_type ENUM('student_id_card','nid_card') NOT NULL,
-        file_path     VARCHAR(512) NOT NULL,
-        file_name     VARCHAR(255) NOT NULL,
-        file_size     INT NOT NULL,
-        mime_type     VARCHAR(100) NOT NULL,
-        file_data     LONGTEXT NULL,
-        created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (application_id) REFERENCES Teacher_Applications(application_id) ON DELETE CASCADE
-      )
-    `);
-    // Add student_id column to Teacher_Applications if missing
-    const [cols] = await db.query(`SHOW COLUMNS FROM Teacher_Applications LIKE 'student_id'`);
-    if (cols.length === 0) {
-      await db.query(`ALTER TABLE Teacher_Applications ADD COLUMN student_id VARCHAR(50) AFTER user_id`);
-    }
-    const [docCols] = await db.query(`SHOW COLUMNS FROM Teacher_Application_Documents LIKE 'file_data'`);
-    if (docCols.length === 0) {
-      await db.query(`ALTER TABLE Teacher_Application_Documents ADD COLUMN file_data LONGTEXT NULL`);
-    }
-  } catch (e) {
-    console.error('[teacherApplicationRoutes] Schema init error:', e.message);
-  }
-})();
-
-// ── Multer disk storage ──
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const unique = `${Date.now()}_${Math.round(Math.random() * 1e6)}`;
-    cb(null, `${unique}${path.extname(file.originalname)}`);
-  }
-});
+// Identity images are stored once in the private database, not copied to disk.
 const fileFilter = (_req, file, cb) => {
   if (file.mimetype.startsWith('image/')) cb(null, true);
   else cb(new Error('Only image files are allowed.'), false);
 };
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: { fileSize: 10 * 1024 * 1024 } // 10 MB
 });
@@ -82,6 +38,7 @@ const uploadDocs = upload.fields([
 
 // ── GET all teacher applications ──
 router.get('/', async (req, res) => {
+  if (Number(req.auth?.is_admin) !== 1) return res.status(403).json({ message: 'Access denied.' });
   try {
     const [rows] = await db.query(`
       SELECT
@@ -110,7 +67,7 @@ router.get('/', async (req, res) => {
     if (appIds.length > 0) {
       const placeholders = appIds.map(() => '?').join(',');
       const [docs] = await db.query(
-        `SELECT document_id, application_id, document_type, file_name, file_size, mime_type, created_at
+        `SELECT document_id, application_id, document_type, created_at
            FROM Teacher_Application_Documents WHERE application_id IN (${placeholders})`,
         appIds
       );
@@ -128,6 +85,10 @@ router.get('/', async (req, res) => {
 
 // ── GET applications for a specific user ──
 router.get('/user/:userId', async (req, res) => {
+  if (!req.auth || (Number(req.auth.is_admin) !== 1 &&
+      String(req.auth.user_id) !== String(req.params.userId))) {
+    return res.status(403).json({ message: 'Access denied.' });
+  }
   try {
     const [rows] = await db.query(
       'SELECT * FROM Teacher_Applications WHERE user_id = ? ORDER BY created_at DESC',
@@ -198,28 +159,18 @@ router.post('/', (req, res) => {
         applicationId = recent[0]?.application_id;
       }
 
-      // Insert documents (with base64 data URI for reliable display across serverless/local environments)
+      // Keep only the private database copy. The path column remains for legacy rows.
       const docsToInsert = [
         { type: 'student_id_card', file: studentIdCardFile },
         { type: 'nid_card',        file: nidCardFile }
       ];
       for (const { type, file } of docsToInsert) {
-        let fileDataUri = null;
-        try {
-          if (file && file.path && fs.existsSync(file.path)) {
-            const buf = fs.readFileSync(file.path);
-            fileDataUri = `data:${file.mimetype || 'image/jpeg'};base64,${buf.toString('base64')}`;
-          }
-        } catch (e) {
-          console.warn('[teacherApplicationRoutes] Error reading uploaded file into base64:', e.message);
-        }
-
-        const relativePath = path.join('uploads', 'teacher_documents', file.filename);
+        const fileDataUri = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
         await conn.query(
           `INSERT INTO Teacher_Application_Documents
            (application_id, document_type, file_path, file_name, file_size, mime_type, file_data)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [applicationId, type, relativePath, file.originalname, file.size, file.mimetype, fileDataUri]
+          [applicationId, type, '', file.originalname, file.size, file.mimetype, fileDataUri]
         );
       }
 
@@ -227,10 +178,6 @@ router.post('/', (req, res) => {
       res.status(201).json({ message: 'Application submitted successfully.', application_id: applicationId });
     } catch (error) {
       await conn.rollback();
-      // Clean up uploaded files on DB error
-      [studentIdCardFile, nidCardFile].forEach(f => {
-        if (f && fs.existsSync(f.path)) fs.unlinkSync(f.path);
-      });
       res.status(500).json({ error: error.message });
     } finally {
       conn.release();
@@ -284,6 +231,9 @@ router.put('/:id/review', async (req, res) => {
 
 // ── GET document file directly by documentId ──
 router.get('/documents/:documentId/file', async (req, res) => {
+  if (Number(req.auth?.is_admin) !== 1) {
+    return res.status(403).send('Access denied');
+  }
   try {
     const [rows] = await db.query(
       'SELECT document_type, file_path, file_name, mime_type, file_data FROM Teacher_Application_Documents WHERE document_id = ?',
@@ -293,21 +243,29 @@ router.get('/documents/:documentId/file', async (req, res) => {
       return res.status(404).send('Document not found');
     }
     const doc = rows[0];
-    if (doc.file_data && doc.file_data.startsWith('data:')) {
-      const parts = doc.file_data.split(',');
-      const mime = parts[0].split(':')[1].split(';')[0];
-      const imgBuf = Buffer.from(parts[1], 'base64');
-      res.setHeader('Content-Type', mime || doc.mime_type || 'image/jpeg');
-      res.setHeader('Cache-Control', 'private, no-store');
+    const safeMime = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(doc.mime_type)
+      ? doc.mime_type : 'application/octet-stream';
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    res.setHeader('Content-Type', safeMime);
+    res.setHeader('Content-Disposition', safeMime === 'application/octet-stream' ? 'attachment' : 'inline');
+    if (doc.file_data && /^data:[^,]+;base64,/.test(doc.file_data)) {
+      const imgBuf = Buffer.from(doc.file_data.slice(doc.file_data.indexOf(',') + 1), 'base64');
       return res.send(imgBuf);
     }
-    const diskPath = path.join(__dirname, '..', doc.file_path);
-    if (fs.existsSync(diskPath)) {
-      return res.sendFile(diskPath, { headers: { 'Cache-Control': 'private, no-store' } });
+    // Legacy disk rows only: never allow a database path to escape this directory.
+    const legacyPrefix = 'uploads/teacher_documents/';
+    const normalizedPath = String(doc.file_path || '').replace(/\\/g, '/');
+    if (normalizedPath.startsWith(legacyPrefix) &&
+        normalizedPath.slice(legacyPrefix.length) === path.basename(normalizedPath)) {
+      const diskPath = path.join(UPLOAD_DIR, path.basename(normalizedPath));
+      if (fs.existsSync(diskPath) && fs.realpathSync(diskPath).startsWith(`${fs.realpathSync(UPLOAD_DIR)}${path.sep}`)) {
+        return res.send(fs.readFileSync(diskPath));
+      }
     }
     res.status(404).send('File not found');
   } catch (err) {
-    res.status(500).send(err.message);
+    res.status(500).send('Could not load document');
   }
 });
 

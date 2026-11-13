@@ -20,6 +20,7 @@ router.post('/logout', async (req, res) => {
 
 // 1. Get all users
 router.get('/', async (req, res) => {
+  if (Number(req.auth?.is_admin) !== 1) return res.status(403).json({ message: 'Access denied.' });
   try {
     const query = `
       SELECT
@@ -82,7 +83,10 @@ router.post('/register', async (req, res) => {
 // 3. Get user profile with posts
 router.get('/profile/:userId', async (req, res) => {
   try {
-    const userQuery = `
+    const isOwner = req.auth && String(req.auth.user_id) === String(req.params.userId);
+    const isAdmin = req.auth && Number(req.auth.is_admin) === 1;
+    const privateFields = isOwner || isAdmin;
+    const userQuery = privateFields ? `
       SELECT
         user_id,
         full_name,
@@ -99,6 +103,9 @@ router.get('/profile/:userId', async (req, res) => {
         created_at
       FROM Users
       WHERE user_id = ?
+    ` : `
+      SELECT user_id, full_name, role, is_verified, department, bio, avatar_color, created_at
+      FROM Users WHERE user_id = ?
     `;
     const [userRows] = await db.query(userQuery, [req.params.userId]);
 
@@ -106,19 +113,7 @@ router.get('/profile/:userId', async (req, res) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    const user = userRows[0];
-    const isOwner = req.auth && String(req.auth.user_id) === String(user.user_id);
-    const isAdmin = req.auth && Number(req.auth.is_admin) === 1;
-    const visibleUser = (isOwner || isAdmin) ? user : {
-      user_id: user.user_id,
-      full_name: user.full_name,
-      role: user.role,
-      is_verified: user.is_verified,
-      department: user.department,
-      bio: user.bio,
-      avatar_color: user.avatar_color,
-      created_at: user.created_at
-    };
+    const visibleUser = userRows[0];
 
     const postsQuery = `
       SELECT
@@ -151,6 +146,10 @@ router.get('/profile/:userId', async (req, res) => {
 
 // 4. Update user profile
 router.put('/profile/:userId', async (req, res) => {
+  if (!req.auth || (Number(req.auth.is_admin) !== 1 &&
+      String(req.auth.user_id) !== String(req.params.userId))) {
+    return res.status(403).json({ message: 'Access denied.' });
+  }
   const { full_name, department, bio, phone, student_id } = req.body;
 
   if (!full_name) {

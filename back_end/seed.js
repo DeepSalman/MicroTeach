@@ -112,6 +112,7 @@ const TABLES = {
     CREATE TABLE IF NOT EXISTS Teacher_Applications (
       application_id INT AUTO_INCREMENT PRIMARY KEY,
       user_id INT NOT NULL,
+      student_id VARCHAR(50),
       reason TEXT,
       expertise TEXT,
       status ENUM('pending','approved','rejected') DEFAULT 'pending',
@@ -120,6 +121,19 @@ const TABLES = {
       reviewed_at TIMESTAMP NULL,
       FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
       FOREIGN KEY (reviewed_by) REFERENCES Users(user_id) ON DELETE SET NULL
+    )`,
+  Teacher_Application_Documents: `
+    CREATE TABLE IF NOT EXISTS Teacher_Application_Documents (
+      document_id INT AUTO_INCREMENT PRIMARY KEY,
+      application_id INT NOT NULL,
+      document_type ENUM('student_id_card','nid_card') NOT NULL,
+      file_path VARCHAR(512) NOT NULL,
+      file_name VARCHAR(255) NOT NULL,
+      file_size INT NOT NULL,
+      mime_type VARCHAR(100) NOT NULL,
+      file_data LONGTEXT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (application_id) REFERENCES Teacher_Applications(application_id) ON DELETE CASCADE
     )`,
   Reports: `
     CREATE TABLE IF NOT EXISTS Reports (
@@ -208,6 +222,11 @@ const TABLES = {
       kind VARCHAR(30) NOT NULL DEFAULT 'text',
       body TEXT NOT NULL,
       client_msg_id VARCHAR(64) NULL,
+      file_path VARCHAR(512) NULL,
+      file_name VARCHAR(255) NULL,
+      file_size INT NULL,
+      mime_type VARCHAR(100) NULL,
+      file_data LONGTEXT NULL,
       created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
       PRIMARY KEY (conversation_id, seq),
       UNIQUE KEY unique_client_msg (conversation_id, client_msg_id),
@@ -221,7 +240,7 @@ const DROP_ORDER = [
   'Auth_Sessions',
   'Messages', 'Conversation_Members', 'Conversations',
   'Reviews', 'Escrow_Settlements', 'Transactions',
-  'Post_Applications', 'Reports', 'Teacher_Applications',
+  'Post_Applications', 'Reports', 'Teacher_Application_Documents', 'Teacher_Applications',
   'Sessions', 'Posts', 'User_Skills', 'Skills', 'Users'
 ];
 
